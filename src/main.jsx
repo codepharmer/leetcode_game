@@ -1,10 +1,12 @@
-import React from "react";
+﻿import React from "react";
 import ReactDOM from "react-dom/client";
-import App from "../leetcode-patterns.jsx";
+import { GoogleOAuthProvider } from "@react-oauth/google";
+import App from "./App.jsx";
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
-    <App />
+    <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID || "767273728432-6l4lonq40441sbrmfejk70edhbg94jd5.apps.googleusercontent.com"}>
+      <App />
+    </GoogleOAuthProvider>
   </React.StrictMode>
 );
-

@@ -1,6 +1,6 @@
 # LeetCode Patterns Game
 
-The UI lives in `leetcode-patterns.jsx` and is mounted via Vite.
+The UI lives in `src/App.jsx` and is mounted via Vite (`src/main.jsx`).
 
 ## Run
 
@@ -15,4 +15,3 @@ npm run dev
 npm run build
 npm run preview
 ```
-
