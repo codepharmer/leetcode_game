@@ -1,0 +1,23 @@
+node_modules
+dist
+.vite
+
+.env
+.env.local
+.env.*.local
+
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Local agent notes / runbooks (contains account-specific IDs)
+AGENTS.md
+agents.md
+
+# Generated AWS deploy artifacts (account-specific)
+cloudfront-config-*.json
+cloudfront-update-*.json
+oac-*.json
+route53-*.json
+bucket-policy-*.json
