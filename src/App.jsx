@@ -264,6 +264,11 @@ export default function App() {
 
   const currentQ = questions[currentIdx];
 
+  const resetViewport = useCallback(() => {
+    if (typeof window === "undefined") return;
+    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+  }, []);
+
   const handleGoogleSuccess = async (credentialResponse) => {
     const googleIdToken = credentialResponse?.credential;
     const googlePayload = decodeJwt(googleIdToken);
@@ -355,7 +360,8 @@ export default function App() {
     if (picked.length > 0) setChoices(genChoices(picked[0].pattern, ALL_PATTERNS));
 
     setMode(MODES.PLAY);
-  }, [filterDifficulty, totalQuestions]);
+    resetViewport();
+  }, [filterDifficulty, totalQuestions, resetViewport]);
 
   const handleSelect = (choice) => {
     if (selected !== null) return;
@@ -402,6 +408,7 @@ export default function App() {
       saveData(storageRef.current, ns, historyRef.current);
       setMode(MODES.RESULTS);
       setExpandedResult({});
+      resetViewport();
       return;
     }
 
@@ -412,6 +419,7 @@ export default function App() {
     setShowDesc(false);
     setShowTemplate(false);
     setChoices(genChoices(questions[ni].pattern, ALL_PATTERNS));
+    resetViewport();
   };
 
   const resetAllData = async () => {
