@@ -4,7 +4,8 @@ The UI lives in `src/App.jsx` and is mounted via Vite (`src/main.jsx`).
 
 ## Live
 
-- `https://algogame.nosson.ai` (primary)
+- `https://patternmatch.nosson.ai` (primary)
+- `https://algogame.nosson.ai` (legacy)
 - `https://leetcode-game.nosson.ai` (legacy)
 
 ## Run

@@ -32,6 +32,7 @@ CORS is configured on the Lambda Function URL (not in `index.py`).
 
 Current allowed origins should include:
 
+- `https://patternmatch.nosson.ai`
 - `https://algogame.nosson.ai`
 - `https://leetcode-game.nosson.ai`
 - `http://localhost:5173`
