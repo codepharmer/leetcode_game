@@ -15,6 +15,11 @@ export const MODES = {
   TEMPLATES: "templates",
 };
 
+export const GAME_TYPES = {
+  QUESTION_TO_PATTERN: "question_to_pattern",
+  TEMPLATE_TO_PATTERN: "template_to_pattern",
+};
+
 export const DIFF_COLORS = {
   Easy: "#10b981",
   Medium: "#f59e0b",

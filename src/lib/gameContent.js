@@ -1,0 +1,51 @@
+import { GAME_TYPES } from "./constants";
+import { ALL_PATTERNS, QUESTIONS } from "./questions";
+import { PATTERN_CONFUSION_MAP, TEMPLATE_QUESTIONS } from "./templateQuestions";
+import { genChoices, genChoicesWithConfusions } from "./utils";
+
+const QUESTION_ITEMS = QUESTIONS.map((question) => ({
+  ...question,
+  title: question.name,
+  promptKind: "question",
+}));
+
+const TEMPLATE_ITEMS = TEMPLATE_QUESTIONS.map((snippet) => ({
+  ...snippet,
+  promptKind: "code",
+}));
+
+const GAME_TYPE_CONFIG = {
+  [GAME_TYPES.QUESTION_TO_PATTERN]: {
+    value: GAME_TYPES.QUESTION_TO_PATTERN,
+    label: "question -> pattern",
+    menuSubtitle: "Map Blind 75 questions to their solution patterns",
+    roundNoun: "questions",
+    promptLabel: "What pattern solves this?",
+    browseTitle: "All Patterns",
+    items: QUESTION_ITEMS,
+    allPatterns: ALL_PATTERNS,
+    buildChoices: (correctPattern) => genChoices(correctPattern, ALL_PATTERNS),
+    revealTemplateAfterAnswer: true,
+  },
+  [GAME_TYPES.TEMPLATE_TO_PATTERN]: {
+    value: GAME_TYPES.TEMPLATE_TO_PATTERN,
+    label: "template -> pattern",
+    menuSubtitle: "Match code snippets to their strongest solution patterns",
+    roundNoun: "snippets",
+    promptLabel: "Which pattern is this template most connected to?",
+    browseTitle: "Pattern Snippets",
+    items: TEMPLATE_ITEMS,
+    allPatterns: ALL_PATTERNS,
+    buildChoices: (correctPattern) => genChoicesWithConfusions(correctPattern, ALL_PATTERNS, PATTERN_CONFUSION_MAP),
+    revealTemplateAfterAnswer: false,
+  },
+};
+
+export const GAME_TYPE_OPTIONS = [
+  GAME_TYPE_CONFIG[GAME_TYPES.QUESTION_TO_PATTERN],
+  GAME_TYPE_CONFIG[GAME_TYPES.TEMPLATE_TO_PATTERN],
+];
+
+export function getGameTypeConfig(gameType) {
+  return GAME_TYPE_CONFIG[gameType] || GAME_TYPE_CONFIG[GAME_TYPES.QUESTION_TO_PATTERN];
+}

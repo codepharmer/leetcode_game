@@ -1,4 +1,5 @@
-﻿import { DEFAULT_STATS, STORAGE_KEY } from "./constants";
+import { STORAGE_KEY } from "./constants";
+import { createDefaultProgress, normalizeProgress } from "./progressModel";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "";
 
@@ -65,28 +66,27 @@ export function getStorageAdapter({ credential } = {}) {
 }
 
 export async function loadData(storage) {
-  let stats = { ...DEFAULT_STATS };
-  let history = {};
+  let progress = createDefaultProgress();
   let found = false;
 
   try {
     const r = await storage.get(STORAGE_KEY);
     if (r && r.value) {
-      const p = JSON.parse(r.value);
-      stats = p.stats || stats;
-      history = p.history || history;
+      const payload = JSON.parse(r.value);
+      progress = normalizeProgress(payload);
       found = true;
     }
   } catch (e) {
     // ignore
   }
 
-  return { stats, history, found };
+  return { progress, found };
 }
 
-export async function saveData(storage, stats, history) {
+export async function saveData(storage, progress) {
   try {
-    await storage.set(STORAGE_KEY, JSON.stringify({ stats, history }));
+    const normalized = normalizeProgress(progress);
+    await storage.set(STORAGE_KEY, JSON.stringify(normalized));
   } catch (e) {
     // ignore
   }

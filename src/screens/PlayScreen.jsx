@@ -1,11 +1,12 @@
-﻿import { DIFF_COLORS } from "../lib/constants";
+import { DIFF_COLORS } from "../lib/constants";
 import { S } from "../styles";
 
 import { AccuracyDot } from "../components/AccuracyDot";
+import { CodeBlock } from "../components/CodeBlock";
 import { TemplateViewer } from "../components/TemplateViewer";
 
 export function PlayScreen({
-  currentQ,
+  currentItem,
   currentIdx,
   total,
   score,
@@ -21,8 +22,12 @@ export function PlayScreen({
   showTemplate,
   setShowTemplate,
   history,
+  promptLabel,
+  revealTemplateAfterAnswer,
 }) {
-  if (!currentQ) return null;
+  if (!currentItem) return null;
+
+  const isCodePrompt = currentItem.promptKind === "code";
 
   return (
     <div style={S.playContainer}>
@@ -49,21 +54,27 @@ export function PlayScreen({
 
       <div style={S.questionArea}>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <span style={{ ...S.diffBadge, color: DIFF_COLORS[currentQ.difficulty], borderColor: DIFF_COLORS[currentQ.difficulty] + "40" }}>
-            {currentQ.difficulty}
+          <span style={{ ...S.diffBadge, color: DIFF_COLORS[currentItem.difficulty], borderColor: DIFF_COLORS[currentItem.difficulty] + "40" }}>
+            {currentItem.difficulty}
           </span>
-          <AccuracyDot qId={currentQ.id} history={history} />
+          <AccuracyDot qId={currentItem.id} history={history} />
         </div>
-        <h2 style={S.questionName}>{currentQ.name}</h2>
+        <h2 style={S.questionName}>{isCodePrompt ? "Code Template" : currentItem.title}</h2>
 
-        <button className="hover-row" onClick={() => setShowDesc((p) => !p)} style={S.descToggle}>
-          {showDesc ? " hide description" : " show description"}
-          <span style={S.descHotkey}>D</span>
-        </button>
+        {!isCodePrompt && (
+          <>
+            <button className="hover-row" onClick={() => setShowDesc((p) => !p)} style={S.descToggle}>
+              {showDesc ? " hide description" : " show description"}
+              <span style={S.descHotkey}>D</span>
+            </button>
 
-        {showDesc && <div style={{ ...S.descBox, animation: "descReveal 0.25s ease-out" }}>{currentQ.desc}</div>}
+            {showDesc && <div style={{ ...S.descBox, animation: "descReveal 0.25s ease-out" }}>{currentItem.desc}</div>}
+          </>
+        )}
 
-        <p style={S.questionPrompt}>What pattern solves this?</p>
+        {isCodePrompt && <CodeBlock code={currentItem.code} />}
+
+        <p style={S.questionPrompt}>{promptLabel}</p>
       </div>
 
       <div style={S.choicesGrid}>
@@ -72,7 +83,7 @@ export function PlayScreen({
             border = "var(--border)",
             fg = "var(--text)";
           if (selected !== null) {
-            if (c === currentQ.pattern) {
+            if (c === currentItem.pattern) {
               bg = "rgba(16, 185, 129, 0.15)";
               border = "var(--accent)";
               fg = "var(--accent)";
@@ -106,11 +117,11 @@ export function PlayScreen({
       {showNext && (
         <div style={{ animation: "fadeUp 0.2s ease-out" }}>
           <div style={S.nextArea}>
-            {selected === currentQ.pattern ? (
+            {selected === currentItem.pattern ? (
               <span style={{ color: "var(--accent)", fontSize: 14, fontWeight: 600 }}> correct</span>
             ) : (
               <span style={{ color: "var(--danger)", fontSize: 14, fontWeight: 600 }}>
-                {" "}answer: <span style={{ color: "var(--text)" }}>{currentQ.pattern}</span>
+                {" "}answer: <span style={{ color: "var(--text)" }}>{currentItem.pattern}</span>
               </span>
             )}
             <button onClick={onNext} style={S.nextBtn}>
@@ -118,7 +129,9 @@ export function PlayScreen({
             </button>
           </div>
 
-          <TemplateViewer pattern={currentQ.pattern} open={showTemplate} onOpenChange={setShowTemplate} />
+          {revealTemplateAfterAnswer && (
+            <TemplateViewer pattern={currentItem.pattern} open={showTemplate} onOpenChange={setShowTemplate} />
+          )}
         </div>
       )}
     </div>

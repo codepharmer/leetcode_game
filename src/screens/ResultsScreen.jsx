@@ -1,7 +1,8 @@
-﻿import { PATTERN_COLORS } from "../lib/constants";
+import { GAME_TYPES, PATTERN_COLORS } from "../lib/constants";
 import { S } from "../styles";
 
 import { AccuracyDot } from "../components/AccuracyDot";
+import { CodeBlock } from "../components/CodeBlock";
 import { TemplateViewer } from "../components/TemplateViewer";
 
 export function ResultsScreen({
@@ -18,6 +19,7 @@ export function ResultsScreen({
   startGame,
   goMenu,
   history,
+  gameType,
 }) {
   return (
     <div style={S.resultsContainer}>
@@ -56,24 +58,33 @@ export function ResultsScreen({
       )}
 
       <div style={S.resultsList}>
-        {results.map((r, i) => (
-          <div key={i} style={{ ...S.resultRowOuter, animation: `slideIn 0.2s ease-out ${i * 0.03}s both` }}>
-            <div className="hover-row" onClick={() => setExpandedResult((p) => ({ ...p, [i]: !p[i] }))} style={S.resultRow}>
-              <span style={{ ...S.resultIcon, color: r.correct ? "var(--accent)" : "var(--danger)" }}>{r.correct ? "" : ""}</span>
-              <span style={S.resultName}>{r.question.name}</span>
-              <AccuracyDot qId={r.question.id} history={history} />
-              <span style={{ ...S.resultPattern, color: PATTERN_COLORS[r.question.pattern] || "var(--text)" }}>{r.question.pattern}</span>
-              {!r.correct && <span style={S.resultWrong}>(you: {r.chosen})</span>}
-              <span style={S.chevron}>{expandedResult[i] ? "" : ""}</span>
-            </div>
-            {expandedResult[i] && (
-              <div style={{ padding: "0 12px 12px 40px", animation: "descReveal 0.2s ease-out" }}>
-                <div style={{ fontSize: 13, lineHeight: 1.6, color: "var(--dim)", marginBottom: 10 }}>{r.question.desc}</div>
-                <TemplateViewer pattern={r.question.pattern} compact />
+        {results.map((r, i) => {
+          const item = r.item || r.question;
+          if (!item) return null;
+
+          return (
+            <div key={i} style={{ ...S.resultRowOuter, animation: `slideIn 0.2s ease-out ${i * 0.03}s both` }}>
+              <div className="hover-row" onClick={() => setExpandedResult((p) => ({ ...p, [i]: !p[i] }))} style={S.resultRow}>
+                <span style={{ ...S.resultIcon, color: r.correct ? "var(--accent)" : "var(--danger)" }}>{r.correct ? "" : ""}</span>
+                <span style={S.resultName}>{item.title || item.name || item.id}</span>
+                <AccuracyDot qId={item.id} history={history} />
+                <span style={{ ...S.resultPattern, color: PATTERN_COLORS[item.pattern] || "var(--text)" }}>{item.pattern}</span>
+                {!r.correct && <span style={S.resultWrong}>(you: {r.chosen})</span>}
+                <span style={S.chevron}>{expandedResult[i] ? "" : ""}</span>
               </div>
-            )}
-          </div>
-        ))}
+              {expandedResult[i] && (
+                <div style={{ padding: "0 12px 12px 40px", animation: "descReveal 0.2s ease-out" }}>
+                  {item.promptKind === "code" ? (
+                    <CodeBlock code={item.code} />
+                  ) : (
+                    <div style={{ fontSize: 13, lineHeight: 1.6, color: "var(--dim)", marginBottom: 10 }}>{item.desc}</div>
+                  )}
+                  {gameType !== GAME_TYPES.TEMPLATE_TO_PATTERN && <TemplateViewer pattern={item.pattern} compact />}
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
 
       <div style={S.resultsActions}>

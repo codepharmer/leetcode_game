@@ -88,6 +88,11 @@ function StatRing({ label, value, percentage, delay = 0 }) {
 }
 
 export function MenuScreen({
+  gameType,
+  setGameType,
+  gameTypeOptions,
+  menuSubtitle,
+  roundNoun,
   stats,
   lifetimePct,
   masteredCount,
@@ -117,14 +122,16 @@ export function MenuScreen({
   const displayName = user?.name || user?.email || "Guest";
   const avatarLetter = (displayName || "G").trim().slice(0, 1).toUpperCase();
 
-  const diffLabel = filterDifficulty === "All" ? "all difficulties" : `${String(filterDifficulty).toLowerCase()} problems`;
+  const noun = roundNoun || "questions";
+  const diffLabel = filterDifficulty === "All" ? "all difficulties" : `${String(filterDifficulty).toLowerCase()} ${noun}`;
   const qLabel = totalQuestions === allCount ? "all available" : totalQuestions;
+  const selectedModeLabel = (gameTypeOptions || []).find((opt) => opt.value === gameType)?.label || "mode";
 
   const needsWork = weakSpots.slice(0, 5).map((q) => {
     const h = history[q.id];
     const total = (h?.correct || 0) + (h?.wrong || 0);
     const pct = total > 0 ? Math.round((h.correct / total) * 100) : 0;
-    return { name: q.name, progress: pct };
+    return { name: q.title || q.name || q.id, progress: pct };
   });
 
   return (
@@ -161,7 +168,7 @@ export function MenuScreen({
           <span style={{ color: "var(--accent)", fontFamily: "'DM Mono', monospace", fontWeight: 500 }}>.</span>
           <span style={S.logoDim}>match</span>
         </div>
-        <div style={S.subtitle}>Map Blind 75 questions to their solution patterns</div>
+        <div style={S.subtitle}>{menuSubtitle}</div>
       </div>
 
       <div style={S.content}>
@@ -223,12 +230,28 @@ export function MenuScreen({
             }}
           >
             <span style={{ ...S.sectionLabel, marginBottom: 0 }}>round settings</span>
-            <span style={{ fontSize: 12, color: "var(--dim)", fontFamily: "'DM Mono', monospace" }}>{showRoundSettings ? "hide" : "show"}</span>
+            <span style={{ fontSize: 12, color: "var(--dim)", fontFamily: "'DM Mono', monospace" }}>
+              {selectedModeLabel} | {showRoundSettings ? "hide" : "show"}
+            </span>
           </button>
 
           {showRoundSettings && (
             <div style={{ padding: "0 24px 22px", borderTop: "1px solid var(--border)", animation: "descReveal 0.2s ease-out" }}>
               <div style={{ display: "flex", flexDirection: "column", gap: 14, marginTop: 14 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                  <span style={S.configLabel}>Mode</span>
+                  <div style={S.pillGroup}>
+                    {(gameTypeOptions || []).map((opt) => (
+                      <button
+                        key={opt.value}
+                        onClick={() => setGameType(opt.value)}
+                        style={{ ...S.pill, ...(gameType === opt.value ? S.pillActive : {}) }}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
                   <span style={S.configLabel}>Difficulty</span>
                   <div style={S.pillGroup}>
@@ -240,7 +263,7 @@ export function MenuScreen({
                   </div>
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-                  <span style={S.configLabel}>Questions</span>
+                  <span style={S.configLabel}>{noun}</span>
                   <div style={S.pillGroup}>
                     {questionCountOptions.map((n) => (
                       <button key={n} onClick={() => setTotalQuestions(n)} style={{ ...S.pill, ...(totalQuestions === n ? S.pillActive : {}) }}>
@@ -261,7 +284,7 @@ export function MenuScreen({
                   lineHeight: 1.5,
                 }}
               >
-                Practice <span style={{ color: "var(--muted)" }}>{qLabel} questions</span> across <span style={{ color: "var(--muted)" }}>{diffLabel}</span>
+                Practice <span style={{ color: "var(--muted)" }}>{qLabel} {noun}</span> across <span style={{ color: "var(--muted)" }}>{diffLabel}</span>
               </div>
             </div>
           )}
