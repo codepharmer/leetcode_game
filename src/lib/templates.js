@@ -15,7 +15,7 @@
 export const TEMPLATE_GROUPS = [
   {
     category: "Arrays & Hashing",
-    patterns: ["Hash Map", "Bucket Sort", "Prefix/Suffix", "Design"],
+    patterns: ["Hash Map", "Hash Set", "Bucket Sort", "Prefix/Suffix", "Design"],
     templates: [
       {
         name: "A) Hash Lookup (set / dict)",
@@ -88,6 +88,48 @@ for fast in range(len(arr)):
         arr[slow] = arr[fast]
         slow += 1
 # result is arr[:slow]`,
+      },
+    ],
+  },
+  {
+    category: "Palindromes",
+    patterns: ["Expand Around Center"],
+    templates: [
+      {
+        name: "A) Expand Around Center (longest)",
+        code: `def expand(l, r):
+    while l >= 0 and r < n and s[l] == s[r]:
+        l -= 1
+        r += 1
+    return l + 1, r - 1  # inclusive bounds
+
+bestL, bestR = 0, -1
+for i in range(n):
+    l1, r1 = expand(i, i)        # odd length
+    l2, r2 = expand(i, i + 1)    # even length
+    if r1 - l1 > bestR - bestL:
+        bestL, bestR = l1, r1
+    if r2 - l2 > bestR - bestL:
+        bestL, bestR = l2, r2
+
+return s[bestL:bestR+1]`,
+      },
+      {
+        name: "B) Expand Around Center (count)",
+        code: `def count_from_center(l, r):
+    c = 0
+    while l >= 0 and r < n and s[l] == s[r]:
+        c += 1
+        l -= 1
+        r += 1
+    return c
+
+count = 0
+for i in range(n):
+    count += count_from_center(i, i)        # odd
+    count += count_from_center(i, i + 1)    # even
+
+return count`,
       },
     ],
   },
@@ -173,7 +215,7 @@ for i, x in enumerate(arr):
   },
   {
     category: "Binary Search",
-    patterns: ["Binary Search"],
+    patterns: ["Binary Search", "BST Property / Binary Search"],
     templates: [
       {
         name: "A) Standard Exact Search",
@@ -557,6 +599,27 @@ for r in range(1, R+1):
         dp[r][c] = transition(dp, r, c)
 return dp[R][C]
 # For string DP, r and c are indices in the two strings.`,
+      },
+    ],
+  },
+  {
+    category: "DP + Binary Search",
+    patterns: ["DP + Binary Search (Patience Sorting)"],
+    templates: [
+      {
+        name: "A) Patience Sorting (LIS length)",
+        code: `# O(n log n) length of strictly increasing subsequence
+import bisect
+
+tails = []  # tails[i] = min possible tail of an LIS of length i+1
+for x in nums:
+    i = bisect.bisect_left(tails, x)  # use bisect_right for non-decreasing
+    if i == len(tails):
+        tails.append(x)
+    else:
+        tails[i] = x
+
+return len(tails)`,
       },
     ],
   },

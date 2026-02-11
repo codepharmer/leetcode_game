@@ -45,7 +45,7 @@ export function TemplateViewer({ pattern, compact, open: openProp, onOpenChange 
           <button
             className="hover-row"
             onClick={() => setShowUniversal(!showUniversal)}
-            style={{ ...S.templateToggle, marginBottom: 8, color: "#565f89" }}
+            style={{ ...S.templateToggle, marginBottom: 8, color: "var(--dim)" }}
           >
             {showUniversal ? "" : ""} universal skeleton
           </button>

@@ -24,7 +24,7 @@ export function BrowseScreen({
             <button
               key={d}
               onClick={() => setBrowseFilter(d)}
-              style={{ ...S.pillSmall, ...(browseFilter === d ? S.pillActive : {}), color: d !== "All" && browseFilter === d ? DIFF_COLORS[d] : undefined }}
+              style={{ ...S.pillSmall, ...(browseFilter === d ? S.pillActive : {}) }}
             >
               {d.toLowerCase()}
             </button>
@@ -40,8 +40,8 @@ export function BrowseScreen({
           .map(([pattern, qs]) => (
             <div key={pattern} style={S.patternCard}>
               <div style={S.patternHeader}>
-                <span style={{ ...S.patternDot, background: PATTERN_COLORS[pattern] || "#a9b1d6" }} />
-                <span style={{ ...S.patternName, color: PATTERN_COLORS[pattern] || "#a9b1d6" }}>{pattern}</span>
+                <span style={{ ...S.patternDot, background: PATTERN_COLORS[pattern] || "var(--text)" }} />
+                <span style={{ ...S.patternName, color: PATTERN_COLORS[pattern] || "var(--text)" }}>{pattern}</span>
                 <span style={S.patternCount}>{qs.length}</span>
               </div>
 

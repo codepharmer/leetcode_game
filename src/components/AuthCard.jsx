@@ -22,11 +22,22 @@ export function AuthCard({ user, authError, onGoogleSuccess, onGoogleError, onSi
         </div>
       ) : (
         <div style={S.authCol}>
-          <div style={S.authHint}>sign in with google</div>
-          <GoogleLogin onSuccess={onGoogleSuccess} onError={onGoogleError} theme="filled_black" size="large" shape="pill" width="280" />
-          {authError && <div style={S.authError}>{authError}</div>}
+          <div style={S.authHint}>sign in to sync results</div>
+          <GoogleLogin
+            onSuccess={onGoogleSuccess}
+            onError={onGoogleError}
+            theme="filled_black"
+            size="large"
+            shape="pill"
+            width="280"
+            // GIS renders the button inside a cross-origin iframe. In dark-mode contexts,
+            // browsers sometimes paint a white iframe background that can't be styled via CSS.
+            // Forcing a light color-scheme on the container prevents that artifact.
+            containerProps={{ style: { colorScheme: "light" } }}
+          />
         </div>
       )}
+      {authError && <div style={{ ...S.authError, marginTop: 10 }}>{authError}</div>}
     </div>
   );
 }

@@ -21,3 +21,11 @@ cloudfront-update-*.json
 oac-*.json
 route53-*.json
 bucket-policy-*.json
+lambda-function-url-config.json
+
+# Lambda build artifacts
+lambda/**/function.bin
+
+# Local scratch
+README.copy.md
+testpkg.bin

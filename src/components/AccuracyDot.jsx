@@ -4,11 +4,11 @@
 
   const total = h.correct + h.wrong;
   const pct = Math.round((h.correct / total) * 100);
-  const color = pct >= 80 ? "#98c379" : pct >= 50 ? "#e5c07b" : "#e06c75";
+  const color = pct >= 80 ? "var(--accent)" : pct >= 50 ? "var(--warn)" : "var(--danger)";
 
   return (
-    <span style={{ fontSize: 10, color, fontFamily: "'JetBrains Mono',monospace", flexShrink: 0, marginLeft: 4 }}>
-      {pct}%<span style={{ color: "#3b3d52", fontSize: 9 }}> ({total})</span>
+    <span style={{ fontSize: 11, color, flexShrink: 0, marginLeft: 4, fontVariantNumeric: "tabular-nums" }}>
+      {pct}%<span style={{ color: "var(--faint)", fontSize: 10 }}> ({total})</span>
     </span>
   );
 }

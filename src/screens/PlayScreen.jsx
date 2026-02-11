@@ -35,7 +35,7 @@ export function PlayScreen({
             {currentIdx + 1}
             <span style={S.statDim}>/{total}</span>
           </span>
-          <span style={{ ...S.statItem, color: "#98c379" }}>
+          <span style={{ ...S.statItem, color: "var(--accent)" }}>
             {score}
             <span style={S.statDim}> correct</span>
           </span>
@@ -68,18 +68,18 @@ export function PlayScreen({
 
       <div style={S.choicesGrid}>
         {choices.map((c, i) => {
-          let bg = "transparent",
-            border = "#3b3d52",
-            fg = "#a9b1d6";
+          let bg = "var(--surface-1)",
+            border = "var(--border)",
+            fg = "var(--text)";
           if (selected !== null) {
             if (c === currentQ.pattern) {
-              bg = "#98c37918";
-              border = "#98c379";
-              fg = "#98c379";
+              bg = "rgba(16, 185, 129, 0.15)";
+              border = "var(--accent)";
+              fg = "var(--accent)";
             } else if (c === selected) {
-              bg = "#e06c7518";
-              border = "#e06c75";
-              fg = "#e06c75";
+              bg = "rgba(239, 68, 68, 0.12)";
+              border = "var(--danger)";
+              fg = "var(--danger)";
             }
           }
 
@@ -107,10 +107,10 @@ export function PlayScreen({
         <div style={{ animation: "fadeUp 0.2s ease-out" }}>
           <div style={S.nextArea}>
             {selected === currentQ.pattern ? (
-              <span style={{ color: "#98c379", fontFamily: "'JetBrains Mono',monospace", fontSize: 14 }}> correct</span>
+              <span style={{ color: "var(--accent)", fontSize: 14, fontWeight: 600 }}> correct</span>
             ) : (
-              <span style={{ color: "#e06c75", fontFamily: "'JetBrains Mono',monospace", fontSize: 14 }}>
-                {" "}answer: <span style={{ color: "#a9b1d6" }}>{currentQ.pattern}</span>
+              <span style={{ color: "var(--danger)", fontSize: 14, fontWeight: 600 }}>
+                {" "}answer: <span style={{ color: "var(--text)" }}>{currentQ.pattern}</span>
               </span>
             )}
             <button onClick={onNext} style={S.nextBtn}>

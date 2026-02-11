@@ -1,8 +1,11 @@
 ﻿import { DEFAULT_STATS, STORAGE_KEY } from "./constants";
 
-function getStorageAdapter() {
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "";
+
+function getLocalStorageAdapter() {
   if (typeof window === "undefined") {
     return {
+      kind: "local",
       get: async () => ({ value: null }),
       set: async () => {},
     };
@@ -12,11 +15,12 @@ function getStorageAdapter() {
 
   // Supports environments that provide a KV-like async storage adapter (e.g., browser extensions).
   if (w.storage && typeof w.storage.get === "function" && typeof w.storage.set === "function") {
-    return w.storage;
+    return { kind: "local", ...w.storage };
   }
 
   // Default web fallback.
   return {
+    kind: "local",
     get: async (key) => ({ value: w.localStorage.getItem(key) }),
     set: async (key, value) => {
       w.localStorage.setItem(key, value);
@@ -24,10 +28,46 @@ function getStorageAdapter() {
   };
 }
 
-export async function loadData() {
-  const storage = getStorageAdapter();
+function createApiStorageAdapter(credential) {
+  const base = String(API_BASE_URL || "").replace(/\/+$/, "");
+  return {
+    kind: "api",
+    get: async (key) => {
+      const r = await fetch(`${base}/storage/${encodeURIComponent(key)}`, {
+        method: "GET",
+        headers: { Authorization: `Bearer ${credential}` },
+      });
+      if (!r.ok) {
+        const e = new Error(`API GET failed (${r.status})`);
+        e.status = r.status;
+        throw e;
+      }
+      return await r.json();
+    },
+    set: async (key, value) => {
+      const r = await fetch(`${base}/storage/${encodeURIComponent(key)}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${credential}` },
+        body: JSON.stringify({ value }),
+      });
+      if (!r.ok) {
+        const e = new Error(`API PUT failed (${r.status})`);
+        e.status = r.status;
+        throw e;
+      }
+    },
+  };
+}
+
+export function getStorageAdapter({ credential } = {}) {
+  if (credential && API_BASE_URL) return createApiStorageAdapter(credential);
+  return getLocalStorageAdapter();
+}
+
+export async function loadData(storage) {
   let stats = { ...DEFAULT_STATS };
   let history = {};
+  let found = false;
 
   try {
     const r = await storage.get(STORAGE_KEY);
@@ -35,16 +75,16 @@ export async function loadData() {
       const p = JSON.parse(r.value);
       stats = p.stats || stats;
       history = p.history || history;
+      found = true;
     }
   } catch (e) {
     // ignore
   }
 
-  return { stats, history };
+  return { stats, history, found };
 }
 
-export async function saveData(stats, history) {
-  const storage = getStorageAdapter();
+export async function saveData(storage, stats, history) {
   try {
     await storage.set(STORAGE_KEY, JSON.stringify({ stats, history }));
   } catch (e) {

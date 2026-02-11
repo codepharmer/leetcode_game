@@ -6,18 +6,18 @@ import { CodeBlock } from "../components/CodeBlock";
 
 export function TemplatesScreen({ goMenu }) {
   return (
-    <div style={S.browseContainer}>
-      <div style={S.topBar}>
-        <button onClick={goMenu} style={S.backBtn}>
-          {" "}back
-        </button>
-        <span style={{ fontSize: 14, color: "#c0caf5", fontWeight: 600 }}>All Templates</span>
-      </div>
+      <div style={S.browseContainer}>
+        <div style={S.topBar}>
+          <button onClick={goMenu} style={S.backBtn}>
+            {" "}back
+          </button>
+          <span style={{ fontSize: 14, color: "var(--text-strong)", fontWeight: 700 }}>All Templates</span>
+        </div>
 
       <div style={S.templateFullCard}>
         <div style={{ ...S.patternHeader, marginBottom: 6 }}>
-          <span style={{ ...S.patternDot, background: "#98c379" }} />
-          <span style={{ ...S.patternName, color: "#98c379" }}>Universal Interview Skeleton</span>
+          <span style={{ ...S.patternDot, background: "var(--accent)" }} />
+          <span style={{ ...S.patternName, color: "var(--accent)" }}>Universal Interview Skeleton</span>
         </div>
         <CodeBlock code={UNIVERSAL_TEMPLATE.code} />
       </div>
@@ -25,11 +25,11 @@ export function TemplatesScreen({ goMenu }) {
       {TEMPLATE_GROUPS.map((g, gi) => (
         <div key={gi} style={S.templateFullCard}>
           <div style={S.patternHeader}>
-            <span style={{ ...S.patternDot, background: PATTERN_COLORS[g.patterns[0]] || "#a9b1d6" }} />
-            <span style={{ ...S.patternName, color: PATTERN_COLORS[g.patterns[0]] || "#a9b1d6" }}>{g.category}</span>
+            <span style={{ ...S.patternDot, background: PATTERN_COLORS[g.patterns[0]] || "var(--text)" }} />
+            <span style={{ ...S.patternName, color: PATTERN_COLORS[g.patterns[0]] || "var(--text)" }}>{g.category}</span>
             <span style={S.patternCount}>{g.templates.length} templates</span>
           </div>
-          <div style={{ fontSize: 11, color: "#3b3d52", marginBottom: 8 }}>patterns: {g.patterns.join(", ")}</div>
+          <div style={{ fontSize: 12, color: "var(--dim)", marginBottom: 10 }}>patterns: {g.patterns.join(", ")}</div>
           {g.templates.map((t, ti) => (
             <div key={ti} style={S.templateItem}>
               <div style={S.templateName}>{t.name}</div>
