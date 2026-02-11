@@ -1,3 +1,5 @@
+import { useState } from "react";
+
 import { S } from "../styles";
 
 import { AuthCard } from "../components/AuthCard";
@@ -110,6 +112,7 @@ export function MenuScreen({
 }) {
   const allCount = Number.isFinite(totalAvailableQuestions) ? totalAvailableQuestions : 0;
   const questionCountOptions = Array.from(new Set([10, 20, 40, allCount].filter((n) => n > 0)));
+  const [showRoundSettings, setShowRoundSettings] = useState(false);
 
   const displayName = user?.name || user?.email || "Guest";
   const avatarLetter = (displayName || "G").trim().slice(0, 1).toUpperCase();
@@ -203,62 +206,69 @@ export function MenuScreen({
           </div>
         </div>
 
-        {/* Needs work */}
-        <div style={{ ...S.card, animation: "fadeSlideIn 0.5s ease 0.25s both" }}>
-          <div style={S.sectionLabel}>needs work</div>
-          {needsWork.length > 0 ? (
-            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-              {needsWork.map((item, i) => (
-                <ProgressBar key={item.name} label={item.name} percentage={item.progress} delay={0.3 + i * 0.08} />
-              ))}
+        {/* Round settings */}
+        <div style={{ ...S.card, padding: 0, overflow: "hidden", animation: "fadeSlideIn 0.5s ease 0.2s both" }}>
+          <button
+            onClick={() => setShowRoundSettings((p) => !p)}
+            style={{
+              width: "100%",
+              background: "none",
+              border: "none",
+              textAlign: "left",
+              padding: "18px 24px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              cursor: "pointer",
+            }}
+          >
+            <span style={{ ...S.sectionLabel, marginBottom: 0 }}>round settings</span>
+            <span style={{ fontSize: 12, color: "var(--dim)", fontFamily: "'DM Mono', monospace" }}>{showRoundSettings ? "hide" : "show"}</span>
+          </button>
+
+          {showRoundSettings && (
+            <div style={{ padding: "0 24px 22px", borderTop: "1px solid var(--border)", animation: "descReveal 0.2s ease-out" }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: 14, marginTop: 14 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                  <span style={S.configLabel}>Difficulty</span>
+                  <div style={S.pillGroup}>
+                    {["All", "Easy", "Medium", "Hard"].map((d) => (
+                      <button key={d} onClick={() => setFilterDifficulty(d)} style={{ ...S.pill, ...(filterDifficulty === d ? S.pillActive : {}) }}>
+                        {d.toLowerCase()}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                  <span style={S.configLabel}>Questions</span>
+                  <div style={S.pillGroup}>
+                    {questionCountOptions.map((n) => (
+                      <button key={n} onClick={() => setTotalQuestions(n)} style={{ ...S.pill, ...(totalQuestions === n ? S.pillActive : {}) }}>
+                        {n === allCount ? "all" : n}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              <div
+                style={{
+                  fontFamily: "'DM Sans', sans-serif",
+                  fontSize: 13,
+                  color: "var(--faint)",
+                  marginTop: 16,
+                  paddingTop: 14,
+                  borderTop: "1px solid var(--border)",
+                  lineHeight: 1.5,
+                }}
+              >
+                Practice <span style={{ color: "var(--muted)" }}>{qLabel} questions</span> across <span style={{ color: "var(--muted)" }}>{diffLabel}</span>
+              </div>
             </div>
-          ) : (
-            <div style={{ fontSize: 13, color: "var(--dim)", lineHeight: 1.5 }}>No weak spots yet. Play a few rounds to generate data.</div>
           )}
         </div>
 
-        {/* Round settings */}
-        <div style={{ ...S.card, animation: "fadeSlideIn 0.5s ease 0.35s both" }}>
-          <div style={S.sectionLabel}>round settings</div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-              <span style={S.configLabel}>Difficulty</span>
-              <div style={S.pillGroup}>
-                {["All", "Easy", "Medium", "Hard"].map((d) => (
-                  <button key={d} onClick={() => setFilterDifficulty(d)} style={{ ...S.pill, ...(filterDifficulty === d ? S.pillActive : {}) }}>
-                    {d.toLowerCase()}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-              <span style={S.configLabel}>Questions</span>
-              <div style={S.pillGroup}>
-                {questionCountOptions.map((n) => (
-                  <button key={n} onClick={() => setTotalQuestions(n)} style={{ ...S.pill, ...(totalQuestions === n ? S.pillActive : {}) }}>
-                    {n === allCount ? "all" : n}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-          <div
-            style={{
-              fontFamily: "'DM Sans', sans-serif",
-              fontSize: 13,
-              color: "var(--faint)",
-              marginTop: 16,
-              paddingTop: 14,
-              borderTop: "1px solid var(--border)",
-              lineHeight: 1.5,
-            }}
-          >
-            Practice <span style={{ color: "var(--muted)" }}>{qLabel} questions</span> across <span style={{ color: "var(--muted)" }}>{diffLabel}</span>
-          </div>
-        </div>
-
         {/* Start button */}
-        <div style={{ animation: "fadeSlideIn 0.5s ease 0.45s both" }}>
+        <div style={{ animation: "fadeSlideIn 0.5s ease 0.25s both" }}>
           <button onClick={startGame} style={{ ...S.startBtn, width: "100%", animation: "pulseGlow 3s ease-in-out infinite" }}>
             <span
               style={{
@@ -272,6 +282,20 @@ export function MenuScreen({
             />
             <span style={{ position: "relative" }}>Start Round</span>
           </button>
+        </div>
+
+        {/* Needs work */}
+        <div style={{ ...S.card, animation: "fadeSlideIn 0.5s ease 0.25s both" }}>
+          <div style={S.sectionLabel}>needs work</div>
+          {needsWork.length > 0 ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+              {needsWork.map((item, i) => (
+                <ProgressBar key={item.name} label={item.name} percentage={item.progress} delay={0.3 + i * 0.08} />
+              ))}
+            </div>
+          ) : (
+            <div style={{ fontSize: 13, color: "var(--dim)", lineHeight: 1.5 }}>No weak spots yet. Play a few rounds to generate data.</div>
+          )}
         </div>
 
         {/* Secondary actions */}
