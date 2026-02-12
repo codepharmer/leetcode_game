@@ -13,11 +13,13 @@ export const MODES = {
   RESULTS: "results",
   BROWSE: "browse",
   TEMPLATES: "templates",
+  BLUEPRINT: "blueprint",
 };
 
 export const GAME_TYPES = {
   QUESTION_TO_PATTERN: "question_to_pattern",
   TEMPLATE_TO_PATTERN: "template_to_pattern",
+  BLUEPRINT_BUILDER: "blueprint_builder",
 };
 
 export const DIFF_COLORS = {

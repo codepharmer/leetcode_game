@@ -10,6 +10,7 @@ import { useAuthSession } from "./hooks/useAuthSession";
 import { useGameSession } from "./hooks/useGameSession";
 import { useProgressSync } from "./hooks/useProgressSync";
 import { BrowseScreen } from "./screens/BrowseScreen";
+import { BlueprintScreen } from "./screens/BlueprintScreen";
 import { MenuScreen } from "./screens/MenuScreen";
 import { PlayScreen } from "./screens/PlayScreen";
 import { ResultsScreen } from "./screens/ResultsScreen";
@@ -44,11 +45,13 @@ export default function App() {
   const modeProgress = useMemo(() => getModeProgress(progress, gameType), [gameType, progress]);
   const stats = modeProgress.stats;
   const history = modeProgress.history;
+  const modeMeta = modeProgress.meta || {};
 
   useEffect(() => {
+    if (activeGame.supportsQuestionCount === false) return;
     const max = activeGame.items.length;
     if (max > 0 && totalQuestions > max) setTotalQuestions(max);
-  }, [activeGame.items.length, totalQuestions]);
+  }, [activeGame.items.length, activeGame.supportsQuestionCount, totalQuestions]);
 
   useEffect(() => {
     setExpandedBrowse({});
@@ -80,14 +83,29 @@ export default function App() {
     [gameType, progressRef, setProgress]
   );
 
+  const setModeMeta = useCallback(
+    (updater) => {
+      const currentProgress = progressRef.current;
+      const currentModeProgress = getModeProgress(currentProgress, gameType);
+      const prevMeta = currentModeProgress.meta || {};
+      const nextMeta = typeof updater === "function" ? updater(prevMeta) : updater || {};
+      const nextProgress = setModeProgress(currentProgress, gameType, { ...currentModeProgress, meta: nextMeta });
+      progressRef.current = nextProgress;
+      setProgress(nextProgress);
+      return nextMeta;
+    },
+    [gameType, progressRef, setProgress]
+  );
+
   const persistModeProgress = useCallback(
-    (nextStats, nextHistory) => {
+    (nextStats, nextHistory, nextMeta) => {
       const currentProgress = progressRef.current;
       const currentModeProgress = getModeProgress(currentProgress, gameType);
       const nextProgress = setModeProgress(currentProgress, gameType, {
         ...currentModeProgress,
         stats: nextStats,
         history: nextHistory || {},
+        meta: (nextMeta ?? currentModeProgress.meta) || {},
       });
 
       progressRef.current = nextProgress;
@@ -105,6 +123,31 @@ export default function App() {
   const handleRoundComplete = useCallback(() => {
     setExpandedResult({});
   }, []);
+
+  const blueprintStars = useMemo(() => {
+    const source = modeMeta?.levelStars;
+    if (!source || typeof source !== "object") return {};
+    const out = {};
+    for (const key of Object.keys(source)) {
+      const value = Number(source[key]);
+      if (Number.isFinite(value) && value > 0) out[key] = Math.max(0, Math.min(3, Math.round(value)));
+    }
+    return out;
+  }, [modeMeta]);
+
+  const saveBlueprintStars = useCallback(
+    (levelId, stars) => {
+      const safeLevelId = String(levelId);
+      const safeStars = Math.max(0, Math.min(3, Number(stars) || 0));
+      const nextMeta = setModeMeta((prevMeta) => {
+        const prevStars = prevMeta?.levelStars || {};
+        const nextStars = Math.max(Number(prevStars[safeLevelId] || 0), safeStars);
+        return { ...prevMeta, levelStars: { ...prevStars, [safeLevelId]: nextStars } };
+      });
+      persistModeProgress(stats, history, nextMeta);
+    },
+    [history, persistModeProgress, setModeMeta, stats]
+  );
 
   const {
     roundItems,
@@ -139,6 +182,15 @@ export default function App() {
     resetViewport,
     onRoundComplete: handleRoundComplete,
   });
+
+  const startSelectedMode = useCallback(() => {
+    if (gameType === GAME_TYPES.BLUEPRINT_BUILDER) {
+      setMode(MODES.BLUEPRINT);
+      resetViewport();
+      return;
+    }
+    startGame();
+  }, [gameType, resetViewport, setMode, startGame]);
 
   const resetAllData = useCallback(async () => {
     const freshProgress = createDefaultProgress();
@@ -190,9 +242,13 @@ export default function App() {
           setFilterDifficulty={setFilterDifficulty}
           totalQuestions={totalQuestions}
           setTotalQuestions={setTotalQuestions}
-          startGame={startGame}
+          startGame={startSelectedMode}
           goBrowse={() => setMode(MODES.BROWSE)}
           goTemplates={() => setMode(MODES.TEMPLATES)}
+          supportsBrowse={activeGame.supportsBrowse !== false}
+          supportsTemplates={activeGame.supportsTemplates !== false}
+          supportsDifficultyFilter={activeGame.supportsDifficultyFilter !== false}
+          supportsQuestionCount={activeGame.supportsQuestionCount !== false}
           showResetConfirm={showResetConfirm}
           setShowResetConfirm={setShowResetConfirm}
           resetAllData={resetAllData}
@@ -255,6 +311,14 @@ export default function App() {
       )}
 
       {mode === MODES.TEMPLATES && <TemplatesScreen goMenu={() => setMode(MODES.MENU)} />}
+
+      {mode === MODES.BLUEPRINT && (
+        <BlueprintScreen
+          goMenu={() => setMode(MODES.MENU)}
+          initialStars={blueprintStars}
+          onSaveStars={saveBlueprintStars}
+        />
+      )}
     </div>
   );
 }

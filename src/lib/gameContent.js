@@ -1,4 +1,5 @@
 import { GAME_TYPES } from "./constants";
+import { BLUEPRINT_LEVELS } from "./blueprint/levels";
 import { ALL_PATTERNS, QUESTIONS } from "./questions";
 import { PATTERN_CONFUSION_MAP, TEMPLATE_QUESTIONS } from "./templateQuestions";
 import { genChoices, genChoicesWithConfusions } from "./utils";
@@ -38,12 +39,31 @@ const GAME_TYPE_CONFIG = {
     allPatterns: ALL_PATTERNS,
     buildChoices: (correctPattern) => genChoicesWithConfusions(correctPattern, ALL_PATTERNS, PATTERN_CONFUSION_MAP),
     revealTemplateAfterAnswer: false,
+    supportsBrowse: true,
+    supportsTemplates: true,
+  },
+  [GAME_TYPES.BLUEPRINT_BUILDER]: {
+    value: GAME_TYPES.BLUEPRINT_BUILDER,
+    label: "blueprint builder",
+    menuSubtitle: "Build algorithm blueprints card by card and step through execution traces",
+    roundNoun: "levels",
+    promptLabel: "",
+    browseTitle: "",
+    items: BLUEPRINT_LEVELS,
+    allPatterns: [],
+    buildChoices: () => [],
+    revealTemplateAfterAnswer: false,
+    supportsBrowse: false,
+    supportsTemplates: false,
+    supportsDifficultyFilter: false,
+    supportsQuestionCount: false,
   },
 };
 
 export const GAME_TYPE_OPTIONS = [
   GAME_TYPE_CONFIG[GAME_TYPES.QUESTION_TO_PATTERN],
   GAME_TYPE_CONFIG[GAME_TYPES.TEMPLATE_TO_PATTERN],
+  GAME_TYPE_CONFIG[GAME_TYPES.BLUEPRINT_BUILDER],
 ];
 
 export function getGameTypeConfig(gameType) {

@@ -111,6 +111,10 @@ export function MenuScreen({
   startGame,
   goBrowse,
   goTemplates,
+  supportsBrowse = true,
+  supportsTemplates = true,
+  supportsDifficultyFilter = true,
+  supportsQuestionCount = true,
   showResetConfirm,
   setShowResetConfirm,
   resetAllData,
@@ -126,6 +130,7 @@ export function MenuScreen({
   const diffLabel = filterDifficulty === "All" ? "all difficulties" : `${String(filterDifficulty).toLowerCase()} ${noun}`;
   const qLabel = totalQuestions === allCount ? "all available" : totalQuestions;
   const selectedModeLabel = (gameTypeOptions || []).find((opt) => opt.value === gameType)?.label || "mode";
+  const startLabel = supportsDifficultyFilter || supportsQuestionCount ? "Start Round" : "Open Blueprint Builder";
 
   const needsWork = weakSpots.slice(0, 5).map((q) => {
     const h = history[q.id];
@@ -252,26 +257,30 @@ export function MenuScreen({
                     ))}
                   </div>
                 </div>
-                <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-                  <span style={S.configLabel}>Difficulty</span>
-                  <div style={S.pillGroup}>
-                    {["All", "Easy", "Medium", "Hard"].map((d) => (
-                      <button key={d} onClick={() => setFilterDifficulty(d)} style={{ ...S.pill, ...(filterDifficulty === d ? S.pillActive : {}) }}>
-                        {d.toLowerCase()}
-                      </button>
-                    ))}
+                {supportsDifficultyFilter && (
+                  <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                    <span style={S.configLabel}>Difficulty</span>
+                    <div style={S.pillGroup}>
+                      {["All", "Easy", "Medium", "Hard"].map((d) => (
+                        <button key={d} onClick={() => setFilterDifficulty(d)} style={{ ...S.pill, ...(filterDifficulty === d ? S.pillActive : {}) }}>
+                          {d.toLowerCase()}
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                </div>
-                <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-                  <span style={S.configLabel}>{noun}</span>
-                  <div style={S.pillGroup}>
-                    {questionCountOptions.map((n) => (
-                      <button key={n} onClick={() => setTotalQuestions(n)} style={{ ...S.pill, ...(totalQuestions === n ? S.pillActive : {}) }}>
-                        {n === allCount ? "all" : n}
-                      </button>
-                    ))}
+                )}
+                {supportsQuestionCount && (
+                  <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                    <span style={S.configLabel}>{noun}</span>
+                    <div style={S.pillGroup}>
+                      {questionCountOptions.map((n) => (
+                        <button key={n} onClick={() => setTotalQuestions(n)} style={{ ...S.pill, ...(totalQuestions === n ? S.pillActive : {}) }}>
+                          {n === allCount ? "all" : n}
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
               <div
                 style={{
@@ -284,7 +293,15 @@ export function MenuScreen({
                   lineHeight: 1.5,
                 }}
               >
-                Practice <span style={{ color: "var(--muted)" }}>{qLabel} {noun}</span> across <span style={{ color: "var(--muted)" }}>{diffLabel}</span>
+                {supportsDifficultyFilter || supportsQuestionCount ? (
+                  <>
+                    Practice <span style={{ color: "var(--muted)" }}>{qLabel} {noun}</span> across <span style={{ color: "var(--muted)" }}>{diffLabel}</span>
+                  </>
+                ) : (
+                  <>
+                    This mode tracks completion per level with star ratings based on attempt count.
+                  </>
+                )}
               </div>
             </div>
           )}
@@ -303,7 +320,7 @@ export function MenuScreen({
                 pointerEvents: "none",
               }}
             />
-            <span style={{ position: "relative" }}>Start Round</span>
+            <span style={{ position: "relative" }}>{startLabel}</span>
           </button>
         </div>
 
@@ -322,14 +339,20 @@ export function MenuScreen({
         </div>
 
         {/* Secondary actions */}
-        <div style={{ display: "flex", gap: 10, justifyContent: "center", animation: "fadeSlideIn 0.5s ease 0.5s both" }}>
-          <button onClick={goBrowse} style={S.browseBtn}>
-            browse patterns
-          </button>
-          <button onClick={goTemplates} style={S.browseBtn}>
-            view templates
-          </button>
-        </div>
+        {(supportsBrowse || supportsTemplates) && (
+          <div style={{ display: "flex", gap: 10, justifyContent: "center", animation: "fadeSlideIn 0.5s ease 0.5s both" }}>
+            {supportsBrowse && (
+              <button onClick={goBrowse} style={S.browseBtn}>
+                browse patterns
+              </button>
+            )}
+            {supportsTemplates && (
+              <button onClick={goTemplates} style={S.browseBtn}>
+                view templates
+              </button>
+            )}
+          </div>
+        )}
 
         {/* Danger zone */}
         {stats.gamesPlayed > 0 && (

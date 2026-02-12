@@ -22,8 +22,13 @@ function normalizeHistory(history = {}) {
   return out;
 }
 
+function normalizeMeta(meta) {
+  if (!meta || typeof meta !== "object" || Array.isArray(meta)) return {};
+  return { ...meta };
+}
+
 export function createEmptyModeProgress() {
-  return { stats: cloneStats(), history: {} };
+  return { stats: cloneStats(), history: {}, meta: {} };
 }
 
 export function createDefaultProgress() {
@@ -32,6 +37,7 @@ export function createDefaultProgress() {
     byGameType: {
       [GAME_TYPES.QUESTION_TO_PATTERN]: createEmptyModeProgress(),
       [GAME_TYPES.TEMPLATE_TO_PATTERN]: createEmptyModeProgress(),
+      [GAME_TYPES.BLUEPRINT_BUILDER]: createEmptyModeProgress(),
     },
   };
 }
@@ -49,6 +55,7 @@ export function normalizeProgress(payload) {
         [GAME_TYPES.QUESTION_TO_PATTERN]: {
           stats: cloneStats(payload?.stats),
           history: normalizeHistory(payload?.history || {}),
+          meta: {},
         },
       },
     };
@@ -63,6 +70,7 @@ export function normalizeProgress(payload) {
     out.byGameType[gameType] = {
       stats: cloneStats(mode?.stats),
       history: normalizeHistory(mode?.history || {}),
+      meta: normalizeMeta(mode?.meta),
     };
   }
 
@@ -83,6 +91,7 @@ export function setModeProgress(progress, gameType, modeProgress) {
       [gameType]: {
         stats: cloneStats(modeProgress?.stats),
         history: normalizeHistory(modeProgress?.history || {}),
+        meta: normalizeMeta(modeProgress?.meta),
       },
     },
   };

@@ -61,9 +61,44 @@ export function statsEqual(a, b) {
   );
 }
 
+function normalizeMeta(meta) {
+  if (!meta || typeof meta !== "object" || Array.isArray(meta)) return {};
+  return { ...meta };
+}
+
+function mergeLevelStars(remoteStars, localStars) {
+  const remote = remoteStars && typeof remoteStars === "object" ? remoteStars : {};
+  const local = localStars && typeof localStars === "object" ? localStars : {};
+  const merged = {};
+  const keys = new Set([...Object.keys(remote), ...Object.keys(local)]);
+
+  for (const key of keys) {
+    const rv = Math.max(0, Math.min(3, Math.round(Number(remote[key] || 0))));
+    const lv = Math.max(0, Math.min(3, Math.round(Number(local[key] || 0))));
+    const next = Math.max(rv, lv);
+    if (next > 0) merged[key] = next;
+  }
+  return merged;
+}
+
+function mergeMeta(remoteMeta, localMeta) {
+  const remote = normalizeMeta(remoteMeta);
+  const local = normalizeMeta(localMeta);
+  const merged = { ...remote, ...local };
+  if ("levelStars" in remote || "levelStars" in local) {
+    merged.levelStars = mergeLevelStars(remote.levelStars, local.levelStars);
+  }
+  return merged;
+}
+
+function metaEqual(a, b) {
+  return JSON.stringify(normalizeMeta(a)) === JSON.stringify(normalizeMeta(b));
+}
+
 function mergeModeProgress(remoteMode, localMode) {
   const remoteStats = normalizeStats(remoteMode?.stats);
   const localStats = normalizeStats(localMode?.stats);
+  const remoteMeta = normalizeMeta(remoteMode?.meta);
 
   const remoteHistory = remoteMode?.history || {};
   const localHistory = localMode?.history || {};
@@ -85,9 +120,10 @@ function mergeModeProgress(remoteMode, localMode) {
   };
 
   return {
-    mergedMode: { stats: mergedStats, history: mergedHistory },
+    mergedMode: { stats: mergedStats, history: mergedHistory, meta: mergeMeta(remoteMode?.meta, localMode?.meta) },
     localIsSubset,
     remoteStats,
+    remoteMeta,
   };
 }
 
@@ -102,11 +138,13 @@ export function mergeProgressData(remoteProgressLike, localProgressLike) {
   for (const gameType of Object.values(GAME_TYPES)) {
     const remoteMode = getModeProgress(remoteProgress, gameType);
     const localMode = getModeProgress(localProgress, gameType);
-    const { mergedMode, localIsSubset, remoteStats } = mergeModeProgress(remoteMode, localMode);
+    const { mergedMode, localIsSubset, remoteStats, remoteMeta } = mergeModeProgress(remoteMode, localMode);
     mergedProgress.byGameType[gameType] = mergedMode;
 
     if (!localIsSubset) allLocalIsSubset = false;
-    if (!localIsSubset || !statsEqual(mergedMode.stats, remoteStats)) shouldWriteRemote = true;
+    if (!localIsSubset || !statsEqual(mergedMode.stats, remoteStats) || !metaEqual(mergedMode.meta, remoteMeta)) {
+      shouldWriteRemote = true;
+    }
   }
 
   return {
