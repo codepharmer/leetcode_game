@@ -4,37 +4,38 @@ import { describe, expect, it, vi } from "vitest";
 import { BlueprintScreen } from "./BlueprintScreen";
 
 describe("screens/BlueprintScreen", () => {
-  it("renders level menu and supports returning to app menu", () => {
+  it("renders world menu and supports returning to app menu", () => {
     const goMenu = vi.fn();
     render(<BlueprintScreen goMenu={goMenu} initialStars={{ 1: 2 }} onSaveStars={vi.fn()} />);
 
     expect(screen.getByText("Blueprint Builder")).toBeInTheDocument();
-    expect(screen.getByText("Maximum Window Sum")).toBeInTheDocument();
+    expect(screen.getByText(/World 1: Hash Maps & Sets/i)).toBeInTheDocument();
+    expect(screen.getByText(/Daily Problem/i)).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: /^back$/i }));
     expect(goMenu).toHaveBeenCalled();
   });
 
-  it("opens a level and can navigate back to level list", () => {
+  it("opens a challenge and can navigate back to world list", () => {
     render(<BlueprintScreen goMenu={vi.fn()} initialStars={{}} onSaveStars={vi.fn()} />);
 
-    fireEvent.click(screen.getByRole("button", { name: /Maximum Window Sum/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Two Sum/i }));
     expect(screen.getByText("Run Blueprint")).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: /levels/i }));
-    expect(screen.getByText("Pair With Target Sum")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /worlds/i }));
+    expect(screen.getByText(/World 10/i)).toBeInTheDocument();
   });
 
-  it("shows generated blueprint options from the full solution set", () => {
+  it("shows soft-gated worlds", () => {
     render(<BlueprintScreen goMenu={vi.fn()} initialStars={{}} onSaveStars={vi.fn()} />);
 
-    expect(screen.getByRole("button", { name: /Two Sum/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Set Matrix Zeroes/i })).toBeInTheDocument();
+    expect(screen.getAllByText(/Unlocks after completing any 2 worlds/i).length).toBeGreaterThan(0);
+    expect(screen.getByText(/Boss rush unlocks after completing any 5 worlds/i)).toBeInTheDocument();
   });
 
   it("supports dragging a deck card into a slot", () => {
     render(<BlueprintScreen goMenu={vi.fn()} initialStars={{}} onSaveStars={vi.fn()} />);
-    fireEvent.click(screen.getByRole("button", { name: /Maximum Window Sum/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Two Sum/i }));
 
     const deckCardsBefore = screen.getAllByTestId(/blueprint-deck-card-/);
     const draggedCard = deckCardsBefore[0];
@@ -61,11 +62,9 @@ describe("screens/BlueprintScreen", () => {
     expect(within(setupSlot).getByText("remove")).toBeInTheDocument();
   });
 
-  it("uses solution-only deck and keeps run disabled until all solution cards are placed", () => {
+  it("keeps run disabled until all solution cards are placed", () => {
     render(<BlueprintScreen goMenu={vi.fn()} initialStars={{}} onSaveStars={vi.fn()} />);
-    fireEvent.click(screen.getByRole("button", { name: /Maximum Window Sum/i }));
-
-    expect(screen.queryByText("windowSum -= nums[right]")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /Two Sum/i }));
 
     const runButton = screen.getByRole("button", { name: /run blueprint/i });
     expect(runButton).toBeDisabled();

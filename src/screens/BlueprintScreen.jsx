@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 
+import { getBlueprintCampaign } from "../lib/blueprint/campaign";
 import { findDivergence, getCorrectTrace, runAllTests } from "../lib/blueprint/engine";
-import { BLUEPRINT_LEVELS } from "../lib/blueprint/levels";
 import { getBlueprintTemplate } from "../lib/blueprint/templates";
 import { shuffle } from "../lib/utils";
 import { S } from "../styles";
@@ -15,33 +15,72 @@ const DIFF_COLOR = {
   Hard: "#EF4444",
 };
 
+function normalizeStars(stars) {
+  const out = {};
+  for (const key of Object.keys(stars || {})) {
+    const value = Number(stars?.[key] || 0);
+    if (!Number.isFinite(value) || value <= 0) continue;
+    out[String(key)] = Math.max(0, Math.min(3, Math.round(value)));
+  }
+  return out;
+}
+
+function getLevelStars(starsByLevel, levelId) {
+  return Number(starsByLevel?.[String(levelId)] || 0);
+}
+
+function getChallengeBadgeColor(challenge) {
+  if (challenge?.isBossRush) return "#EF4444";
+  if (challenge?.tier === 1) return "#10B981";
+  if (challenge?.tier === 2) return "#F59E0B";
+  return "#EF4444";
+}
+
 export function BlueprintScreen({ goMenu, initialStars, onSaveStars }) {
   const [view, setView] = useState("menu");
-  const [levelId, setLevelId] = useState(null);
-  const [completed, setCompleted] = useState(initialStars || {});
+  const [activeChallenge, setActiveChallenge] = useState(null);
+  const [selectedWorldId, setSelectedWorldId] = useState(1);
+  const [completed, setCompleted] = useState(() => normalizeStars(initialStars));
 
   useEffect(() => {
-    setCompleted(initialStars || {});
+    setCompleted(normalizeStars(initialStars));
   }, [initialStars]);
 
-  const level = useMemo(() => BLUEPRINT_LEVELS.find((item) => item.id === levelId) || null, [levelId]);
+  const campaign = useMemo(() => getBlueprintCampaign(completed), [completed]);
+  const selectedWorld = useMemo(
+    () => campaign.worlds.find((world) => world.id === selectedWorldId) || campaign.worlds[0] || null,
+    [campaign.worlds, selectedWorldId]
+  );
+  const totalStars = useMemo(
+    () => Object.values(completed).reduce((sum, value) => sum + Math.max(0, Math.min(3, Number(value) || 0)), 0),
+    [completed]
+  );
 
-  const startLevel = (id) => {
-    setLevelId(id);
+  useEffect(() => {
+    if (!selectedWorld || selectedWorld.isUnlocked) return;
+    const firstUnlocked = campaign.worlds.find((world) => world.isUnlocked);
+    if (firstUnlocked) setSelectedWorldId(firstUnlocked.id);
+  }, [campaign.worlds, selectedWorld]);
+
+  const startChallenge = (challenge) => {
+    if (!challenge?.level) return;
+    setActiveChallenge(challenge);
     setView("game");
   };
 
   const handleComplete = (id, stars) => {
-    const nextStars = Math.max(Number(completed?.[id] || 0), Number(stars || 0));
-    setCompleted((prev) => ({ ...prev, [id]: nextStars }));
-    onSaveStars?.(id, nextStars);
+    const safeId = String(id);
+    const nextStars = Math.max(Number(completed?.[safeId] || 0), Number(stars || 0));
+    setCompleted((prev) => ({ ...prev, [safeId]: nextStars }));
+    onSaveStars?.(safeId, nextStars);
     setView("menu");
   };
 
-  if (view === "game" && level) {
+  if (view === "game" && activeChallenge?.level) {
     return (
       <BlueprintGame
-        level={level}
+        level={activeChallenge.level}
+        challenge={activeChallenge}
         onBack={() => setView("menu")}
         onComplete={handleComplete}
       />
@@ -55,68 +94,224 @@ export function BlueprintScreen({ goMenu, initialStars, onSaveStars }) {
           {" "}back
         </button>
         <span style={S.blueprintTitle}>Blueprint Builder</span>
-        <div style={S.blueprintTopMeta}>levels: {BLUEPRINT_LEVELS.length}</div>
+        <div style={S.blueprintTopMeta}>stars: {totalStars}</div>
       </div>
 
       <div style={S.blueprintMenuIntro}>
-        Build each algorithm from cards, run test cases, then inspect the execution trace when it fails.
+        Worlds are grouped by pattern family. Each stage reveals one tier at a time so you only see the next two problems.
       </div>
 
-      <div style={S.blueprintMenuList}>
-        {BLUEPRINT_LEVELS.map((item) => {
-          const stars = Number(completed[item.id] || 0);
+      {campaign.dailyChallenge ? (
+        <button
+          className="hover-row"
+          onClick={() => startChallenge(campaign.dailyChallenge.challenge)}
+          style={{
+            ...S.blueprintMenuCard,
+            borderColor: "rgba(245, 158, 11, 0.45)",
+            background: "rgba(245, 158, 11, 0.08)",
+          }}
+        >
+          <div style={S.blueprintMenuCardTop}>
+            <span style={{ ...S.diffBadge, color: "var(--warn)", borderColor: "rgba(245, 158, 11, 0.45)" }}>Daily Problem</span>
+            <span style={S.blueprintPatternBadge}>{campaign.dailyChallenge.dateKey}</span>
+          </div>
+          <h3 style={S.blueprintLevelTitle}>{campaign.dailyChallenge.level?.title}</h3>
+          <p style={S.blueprintLevelDesc}>From World {campaign.dailyChallenge.worldId}. Keeps pattern-switching sharp.</p>
+          <div style={S.blueprintStarRow}>
+            {[1, 2, 3].map((n) => (
+              <span
+                key={n}
+                style={{
+                  ...S.blueprintStar,
+                  color: n <= getLevelStars(completed, campaign.dailyChallenge.levelId) ? "var(--warn)" : "var(--faint)",
+                }}
+              >
+                *
+              </span>
+            ))}
+          </div>
+        </button>
+      ) : null}
+
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(230px, 1fr))", gap: 10 }}>
+        {campaign.worlds.map((world) => {
+          const isSelected = selectedWorld?.id === world.id;
           return (
             <button
-              key={item.id}
+              key={world.id}
               className="hover-row"
-              onClick={() => startLevel(item.id)}
+              onClick={() => world.isUnlocked && setSelectedWorldId(world.id)}
+              disabled={!world.isUnlocked}
               style={{
                 ...S.blueprintMenuCard,
-                borderColor: `${DIFF_COLOR[item.difficulty] || "var(--border)"}40`,
+                opacity: world.isUnlocked ? 1 : 0.55,
+                cursor: world.isUnlocked ? "pointer" : "not-allowed",
+                borderColor: isSelected ? "rgba(16, 185, 129, 0.45)" : "var(--border)",
+                background: isSelected ? "rgba(16, 185, 129, 0.08)" : "var(--surface-1)",
               }}
             >
               <div style={S.blueprintMenuCardTop}>
                 <span
                   style={{
                     ...S.diffBadge,
-                    color: DIFF_COLOR[item.difficulty] || "var(--dim)",
-                    borderColor: `${DIFF_COLOR[item.difficulty] || "var(--border)"}50`,
+                    color: world.isUnlocked ? "var(--accent)" : "var(--dim)",
+                    borderColor: "var(--border)",
                   }}
                 >
-                  {item.difficulty}
+                  {world.name}
                 </span>
-                <span style={S.blueprintPatternBadge}>{item.pattern}</span>
+                <span style={S.blueprintPatternBadge}>{world.family}</span>
               </div>
-              <h3 style={S.blueprintLevelTitle}>{item.title}</h3>
-              <p style={S.blueprintLevelDesc}>{item.description}</p>
-              <div style={S.blueprintStarRow}>
-                {[1, 2, 3].map((n) => (
-                  <span
-                    key={n}
-                    style={{
-                      ...S.blueprintStar,
-                      color: n <= stars ? "var(--warn)" : "var(--faint)",
-                    }}
-                  >
-                    *
-                  </span>
-                ))}
+              <div style={{ fontSize: 12, color: "var(--dim)", fontFamily: "'DM Mono', monospace" }}>
+                problems: {world.totalCount} ({world.problemRange})
               </div>
+              <div style={{ fontSize: 12, color: world.isComplete ? "var(--accent)" : "var(--faint)" }}>
+                {world.completedCount}/{world.totalCount} complete
+              </div>
+              {!world.isUnlocked ? <div style={{ fontSize: 12, color: "var(--warn)" }}>{world.unlockRule.label}</div> : null}
             </button>
           );
         })}
       </div>
+
+      {selectedWorld ? (
+        <div style={{ ...S.blueprintProblemCard, marginTop: 4 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+            <div>
+              <div style={S.blueprintLevelTitle}>
+                {selectedWorld.name}: {selectedWorld.family}
+              </div>
+              <div style={{ fontSize: 12, color: "var(--dim)" }}>
+                {selectedWorld.activeStage?.label || "Set 1"} | {selectedWorld.activeTier?.label || "Tier 1"}
+              </div>
+            </div>
+            <div style={{ ...S.blueprintTopMeta, minWidth: "auto" }}>
+              progress: {selectedWorld.progressPct}%
+            </div>
+          </div>
+
+          {!selectedWorld.isUnlocked ? (
+            <div style={S.blueprintLevelDesc}>{selectedWorld.unlockRule.label}</div>
+          ) : (
+            <>
+              {selectedWorld.visibleChallenges.length === 0 ? (
+                <div style={S.blueprintLevelDesc}>World complete. Replay daily or choose another world.</div>
+              ) : (
+                <div style={S.blueprintMenuList}>
+                  {selectedWorld.visibleChallenges.map((challenge) => {
+                    const item = challenge.level;
+                    const stars = getLevelStars(completed, challenge.levelId);
+                    return (
+                      <button
+                        key={challenge.id}
+                        className="hover-row"
+                        onClick={() => startChallenge(challenge)}
+                        style={{
+                          ...S.blueprintMenuCard,
+                          borderColor: `${getChallengeBadgeColor(challenge)}55`,
+                        }}
+                      >
+                        <div style={S.blueprintMenuCardTop}>
+                          <span
+                            style={{
+                              ...S.diffBadge,
+                              color: getChallengeBadgeColor(challenge),
+                              borderColor: `${getChallengeBadgeColor(challenge)}55`,
+                            }}
+                          >
+                            {challenge.tierIcon} {challenge.tierRole}
+                          </span>
+                          <span style={{ ...S.diffBadge, color: DIFF_COLOR[item.difficulty] || "var(--dim)", borderColor: "var(--border)" }}>
+                            {item.difficulty}
+                          </span>
+                          <span style={S.blueprintPatternBadge}>{challenge.showPatternLabel ? item.pattern : "pattern hidden"}</span>
+                        </div>
+                        <h3 style={S.blueprintLevelTitle}>{item.title}</h3>
+                        <p style={S.blueprintLevelDesc}>{item.description}</p>
+                        <div style={{ ...S.blueprintTopMeta, minWidth: "auto", textAlign: "left" }}>
+                          time limit: {Math.round(challenge.timeLimitSec / 60)}m
+                        </div>
+                        <div style={S.blueprintStarRow}>
+                          {[1, 2, 3].map((n) => (
+                            <span key={n} style={{ ...S.blueprintStar, color: n <= stars ? "var(--warn)" : "var(--faint)" }}>
+                              *
+                            </span>
+                          ))}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+
+              {selectedWorld.lockedSilhouettes.length > 0 ? (
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  {selectedWorld.lockedSilhouettes.map((silhouette) => (
+                    <div
+                      key={silhouette.tierIndex}
+                      style={{
+                        ...S.blueprintMenuCard,
+                        borderStyle: "dashed",
+                        borderColor: "var(--border)",
+                        opacity: 0.65,
+                        cursor: "default",
+                      }}
+                    >
+                      <div style={S.blueprintMenuCardTop}>
+                        <span style={{ ...S.diffBadge, color: "var(--dim)", borderColor: "var(--border)" }}>{silhouette.label}</span>
+                        <span style={S.blueprintPatternBadge}>locked</span>
+                      </div>
+                      <div style={S.blueprintLevelDesc}>Complete current tier to unlock {silhouette.count} more problems.</div>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+            </>
+          )}
+        </div>
+      ) : null}
     </div>
   );
 }
 
-function BlueprintGame({ level, onBack, onComplete }) {
+function formatElapsed(ms) {
+  const safeMs = Math.max(0, Number(ms) || 0);
+  const totalSeconds = Math.round(safeMs / 1000);
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = String(totalSeconds % 60).padStart(2, "0");
+  return `${minutes}:${seconds}`;
+}
+
+function sortCardsForGuided(cards, slotIds) {
+  const slotOrder = new Map(slotIds.map((slotId, index) => [slotId, index]));
+  return [...cards].sort((a, b) => {
+    const slotA = slotOrder.get(a.correctSlot) ?? 999;
+    const slotB = slotOrder.get(b.correctSlot) ?? 999;
+    if (slotA !== slotB) return slotA - slotB;
+    return (a.correctOrder || 0) - (b.correctOrder || 0);
+  });
+}
+
+function buildHintMessage(card, hintsMode) {
+  if (card?.isDistractor) return "This card may be a distractor.";
+  if (hintsMode === "limited") return `Focus on the ${String(card?.hint || card?.correctSlot || "correct")} phase.`;
+  return `This card belongs in ${card?.hint || card?.correctSlot || "a different slot"}.`;
+}
+
+function BlueprintGame({ level, challenge, onBack, onComplete }) {
   const slotDefs = useMemo(() => getBlueprintTemplate(level.templateId).slots, [level.templateId]);
   const slotIds = useMemo(() => slotDefs.map((slot) => slot.id), [slotDefs]);
   const solutionCards = useMemo(() => {
     const required = (level.cards || []).filter((card) => !!card.correctSlot);
     return required.length > 0 ? required : level.cards || [];
   }, [level.cards]);
+  const hintsMode = challenge?.hintsMode || (level.hints ? "full" : "none");
+  const guided = !!challenge?.guided;
+  const hideSlotScaffolding = !!challenge?.hideSlotScaffolding;
+  const showPatternLabel = challenge?.showPatternLabel !== false;
+  const timeLimitSec = Number(challenge?.timeLimitSec || 180);
+  const maxHints = hintsMode === "limited" ? 2 : Number.POSITIVE_INFINITY;
+  const orderedSolutionCards = useMemo(() => (guided ? sortCardsForGuided(solutionCards, slotIds) : solutionCards), [guided, solutionCards, slotIds]);
 
   const [deck, setDeck] = useState([]);
   const [slots, setSlots] = useState({});
@@ -130,13 +325,17 @@ function BlueprintGame({ level, onBack, onComplete }) {
   const [attempts, setAttempts] = useState(0);
   const [divergence, setDivergence] = useState(null);
   const [showHint, setShowHint] = useState(null);
+  const [hintUses, setHintUses] = useState(0);
+  const [usedHint, setUsedHint] = useState(false);
+  const [startedAt, setStartedAt] = useState(Date.now());
+  const [runSummary, setRunSummary] = useState(null);
 
   useEffect(() => {
     const nextSlots = {};
     for (const slotId of slotIds) nextSlots[slotId] = [];
 
     setSlots(nextSlots);
-    setDeck(shuffle(solutionCards));
+    setDeck(guided ? orderedSolutionCards : shuffle(solutionCards));
     setSelected(null);
     setDraggingCardId(null);
     setDragOverSlotId(null);
@@ -147,7 +346,13 @@ function BlueprintGame({ level, onBack, onComplete }) {
     setAttempts(0);
     setDivergence(null);
     setShowHint(null);
-  }, [level.id, slotIds, solutionCards]);
+    setHintUses(0);
+    setUsedHint(false);
+    setStartedAt(Date.now());
+    setRunSummary(null);
+  }, [guided, level.id, orderedSolutionCards, slotIds, solutionCards]);
+
+  const selectedOrGuided = selected || (guided ? deck[0] || null : null);
 
   const getCardById = (cardId) => {
     if (!cardId) return null;
@@ -203,8 +408,8 @@ function BlueprintGame({ level, onBack, onComplete }) {
   };
 
   const handleSlotClick = (slotId) => {
-    if (phase !== "build" || !selected) return;
-    placeCardInSlot(selected.id, slotId);
+    if (phase !== "build" || !selectedOrGuided) return;
+    placeCardInSlot(selectedOrGuided.id, slotId);
   };
 
   const removeFromSlot = (card, slotId) => {
@@ -235,7 +440,22 @@ function BlueprintGame({ level, onBack, onComplete }) {
     setExecStep(0);
     setPhase("executing");
 
-    if (!results.every((result) => result.passed)) {
+    const allPassed = results.every((result) => result.passed);
+    const elapsedMs = Math.max(0, Date.now() - startedAt);
+    const underTime = allPassed && elapsedMs <= timeLimitSec * 1000;
+    const noHintBonus = allPassed && !usedHint;
+    const stars = allPassed ? 1 + (underTime ? 1 : 0) + (noHintBonus ? 1 : 0) : 0;
+    setRunSummary({
+      allPassed,
+      stars,
+      elapsedMs,
+      underTime,
+      noHintBonus,
+      usedHint,
+      timeLimitSec,
+    });
+
+    if (!allPassed) {
       const correct = getCorrectTrace(level);
       setDivergence(findDivergence(firstTrace, correct.trace));
     } else {
@@ -248,7 +468,7 @@ function BlueprintGame({ level, onBack, onComplete }) {
     for (const slotId of slotIds) nextSlots[slotId] = [];
 
     setSlots(nextSlots);
-    setDeck(shuffle(solutionCards));
+    setDeck(guided ? orderedSolutionCards : shuffle(solutionCards));
     setSelected(null);
     setDraggingCardId(null);
     setDragOverSlotId(null);
@@ -258,6 +478,10 @@ function BlueprintGame({ level, onBack, onComplete }) {
     setExecStep(0);
     setDivergence(null);
     setShowHint(null);
+    setHintUses(0);
+    setUsedHint(false);
+    setStartedAt(Date.now());
+    setRunSummary(null);
   };
 
   const handleBackToBuild = () => {
@@ -266,10 +490,11 @@ function BlueprintGame({ level, onBack, onComplete }) {
     setExecTrace([]);
     setExecStep(0);
     setDivergence(null);
+    setRunSummary(null);
   };
 
-  const allPassed = testResults?.every((result) => result.passed);
-  const stars = allPassed ? (attempts <= 1 ? 3 : attempts <= 3 ? 2 : 1) : 0;
+  const allPassed = !!runSummary?.allPassed;
+  const stars = Number(runSummary?.stars || 0);
   const totalPlaced = Object.values(slots).reduce((sum, items) => sum + items.length, 0);
   const requiredCards = solutionCards.length;
   const canRun = requiredCards > 0 && totalPlaced === requiredCards;
@@ -278,34 +503,48 @@ function BlueprintGame({ level, onBack, onComplete }) {
     <div style={S.blueprintContainer}>
       <div style={S.topBar}>
         <button onClick={onBack} style={S.backBtn}>
-          {" "}levels
+          {" "}worlds
         </button>
         <span style={S.blueprintTitle}>{level.title}</span>
         <div style={S.blueprintTopMeta}>attempts: {attempts}</div>
       </div>
 
       <div style={S.blueprintProblemCard}>
-        <div style={{ ...S.diffBadge, color: DIFF_COLOR[level.difficulty] || "var(--text)", borderColor: `${DIFF_COLOR[level.difficulty] || "var(--border)"}45` }}>
-          {level.pattern}
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <span style={{ ...S.diffBadge, color: getChallengeBadgeColor(challenge), borderColor: `${getChallengeBadgeColor(challenge)}55` }}>
+            {challenge?.tierIcon || "LVL"} {challenge?.tierRole || level.difficulty}
+          </span>
+          <span style={{ ...S.diffBadge, color: DIFF_COLOR[level.difficulty] || "var(--text)", borderColor: `${DIFF_COLOR[level.difficulty] || "var(--border)"}45` }}>
+            {level.difficulty}
+          </span>
+          <span style={S.blueprintPatternBadge}>{showPatternLabel ? level.pattern : "pattern hidden"}</span>
         </div>
+        {challenge?.isBossRush ? (
+          <div style={{ fontSize: 12, color: "var(--warn)" }}>Boss rush mode: identify the pattern yourself.</div>
+        ) : null}
         <p style={S.blueprintProblemText}>{level.description}</p>
         <pre style={S.blueprintExample}>{level.example}</pre>
-        <div style={{ ...S.blueprintTopMeta, minWidth: "auto", textAlign: "left" }}>
-          solution cards: {totalPlaced}/{requiredCards}
+        <div style={{ ...S.blueprintTopMeta, minWidth: "auto", textAlign: "left", display: "flex", gap: 14, flexWrap: "wrap" }}>
+          <span>solution cards: {totalPlaced}/{requiredCards}</span>
+          <span>time limit: {formatElapsed(timeLimitSec * 1000)}</span>
+          {hintsMode === "limited" ? <span>hint budget: {Math.max(0, maxHints - hintUses)}</span> : null}
         </div>
       </div>
 
       {phase === "build" && (
         <>
           <div style={S.blueprintSlotList}>
-            {slotDefs.map((meta) => {
+            {slotDefs.map((meta, slotIndex) => {
               const slotId = meta.id;
               const cards = slots[slotId] || [];
               const limit = level.slotLimits?.[slotId];
-              const activeCardId = selected?.id || draggingCardId;
+              const activeCardId = selectedOrGuided?.id || draggingCardId;
               const canDropHere = !!activeCardId && canPlaceCardInSlot(activeCardId, slotId);
               const isDragOver = dragOverSlotId === slotId && canDropHere;
               const isTarget = canDropHere;
+              const displayMeta = hideSlotScaffolding
+                ? { ...meta, icon: String(slotIndex + 1), name: `Slot ${slotIndex + 1}`, desc: "Place a core step" }
+                : meta;
 
               return (
                 <div
@@ -332,15 +571,15 @@ function BlueprintGame({ level, onBack, onComplete }) {
                   }}
                   style={{
                     ...S.blueprintSlot,
-                    borderColor: isDragOver ? `${meta.color}` : isTarget ? `${meta.color}88` : "var(--border)",
-                    background: isDragOver ? `${meta.color}22` : isTarget ? `${meta.color}10` : "var(--surface-1)",
+                    borderColor: isDragOver ? `${displayMeta.color}` : isTarget ? `${displayMeta.color}88` : "var(--border)",
+                    background: isDragOver ? `${displayMeta.color}22` : isTarget ? `${displayMeta.color}10` : "var(--surface-1)",
                     cursor: isTarget ? "pointer" : "default",
                   }}
                 >
                   <div style={S.blueprintSlotHeader}>
-                    <span style={{ ...S.blueprintSlotIcon, color: meta.color }}>{meta.icon}</span>
-                    <span style={{ ...S.blueprintSlotName, color: meta.color }}>{meta.name}</span>
-                    <span style={S.blueprintSlotDesc}>{meta.desc}</span>
+                    <span style={{ ...S.blueprintSlotIcon, color: displayMeta.color }}>{displayMeta.icon}</span>
+                    <span style={{ ...S.blueprintSlotName, color: displayMeta.color }}>{displayMeta.name}</span>
+                    <span style={S.blueprintSlotDesc}>{displayMeta.desc}</span>
                     {limit ? <span style={S.blueprintSlotLimit}>{cards.length}/{limit}</span> : null}
                   </div>
 
@@ -360,7 +599,7 @@ function BlueprintGame({ level, onBack, onComplete }) {
                           }}
                           style={{
                             ...S.blueprintPlacedCard,
-                            borderLeftColor: meta.color,
+                            borderLeftColor: displayMeta.color,
                           }}
                         >
                           <pre style={S.blueprintCardCode}>{card.text}</pre>
@@ -401,10 +640,15 @@ function BlueprintGame({ level, onBack, onComplete }) {
           </div>
 
           <div style={S.blueprintDeckArea}>
-            <div style={S.sectionLabel}>card deck</div>
+            <div style={S.sectionLabel}>
+              card deck
+              {hintsMode === "limited" ? ` | hints left: ${Math.max(0, maxHints - hintUses)}` : ""}
+            </div>
             <div style={S.blueprintDeckRow}>
-              {deck.map((card) => {
-                const isSelected = selected?.id === card.id;
+              {deck.map((card, deckIndex) => {
+                const guidedSelected = guided && !selected && deckIndex === 0;
+                const isSelected = selected?.id === card.id || guidedSelected;
+                const canOpenHint = showHint === card.id || hintUses < maxHints;
                 return (
                   <button
                     key={card.id}
@@ -429,30 +673,42 @@ function BlueprintGame({ level, onBack, onComplete }) {
                     }}
                   >
                     <pre style={S.blueprintCardCode}>{card.text}</pre>
-                    {level.hints ? (
+                    {hintsMode !== "none" ? (
                       <span
                         role="button"
                         tabIndex={0}
-                        style={S.blueprintHintBtn}
+                        style={{ ...S.blueprintHintBtn, opacity: canOpenHint ? 1 : 0.4, cursor: canOpenHint ? "pointer" : "not-allowed" }}
                         onClick={(event) => {
                           event.stopPropagation();
-                          setShowHint(showHint === card.id ? null : card.id);
+                          if (showHint === card.id) {
+                            setShowHint(null);
+                            return;
+                          }
+                          if (!canOpenHint) return;
+                          setShowHint(card.id);
+                          setHintUses((value) => value + 1);
+                          setUsedHint(true);
                         }}
                         onKeyDown={(event) => {
                           if (event.key !== "Enter" && event.key !== " ") return;
                           event.preventDefault();
                           event.stopPropagation();
-                          setShowHint(showHint === card.id ? null : card.id);
+                          if (showHint === card.id) {
+                            setShowHint(null);
+                            return;
+                          }
+                          if (!canOpenHint) return;
+                          setShowHint(card.id);
+                          setHintUses((value) => value + 1);
+                          setUsedHint(true);
                         }}
-                        title="hint"
+                        title={canOpenHint ? "hint" : "hint limit reached"}
                       >
                         ?
                       </span>
                     ) : null}
-                    {level.hints && showHint === card.id ? (
-                      <div style={S.blueprintHintBubble}>
-                        {card.isDistractor ? "This may be a distractor." : `This card belongs in ${card.hint || "a different slot"}.`}
-                      </div>
+                    {hintsMode !== "none" && showHint === card.id ? (
+                      <div style={S.blueprintHintBubble}>{buildHintMessage(card, hintsMode)}</div>
                     ) : null}
                   </button>
                 );
@@ -489,7 +745,7 @@ function BlueprintGame({ level, onBack, onComplete }) {
           testResults={testResults}
           allPassed={!!allPassed}
           divergence={divergence}
-          stars={stars}
+          runSummary={runSummary}
           onBackToBuild={handleBackToBuild}
           onComplete={() => onComplete(level.id, stars)}
           onReset={handleReset}
@@ -506,7 +762,7 @@ function BlueprintExecution({
   testResults,
   allPassed,
   divergence,
-  stars,
+  runSummary,
   onBackToBuild,
   onComplete,
   onReset,
@@ -649,10 +905,19 @@ function BlueprintExecution({
           <div style={{ fontSize: 16, fontWeight: 800, color: "var(--accent)", textAlign: "center" }}>Blueprint Correct</div>
           <div style={S.blueprintStarRow}>
             {[1, 2, 3].map((n) => (
-              <span key={n} style={{ ...S.blueprintStar, color: n <= stars ? "var(--warn)" : "var(--faint)" }}>
+              <span key={n} style={{ ...S.blueprintStar, color: n <= Number(runSummary?.stars || 0) ? "var(--warn)" : "var(--faint)" }}>
                 *
               </span>
             ))}
+          </div>
+          <div style={{ fontSize: 12, color: "var(--muted)", display: "flex", flexDirection: "column", gap: 4, marginTop: 8 }}>
+            <div>1 star: complete the level</div>
+            <div style={{ color: runSummary?.underTime ? "var(--accent)" : "var(--dim)" }}>
+              +1 star: finish under {formatElapsed((runSummary?.timeLimitSec || 0) * 1000)} ({formatElapsed(runSummary?.elapsedMs)})
+            </div>
+            <div style={{ color: runSummary?.noHintBonus ? "var(--accent)" : "var(--dim)" }}>
+              +1 star: no hint button usage
+            </div>
           </div>
         </div>
       ) : null}
