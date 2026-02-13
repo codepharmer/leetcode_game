@@ -23,4 +23,25 @@ describe("lib/blueprint/strategies/comparators", () => {
     expect(validTopologicalOrder(input, [0, 1, 2, 3])).toBe(true);
     expect(validTopologicalOrder(input, [1, 0, 2, 3])).toBe(false);
   });
+
+  it("rejects linked-list false positives with truncated structure", () => {
+    const listA = { val: 1, next: { val: 2, next: null } };
+    const expected = [1, 2, 3];
+    expect(compareByOutputMode({ mode: "linked-list-equivalent", got: listA, expected })).toBe(false);
+  });
+
+  it("rejects tree false positives when shape differs", () => {
+    const treeA = { val: 1, left: null, right: { val: 2, left: null, right: null } };
+    const treeB = [1, 2];
+    expect(compareByOutputMode({ mode: "tree-structure-equivalent", got: treeA, expected: treeB })).toBe(false);
+  });
+
+  it("rejects invalid topological outputs with duplicate nodes", () => {
+    const input = {
+      numCourses: 3,
+      prerequisites: [[1, 0], [2, 1]],
+    };
+    expect(validTopologicalOrder(input, [0, 1, 1])).toBe(false);
+    expect(validTopologicalOrder(input, [0, 1])).toBe(false);
+  });
 });

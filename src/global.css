@@ -442,6 +442,42 @@ pre::-webkit-scrollbar-thumb {
 
 @media (max-width: 700px) {
   .menu-mode-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  .menu-mode-card {
+    min-height: 96px;
+    padding: 10px 8px 8px;
+    border-radius: 12px;
+    gap: 6px;
+  }
+
+  .menu-mode-card__indicator {
+    top: 8px;
+    right: 8px;
+    width: 11px;
+    height: 11px;
+  }
+
+  .menu-mode-card__dot {
+    width: 5px;
+    height: 5px;
+  }
+
+  .menu-mode-card__badge {
+    width: 22px;
+    height: 22px;
+    border-radius: 8px;
+    font-size: 10px;
+  }
+
+  .menu-mode-card__title {
+    font-size: 12px;
+    letter-spacing: 0;
+  }
+
+  .menu-mode-card__desc {
+    display: none;
   }
 }

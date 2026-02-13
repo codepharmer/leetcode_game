@@ -4,6 +4,13 @@ function deepEqual(a, b) {
   return JSON.stringify(a) === JSON.stringify(b);
 }
 
+function cloneCaseInput(value) {
+  if (typeof globalThis.structuredClone === "function") {
+    return globalThis.structuredClone(value);
+  }
+  return JSON.parse(JSON.stringify(value));
+}
+
 function makeFailure(kind, details) {
   return { kind, ...details };
 }
@@ -33,6 +40,7 @@ export function verifySolutionPlan({ contract, plan }) {
   const randomTrials = Math.max(0, Number(plan?.randomTrials || 0));
   const assertCase = typeof plan?.assertCase === "function" ? plan.assertCase : defaultAssertCase;
   const normalizeResult = typeof plan?.normalizeResult === "function" ? plan.normalizeResult : null;
+  const cloneInputs = plan?.cloneInputs === true;
 
   const solve = plan?.solve;
   if (typeof solve !== "function") {
@@ -61,9 +69,10 @@ export function verifySolutionPlan({ contract, plan }) {
   for (const testCase of deterministicCases) {
     const input = testCase?.input || {};
     const expected = testCase?.expected;
+    const solveInput = cloneInputs ? cloneCaseInput(input) : input;
     let got;
     try {
-      got = solve(input);
+      got = solve(solveInput);
     } catch (error) {
       failures.push(
         makeFailure("deterministic_exception", {
@@ -101,11 +110,13 @@ export function verifySolutionPlan({ contract, plan }) {
       const random = createVerifierRandom(0xdeadbeef);
       for (let i = 0; i < randomTrials; i += 1) {
         const input = plan.randomCaseFactory(random);
+        const oracleInput = cloneInputs ? cloneCaseInput(input) : input;
+        const solveInput = cloneInputs ? cloneCaseInput(input) : input;
         let expected;
         let got;
 
         try {
-          expected = plan.randomOracle(input);
+          expected = plan.randomOracle(oracleInput);
         } catch (error) {
           failures.push(
             makeFailure("random_oracle_exception", {
@@ -118,7 +129,7 @@ export function verifySolutionPlan({ contract, plan }) {
         }
 
         try {
-          got = solve(input);
+          got = solve(solveInput);
         } catch (error) {
           failures.push(
             makeFailure("random_exception", {

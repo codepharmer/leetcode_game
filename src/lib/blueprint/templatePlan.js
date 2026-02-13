@@ -26,6 +26,51 @@ const DIFFICULTY_TEMPLATE_INDEX = {
   Hard: 2,
 };
 
+export const QUESTION_TEMPLATE_VARIANT_BY_ID = {
+  57: 2,
+  58: 2,
+  59: 3,
+  60: 3,
+  80: 0,
+  81: 2,
+  82: 3,
+  83: 1,
+  84: 4,
+  85: 1,
+  86: 0,
+  87: 2,
+};
+
+export const PATTERN_TEMPLATE_VARIANT_RULES = {
+  "Topological Sort": 2,
+  "Union Find / DFS": 3,
+};
+
+function clampTemplateIndex(index, total) {
+  if (total <= 0) return 0;
+  if (!Number.isInteger(index) || index < 0) return 0;
+  return Math.min(index, total - 1);
+}
+
+function resolveTemplateVariantIndex(question, templates) {
+  const total = templates.length;
+  if (!total) return 0;
+  const questionId = Number(question?.id);
+  if (Number.isInteger(QUESTION_TEMPLATE_VARIANT_BY_ID[questionId])) {
+    return clampTemplateIndex(QUESTION_TEMPLATE_VARIANT_BY_ID[questionId], total);
+  }
+
+  const patternRule = PATTERN_TEMPLATE_VARIANT_RULES[question?.pattern];
+  if (Number.isInteger(patternRule)) {
+    return clampTemplateIndex(patternRule, total);
+  }
+  if (typeof patternRule === "function") {
+    return clampTemplateIndex(patternRule(question, templates), total);
+  }
+
+  return clampTemplateIndex(DIFFICULTY_TEMPLATE_INDEX[question?.difficulty] || 0, total);
+}
+
 export const FALLBACK_CODE_BY_TEMPLATE_ID = {
   [DEFAULT_BLUEPRINT_TEMPLATE_ID]: `state = init()
 best = init_best()
@@ -156,8 +201,8 @@ export function getTemplateSnippetForQuestion(question, explicitTemplateId = nul
     };
   }
 
-  const preferredIndex = DIFFICULTY_TEMPLATE_INDEX[question?.difficulty] || 0;
-  const selected = templates[Math.min(preferredIndex, templates.length - 1)] || templates[0];
+  const preferredIndex = resolveTemplateVariantIndex(question, templates);
+  const selected = templates[preferredIndex] || templates[0];
   return {
     code: selected.code || FALLBACK_CODE_BY_TEMPLATE_ID[templateId] || UNIVERSAL_TEMPLATE.code,
     name: selected.name || patternEntry?.category || question?.pattern || "template",

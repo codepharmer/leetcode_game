@@ -24,4 +24,16 @@ describe("lib/blueprint/ciGates", () => {
       expect(wave.fallback_count).toBe(0);
     }
   });
+
+  it("enforces zero placeholder/probe usage in production questions", () => {
+    const report = buildBlueprintCoverageReport(BLUEPRINT_LEVELS, QUESTIONS);
+    expect(report.placeholderContractCount).toBe(0);
+    expect(report.semanticProbeUsageCount).toBe(0);
+    expect(report.problemSpecificStrategyCount).toBe(QUESTIONS.length);
+    for (const wave of Object.values(report.per_wave_completion || {})) {
+      expect(wave.placeholder_contract_count).toBe(0);
+      expect(wave.semantic_probe_usage_count).toBe(0);
+      expect(wave.problem_specific_strategy_generated).toBe(wave.total);
+    }
+  });
 });

@@ -9,6 +9,9 @@ describe("lib/blueprint/coverageReport", () => {
     const report = buildBlueprintCoverageReport(BLUEPRINT_LEVELS, QUESTIONS);
     expect(report.total_questions).toBe(QUESTIONS.length);
     expect(report.strategy_generated).toBe(QUESTIONS.length);
+    expect(report.problemSpecificStrategyCount).toBe(QUESTIONS.length);
+    expect(report.placeholderContractCount).toBe(0);
+    expect(report.semanticProbeUsageCount).toBe(0);
     expect(report.semantic_passed).toBe(QUESTIONS.length);
     expect(report.strategy_coverage_pct).toBe(100);
     expect(report.semantic_pass_pct).toBe(100);
@@ -22,6 +25,7 @@ describe("lib/blueprint/coverageReport", () => {
     const report = buildBlueprintCoverageReport(BLUEPRINT_LEVELS, QUESTIONS);
     expect(report.per_pattern_completion["Dynamic Programming"].total).toBe(8);
     expect(report.per_pattern_completion["Dynamic Programming"].strategy_generated).toBe(8);
+    expect(report.per_pattern_completion["Dynamic Programming"].problem_specific_strategy_generated).toBe(8);
     expect(report.per_pattern_completion["Bit Manipulation"].semantic_passed).toBe(5);
   });
 });

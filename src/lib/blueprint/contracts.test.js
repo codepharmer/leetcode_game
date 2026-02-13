@@ -4,6 +4,8 @@ import { QUESTIONS } from "../questions";
 import {
   QUESTION_CONTRACTS,
   getContractCoverageSummary,
+  getPlaceholderContractCount,
+  hasPlaceholderProbeCases,
   getQuestionContract,
   validateContractSchema,
 } from "./contracts";
@@ -30,6 +32,13 @@ describe("lib/blueprint/contracts", () => {
       expect(contract.strategyId).toBeTruthy();
       expect(contract.deterministicCases.length).toBeGreaterThan(0);
       expect(contract.randomTrials).toBeGreaterThan(0);
+    }
+  });
+
+  it("contains no placeholder probe cases for production questions", () => {
+    expect(getPlaceholderContractCount(QUESTION_CONTRACTS)).toBe(0);
+    for (const contract of QUESTION_CONTRACTS) {
+      expect(hasPlaceholderProbeCases(contract)).toBe(false);
     }
   });
 });

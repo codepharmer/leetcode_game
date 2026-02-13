@@ -711,6 +711,22 @@ for i in range(1, n+1):
     dp[i] = dp[i >> 1] + (i & 1)
 return dp`,
       },
+      {
+        name: "D) Reverse 32-bit Pattern",
+        code: `res = 0
+for _ in range(32):
+    res = (res << 1) | (n & 1)
+    n >>= 1
+return res`,
+      },
+      {
+        name: "E) Bitwise Add (No + / -)",
+        code: `while b != 0:
+    carry = (a & b) << 1
+    a = a ^ b
+    b = carry
+return a`,
+      },
     ],
   },
   {
@@ -752,6 +768,23 @@ for layer in range(n // 2):
         mat[last-offset][first] = mat[last][last-offset]
         mat[last][last-offset] = mat[i][last]
         mat[i][last] = top`,
+      },
+      {
+        name: "C) Set Matrix Zeroes (row/col markers)",
+        code: `rows = set()
+cols = set()
+
+for r in range(R):
+    for c in range(C):
+        if mat[r][c] == 0:
+            rows.add(r)
+            cols.add(c)
+
+for r in range(R):
+    for c in range(C):
+        if r in rows or c in cols:
+            mat[r][c] = 0
+return mat`,
       },
     ],
   },

@@ -1,6 +1,10 @@
 import { QUESTIONS } from "../questions";
-import { getQuestionBlueprintProfile } from "./taxonomy";
-import { solveSemanticProbe } from "./strategies/shared";
+import { WAVE_1_PROBLEM_SPECS } from "./strategies/wave1Strategies";
+import { WAVE_2_PROBLEM_SPECS } from "./strategies/wave2Strategies";
+import { WAVE_3_PROBLEM_SPECS } from "./strategies/wave3Strategies";
+import { WAVE_4_PROBLEM_SPECS } from "./strategies/wave4Strategies";
+import { WAVE_5_PROBLEM_SPECS } from "./strategies/wave5Strategies";
+import { WAVE_6_PROBLEM_SPECS } from "./strategies/wave6Strategies";
 
 function makeContract({
   id,
@@ -22,70 +26,40 @@ function makeContract({
   };
 }
 
-function seedProbeCase(questionId, variant = 0) {
-  const base = questionId * 13 + variant * 7;
-  const input = {
-    left: (base % 31) - 15,
-    right: ((base * 3) % 27) - 13,
-    text: `q-${questionId}-v-${variant}`,
-  };
-  return {
-    input,
-    expected: solveSemanticProbe(input),
-  };
-}
+const PRODUCTION_QUESTION_IDS = new Set(QUESTIONS.map((question) => Number(question.id)));
 
-function defaultDeterministicCases(questionId) {
-  return [seedProbeCase(questionId, 0), seedProbeCase(questionId, 1)];
-}
-
-const RANDOM_TRIALS_BY_DIFFICULTY = {
-  Easy: 40,
-  Medium: 60,
-  Hard: 80,
-  Tutorial: 30,
-  Practice: 40,
-  Boss: 80,
-};
-
-const OUTPUT_MODE_BY_QUESTION_ID = {
-  4: "unordered-nested-members",
-  5: "unordered-number-members",
-  10: "unordered-triplets",
-  27: "linked-list-equivalent",
-  28: "linked-list-equivalent",
-  30: "linked-list-equivalent",
-  31: "linked-list-equivalent",
-  32: "linked-list-equivalent",
-  41: "tree-structure-equivalent",
-  43: "tree-structure-equivalent",
-  58: "topological-order",
-};
-
-const DISALLOW_TOKENS_BY_QUESTION_ID = {
-  5: [".sort("],
-  6: ["/"],
-};
+const PROBLEM_SPEC_BY_QUESTION_ID = new Map(
+  [
+    ...WAVE_1_PROBLEM_SPECS,
+    ...WAVE_2_PROBLEM_SPECS,
+    ...WAVE_3_PROBLEM_SPECS,
+    ...WAVE_4_PROBLEM_SPECS,
+    ...WAVE_5_PROBLEM_SPECS,
+    ...WAVE_6_PROBLEM_SPECS,
+  ].map((spec) => [Number(spec.questionId), spec])
+);
 
 function defaultContract(question) {
-  const profile = getQuestionBlueprintProfile(question);
-  const outputMode = OUTPUT_MODE_BY_QUESTION_ID[question.id];
-  const disallowTokens = DISALLOW_TOKENS_BY_QUESTION_ID[question.id];
-
   return makeContract({
     id: `question-${question.id}-contract`,
     questionId: question.id,
-    strategyId: profile.strategyId,
-    complexity: {
-      time: "pattern-dependent",
-      space: "pattern-dependent",
-    },
-    deterministicCases: defaultDeterministicCases(question.id),
-    randomTrials: RANDOM_TRIALS_BY_DIFFICULTY[question.difficulty] || 40,
-    constraints: {
-      outputMode: outputMode || "normalized",
-      disallowTokens: disallowTokens || [],
-    },
+    strategyId: null,
+    complexity: { time: "pattern-dependent", space: "pattern-dependent" },
+    deterministicCases: [],
+    randomTrials: 0,
+    constraints: { outputMode: "normalized", disallowTokens: [] },
+  });
+}
+
+function contractFromProblemSpec(spec) {
+  return makeContract({
+    id: `question-${spec.questionId}-contract`,
+    questionId: spec.questionId,
+    strategyId: spec.strategyId,
+    complexity: spec.complexity,
+    deterministicCases: spec.deterministicCases,
+    randomTrials: spec.randomTrials,
+    constraints: spec.constraints,
   });
 }
 
@@ -246,12 +220,32 @@ const FIRST_TEN_CONTRACTS = [
 
 const FIRST_TEN_BY_QUESTION_ID = new Map(FIRST_TEN_CONTRACTS.map((contract) => [Number(contract.questionId), contract]));
 
-const CONTRACTS = QUESTIONS.map((question) => FIRST_TEN_BY_QUESTION_ID.get(question.id) || defaultContract(question));
+const CONTRACTS = QUESTIONS.map((question) => {
+  if (FIRST_TEN_BY_QUESTION_ID.has(question.id)) return FIRST_TEN_BY_QUESTION_ID.get(question.id);
+  const problemSpec = PROBLEM_SPEC_BY_QUESTION_ID.get(question.id);
+  if (problemSpec) return contractFromProblemSpec(problemSpec);
+  return defaultContract(question);
+});
 
 const CONTRACTS_BY_QUESTION_ID = new Map(CONTRACTS.map((contract) => [Number(contract.questionId), contract]));
 
 function isPlainObject(value) {
   return !!value && typeof value === "object" && !Array.isArray(value);
+}
+
+export function isProbePlaceholderInput(input) {
+  if (!isPlainObject(input)) return false;
+  const keys = Object.keys(input).sort();
+  if (keys.length !== 3) return false;
+  return keys[0] === "left" && keys[1] === "right" && keys[2] === "text";
+}
+
+export function hasPlaceholderProbeCases(contract) {
+  return (contract?.deterministicCases || []).some((testCase) => isProbePlaceholderInput(testCase?.input));
+}
+
+export function getPlaceholderContractCount(contracts = CONTRACTS) {
+  return (contracts || []).filter((contract) => PRODUCTION_QUESTION_IDS.has(Number(contract?.questionId)) && hasPlaceholderProbeCases(contract)).length;
 }
 
 export function validateContractSchema(contract) {
@@ -273,6 +267,17 @@ export function validateContractSchema(contract) {
   if (!Array.isArray(contract.deterministicCases)) errors.push("deterministicCases must be an array");
   if (!Number.isInteger(contract.randomTrials) || contract.randomTrials < 0) errors.push("randomTrials must be a non-negative integer");
   if (!isPlainObject(contract.constraints)) errors.push("constraints must be an object");
+
+  const isProductionQuestion = PRODUCTION_QUESTION_IDS.has(Number(contract.questionId));
+  if (isProductionQuestion && Array.isArray(contract.deterministicCases) && contract.deterministicCases.length === 0) {
+    errors.push("production contracts require deterministic cases");
+  }
+  if (isProductionQuestion && Number(contract.randomTrials) <= 0) {
+    errors.push("production contracts require positive randomTrials");
+  }
+  if (isProductionQuestion && hasPlaceholderProbeCases(contract)) {
+    errors.push("production contracts may not use probe placeholder inputs");
+  }
 
   return { valid: errors.length === 0, errors };
 }
@@ -296,9 +301,9 @@ export function getQuestionContract(question) {
     questionId,
     strategyId: null,
     complexity: {},
-    deterministicCases: defaultDeterministicCases(questionId),
+    deterministicCases: [],
     randomTrials: 0,
-    constraints: {},
+    constraints: { outputMode: "normalized", disallowTokens: [] },
   });
 }
 

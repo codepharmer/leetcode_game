@@ -105,6 +105,9 @@ Base URL for the storage/session API (Lambda Function URL or equivalent).
 4. Blueprint generation:
 - All 87 questions use strategy-driven generation with semantic verification.
 - Production fallback is disabled by default and only enabled via explicit dev flag.
+- Questions `q-11..q-87` now run problem-specific strategy/oracle paths (no probe placeholders in production contracts).
+- CI/reporting enforces: `problemSpecificStrategyCount = 87`, `placeholderContractCount = 0`, `semanticProbeUsageCount = 0`.
+- In Blueprint challenge headers, auto-generated questions show objective text instead of exposed solution-code preview lines.
 - Auto and tutorial levels now render pattern-family slot flows (for example: two pointers, sliding window, binary search, stack/heap, linked list, intervals/greedy, tree/graph, DP-state, backtracking) instead of one universal slot scaffold.
 
 ## Repository Map (Directories)
@@ -306,16 +309,19 @@ JWT decode helpers and token-to-user mapping.
 Blueprint slot template definitions.
 
 - `src/lib/blueprint/contracts.js`
-Semantic contracts and randomized trial counts for all 87 questions.
+Semantic contracts and randomized trial counts for all 87 questions, including placeholder-shape schema gates.
 
 - `src/lib/blueprint/strategyRegistry.js`
 Registry facade for modular strategy families in `src/lib/blueprint/strategies/`.
+
+- `src/lib/blueprint/strategies/wave1Strategies.js` .. `src/lib/blueprint/strategies/wave6Strategies.js`
+Problem-specific strategy families for `q-11..q-87` with per-question solve/oracle/case wiring.
 
 - `src/lib/blueprint/taxonomy.js`
 Pattern-to-archetype taxonomy with wave assignment and reusable slot-set mapping.
 
 - `src/lib/blueprint/coverageReport.js`
-Coverage and quality metrics (`strategy coverage`, `semantic pass`, `fallback count`, `per-wave`, `per-pattern`).
+Coverage and quality metrics (`strategy coverage`, `semantic pass`, `problemSpecificStrategyCount`, `placeholderContractCount`, `semanticProbeUsageCount`, `per-wave`, `per-pattern`).
 
 - `src/lib/blueprint/semanticVerifier.js`
 Deterministic/random verification gate for strategy solve plans.
@@ -338,7 +344,7 @@ Blueprint executor, test runner, trace generation, divergence detection.
 ### `src/screens`
 
 - `src/screens/MenuScreen.jsx`
-Main menu with top-level mode cards, contextual progress stats, quiz round settings, blueprint campaign preview, auth entry, and launch actions.
+Main menu with top-level mode cards (compact single-row layout on mobile), contextual progress stats, quiz round settings, blueprint campaign preview, auth entry, and launch actions.
 
 - `src/screens/PlayScreen.jsx`
 Question/snippet gameplay screen.

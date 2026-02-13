@@ -157,10 +157,10 @@ function summarizeDescription(desc) {
   return first.endsWith(".") ? first : `${first}.`;
 }
 
-function buildExamplePreview(cards, pattern, snippetName) {
-  if (!cards.length) return `Pattern: ${pattern}`;
-  const preview = cards.slice(0, 4).map((card) => card.text).join("\n");
-  return cards.length > 4 ? `${preview}\n... (${snippetName})` : `${preview}\n(${snippetName})`;
+function buildExamplePreview(question) {
+  const pattern = question?.pattern || "Pattern";
+  const title = question?.name || "problem";
+  return `Objective: assemble the ${pattern} blueprint for "${title}".`;
 }
 
 const AUTO_BLUEPRINT_LEVELS = QUESTIONS.map((question) => {
@@ -179,7 +179,7 @@ const AUTO_BLUEPRINT_LEVELS = QUESTIONS.map((question) => {
     pattern: question.pattern,
     difficulty: question.difficulty || "Medium",
     description: summarizeDescription(question.desc),
-    example: buildExamplePreview(cards, question.pattern, snippetName),
+    example: buildExamplePreview(question),
     hints: false,
     slotLimits: buildSlotLimits(cards),
     cards,
