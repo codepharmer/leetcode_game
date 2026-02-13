@@ -402,6 +402,25 @@ export default function App() {
   const lifetimePct = calcLifetimePct(stats);
 
   const modeProgressByGameType = useMemo(() => {
+    const blueprintLevelIds = new Set((getGameTypeConfig(GAME_TYPES.BLUEPRINT_BUILDER).items || []).map((item) => String(item.id)));
+    let blueprintCompletedLevels = 0;
+    let blueprintPerfectLevels = 0;
+    let blueprintTotalStars = 0;
+    for (const levelId of Object.keys(blueprintStars || {})) {
+      if (!blueprintLevelIds.has(String(levelId))) continue;
+      const stars = Math.max(0, Math.min(3, Number(blueprintStars[levelId]) || 0));
+      if (stars >= 1) blueprintCompletedLevels += 1;
+      if (stars >= 3) blueprintPerfectLevels += 1;
+      blueprintTotalStars += stars;
+    }
+    const blueprintWorlds = Array.isArray(blueprintCampaign?.worlds) ? blueprintCampaign.worlds : [];
+    const blueprintCompletedWorlds = blueprintWorlds.filter((world) => {
+      const totalCount = Math.max(0, Number(world?.totalCount || 0));
+      const completedCount = Math.max(0, Number(world?.completedCount || 0));
+      return totalCount > 0 && completedCount >= totalCount;
+    }).length;
+    const blueprintWorldCount = blueprintWorlds.length;
+
     const out = {};
     for (const option of GAME_TYPE_OPTIONS) {
       const type = option.value;
@@ -409,6 +428,24 @@ export default function App() {
       const modeStats = modeState.stats || {};
       const modeHistory = modeState.history || {};
       const modeGame = getGameTypeConfig(type);
+
+      if (type === GAME_TYPES.BLUEPRINT_BUILDER) {
+        const totalLevels = modeGame.items.length;
+        const totalStarsPossible = totalLevels * 3;
+        out[type] = {
+          stats: {
+            gamesPlayed: blueprintCompletedLevels,
+            totalCorrect: blueprintTotalStars,
+            totalAnswered: totalStarsPossible,
+            bestStreak: blueprintCompletedWorlds,
+          },
+          lifetimePct: totalStarsPossible > 0 ? Math.round((blueprintTotalStars / totalStarsPossible) * 100) : 0,
+          masteredCount: blueprintPerfectLevels,
+          allCount: totalLevels,
+          worldCount: blueprintWorldCount,
+        };
+        continue;
+      }
 
       out[type] = {
         stats: modeStats,
@@ -418,7 +455,7 @@ export default function App() {
       };
     }
     return out;
-  }, [progress]);
+  }, [blueprintCampaign, blueprintStars, progress]);
 
   const weakSpots = useMemo(() => getWeakSpots(activeGame.items, history), [activeGame.items, history]);
   const masteredCount = useMemo(() => getMasteredCount(activeGame.items, history), [activeGame.items, history]);

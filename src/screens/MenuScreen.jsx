@@ -262,15 +262,41 @@ function ModeSelectionSection({ gameTypeOptions, gameType, setGameType }) {
   );
 }
 
-function ProgressSection({ stats, lifetimePct, masteredCount, allCount, modeVisual, hideAccuracyAndStreak = false }) {
+function ProgressSection({ stats, lifetimePct, masteredCount, allCount, modeVisual, isBlueprintMode = false, blueprintWorldCount = 0 }) {
   const gamesPlayed = Math.max(0, Number(stats?.gamesPlayed || 0));
   const bestStreak = Math.max(0, Number(stats?.bestStreak || 0));
   const accuracyPct = clamp(lifetimePct, 0, 100);
   const accentColor = modeVisual.accent || "var(--accent)";
 
-  const accuracyValue = hideAccuracyAndStreak ? "--" : `${accuracyPct}%`;
-  const streakValue = hideAccuracyAndStreak ? "--" : bestStreak;
   const masteredValue = `${masteredCount}/${allCount}`;
+
+  if (isBlueprintMode) {
+    const starsEarned = Math.max(0, Number(stats?.totalCorrect || 0));
+    const starsPossible = Math.max(0, Number(stats?.totalAnswered || 0));
+    const worldCount = Math.max(0, Number(blueprintWorldCount || 0));
+    const levelsPct = allCount > 0 ? (gamesPlayed / allCount) * 100 : 0;
+    const worldsValue = `${bestStreak}/${worldCount}`;
+    const worldsPct = worldCount > 0 ? (bestStreak / worldCount) * 100 : 0;
+    const starsValue = `${starsEarned}/${starsPossible}`;
+    const starsPct = starsPossible > 0 ? (starsEarned / starsPossible) * 100 : 0;
+
+    return (
+      <div style={{ ...S.card, animation: "fadeSlideIn 0.5s ease 0.15s both" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 18 }}>
+          <div style={{ ...S.sectionLabel, marginBottom: 0 }}>your progress</div>
+          <span className="menu-progress-mode-badge" style={getModeVars(modeVisual)}>
+            {modeVisual.progressBadge}
+          </span>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+          <StatRing label="levels" value={`${gamesPlayed}/${allCount}`} percentage={levelsPct} delay={0.15} accentColor={accentColor} />
+          <StatRing label="stars" value={starsValue} percentage={starsPct} delay={0.2} accentColor={accentColor} />
+          <StatRing label="worlds" value={worldsValue} percentage={worldsPct} delay={0.25} accentColor={accentColor} />
+          <StatRing label="mastered" value={masteredValue} percentage={allCount > 0 ? (masteredCount / allCount) * 100 : 0} delay={0.3} accentColor={accentColor} />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={{ ...S.card, animation: "fadeSlideIn 0.5s ease 0.15s both" }}>
@@ -282,8 +308,8 @@ function ProgressSection({ stats, lifetimePct, masteredCount, allCount, modeVisu
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
         <StatRing label="games" value={gamesPlayed} percentage={(gamesPlayed / 20) * 100} delay={0.15} accentColor={accentColor} />
-        <StatRing label="accuracy" value={accuracyValue} percentage={hideAccuracyAndStreak ? 0 : accuracyPct} delay={0.2} accentColor={accentColor} />
-        <StatRing label="best streak" value={streakValue} percentage={hideAccuracyAndStreak ? 0 : (bestStreak / 20) * 100} delay={0.25} accentColor={accentColor} />
+        <StatRing label="accuracy" value={`${accuracyPct}%`} percentage={accuracyPct} delay={0.2} accentColor={accentColor} />
+        <StatRing label="best streak" value={bestStreak} percentage={(bestStreak / 20) * 100} delay={0.25} accentColor={accentColor} />
         <StatRing label="mastered" value={masteredValue} percentage={allCount > 0 ? (masteredCount / allCount) * 100 : 0} delay={0.3} accentColor={accentColor} />
       </div>
     </div>
@@ -618,7 +644,8 @@ export function MenuScreen({
           masteredCount={selectedMasteredCount}
           allCount={allCount}
           modeVisual={selectedModeVisual}
-          hideAccuracyAndStreak={isBlueprintMode}
+          isBlueprintMode={isBlueprintMode}
+          blueprintWorldCount={Number.isFinite(selectedModeProgress?.worldCount) ? selectedModeProgress.worldCount : 0}
         />
 
         {isBlueprintMode ? (

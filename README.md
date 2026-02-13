@@ -345,6 +345,7 @@ Blueprint executor, test runner, trace generation, divergence detection.
 
 - `src/screens/MenuScreen.jsx`
 Main menu with top-level mode cards (compact single-row layout on mobile), contextual progress stats, quiz round settings, blueprint campaign preview, auth entry, and launch actions.
+For `blueprint builder`, the menu progress card derives `levels`, `stars`, `worlds`, and `mastered` values from `byGameType.blueprint_builder.meta.levelStars` plus campaign world completion, instead of quiz history counters.
 
 - `src/screens/PlayScreen.jsx`
 Question/snippet gameplay screen.

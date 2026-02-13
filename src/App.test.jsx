@@ -8,6 +8,7 @@ import { createDefaultProgress } from "./lib/progressModel";
 const useAuthSessionMock = vi.hoisted(() => vi.fn());
 const useProgressSyncMock = vi.hoisted(() => vi.fn());
 const useGameSessionMock = vi.hoisted(() => vi.fn());
+const menuScreenMock = vi.hoisted(() => vi.fn());
 
 vi.mock("./hooks/useAuthSession", () => ({
   useAuthSession: useAuthSessionMock,
@@ -22,15 +23,7 @@ vi.mock("./hooks/useGameSession", () => ({
 }));
 
 vi.mock("./screens/MenuScreen", () => ({
-  MenuScreen: (props) => (
-    <div>
-      <div>menu-screen</div>
-      <button onClick={props.startGame}>menu-start</button>
-      <button onClick={props.goBrowse}>menu-browse</button>
-      <button onClick={props.goTemplates}>menu-templates</button>
-      <button onClick={() => props.setGameType(GAME_TYPES.BLUEPRINT_BUILDER)}>menu-blueprint</button>
-    </div>
-  ),
+  MenuScreen: menuScreenMock,
 }));
 
 vi.mock("./screens/PlayScreen", () => ({
@@ -92,6 +85,16 @@ function renderApp(initialEntries = ["/"]) {
 describe("App", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+
+    menuScreenMock.mockImplementation((props) => (
+      <div>
+        <div>menu-screen</div>
+        <button onClick={props.startGame}>menu-start</button>
+        <button onClick={props.goBrowse}>menu-browse</button>
+        <button onClick={props.goTemplates}>menu-templates</button>
+        <button onClick={() => props.setGameType(GAME_TYPES.BLUEPRINT_BUILDER)}>menu-blueprint</button>
+      </div>
+    ));
 
     useAuthSessionMock.mockReturnValue({
       user: null,
@@ -200,5 +203,33 @@ describe("App", () => {
     expect(args.setMode).toBeTypeOf("function");
     expect(GAME_TYPES.QUESTION_TO_PATTERN).toBeTruthy();
     expect(GAME_TYPES.BLUEPRINT_BUILDER).toBeTruthy();
+  });
+
+  it("derives blueprint menu progress from saved level stars", () => {
+    const progress = createDefaultProgress();
+    progress.byGameType[GAME_TYPES.BLUEPRINT_BUILDER].meta = {
+      levelStars: {
+        "1": 3,
+        "2": 1,
+        "not-a-level": 2,
+      },
+    };
+    useProgressSyncMock.mockReturnValue({
+      loaded: true,
+      progress,
+      setProgress: vi.fn(),
+      progressRef: { current: progress },
+      persistProgress: vi.fn(async () => {}),
+    });
+
+    renderApp();
+    const menuProps = menuScreenMock.mock.calls.at(-1)?.[0];
+    const blueprintProgress = menuProps.modeProgressByGameType[GAME_TYPES.BLUEPRINT_BUILDER];
+    expect(blueprintProgress.stats.gamesPlayed).toBe(2);
+    expect(blueprintProgress.stats.totalCorrect).toBe(4);
+    expect(blueprintProgress.stats.totalAnswered).toBeGreaterThan(0);
+    expect(blueprintProgress.lifetimePct).toBe(Math.round((4 / blueprintProgress.stats.totalAnswered) * 100));
+    expect(blueprintProgress.masteredCount).toBe(1);
+    expect(blueprintProgress.worldCount).toBeGreaterThan(0);
   });
 });
