@@ -9,8 +9,8 @@ describe("screens/BlueprintScreen", () => {
     render(<BlueprintScreen goMenu={goMenu} initialStars={{ 1: 2 }} onSaveStars={vi.fn()} />);
 
     expect(screen.getByText("Blueprint Builder")).toBeInTheDocument();
-    expect(screen.getByText(/World 1: Hash Maps & Sets/i)).toBeInTheDocument();
-    expect(screen.getByText(/Daily Problem/i)).toBeInTheDocument();
+    expect(screen.getByText(/Hash Maps & Sets/i)).toBeInTheDocument();
+    expect(screen.getByText(/Daily Challenge/i)).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: /^back$/i }));
     expect(goMenu).toHaveBeenCalled();
@@ -29,8 +29,8 @@ describe("screens/BlueprintScreen", () => {
   it("shows soft-gated worlds", () => {
     render(<BlueprintScreen goMenu={vi.fn()} initialStars={{}} onSaveStars={vi.fn()} />);
 
-    expect(screen.getAllByText(/Unlocks after completing any 2 worlds/i).length).toBeGreaterThan(0);
-    expect(screen.getByText(/Boss rush unlocks after completing any 5 worlds/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/Complete 2 worlds to unlock/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Complete 5 worlds to unlock/i).length).toBeGreaterThan(0);
   });
 
   it("supports dragging a deck card into a slot", () => {
@@ -90,12 +90,15 @@ describe("screens/BlueprintScreen", () => {
       clientX: 20,
       clientY: 36,
     });
+    expect(screen.getByTestId("blueprint-touch-ghost")).toHaveStyle("visibility: visible");
+
     fireEvent.pointerUp(draggedCard, {
       pointerId: 1,
       pointerType: "touch",
       clientX: 20,
       clientY: 36,
     });
+    expect(screen.getByTestId("blueprint-touch-ghost")).toHaveStyle("visibility: hidden");
 
     if (originalElementFromPoint) {
       Object.defineProperty(document, "elementFromPoint", {

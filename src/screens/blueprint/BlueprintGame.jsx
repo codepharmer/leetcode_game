@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useRef, useState } from "react";
 
 import { S } from "../../styles";
 import { BlueprintExecution } from "./BlueprintExecution";
@@ -9,11 +9,14 @@ export function BlueprintGame({ level, challenge, onBack, onComplete }) {
   const touchDragRef = useRef({
     pointerId: null,
     cardId: null,
+    cardText: "",
     startX: 0,
     startY: 0,
     dragging: false,
   });
+  const touchGhostRef = useRef(null);
   const suppressClickCardIdRef = useRef(null);
+  const [touchGhost, setTouchGhost] = useState({ visible: false, text: "" });
 
   const {
     slotDefs,
@@ -67,28 +70,45 @@ export function BlueprintGame({ level, challenge, onBack, onComplete }) {
     return slotEl?.getAttribute("data-blueprint-slot-id") || null;
   };
 
+  const positionTouchGhost = (x, y) => {
+    const ghost = touchGhostRef.current;
+    if (!ghost) return;
+    ghost.style.transform = `translate3d(${Math.round(x + 14)}px, ${Math.round(y + 14)}px, 0)`;
+  };
+
+  const hideTouchGhost = () => {
+    setTouchGhost({ visible: false, text: "" });
+    const ghost = touchGhostRef.current;
+    if (!ghost) return;
+    ghost.style.transform = "translate3d(-9999px, -9999px, 0)";
+  };
+
   const resetTouchDrag = () => {
     touchDragRef.current = {
       pointerId: null,
       cardId: null,
+      cardText: "",
       startX: 0,
       startY: 0,
       dragging: false,
     };
   };
 
-  const handleTouchDragStart = (event, cardId) => {
+  const handleTouchDragStart = (event, card) => {
     if (event.pointerType !== "touch" || phase !== "build") return;
     event.currentTarget.setPointerCapture?.(event.pointerId);
     touchDragRef.current = {
       pointerId: event.pointerId,
-      cardId,
+      cardId: card.id,
+      cardText: card.text,
       startX: event.clientX,
       startY: event.clientY,
       dragging: false,
     };
-    setDraggingCardId(cardId);
+    setDraggingCardId(card.id);
     setDragOverSlotId(null);
+    setTouchGhost({ visible: false, text: card.text });
+    positionTouchGhost(event.clientX, event.clientY);
   };
 
   const handleTouchDragMove = (event, cardId) => {
@@ -99,8 +119,12 @@ export function BlueprintGame({ level, challenge, onBack, onComplete }) {
     const movedEnough = Math.hypot(event.clientX - state.startX, event.clientY - state.startY) >= 8;
     if (!state.dragging && !movedEnough) return;
 
-    if (!state.dragging) state.dragging = true;
+    if (!state.dragging) {
+      state.dragging = true;
+      setTouchGhost({ visible: true, text: state.cardText });
+    }
     event.preventDefault();
+    positionTouchGhost(event.clientX, event.clientY);
 
     const slotId = getSlotIdAtPoint(event.clientX, event.clientY);
     if (!slotId || !canPlaceCardInSlot(cardId, slotId)) {
@@ -130,6 +154,8 @@ export function BlueprintGame({ level, challenge, onBack, onComplete }) {
       }, 0);
     }
 
+    clearDragState();
+    hideTouchGhost();
     resetTouchDrag();
   };
 
@@ -139,6 +165,7 @@ export function BlueprintGame({ level, challenge, onBack, onComplete }) {
     if (state.pointerId !== event.pointerId || state.cardId !== cardId) return;
     event.currentTarget.releasePointerCapture?.(event.pointerId);
     clearDragState();
+    hideTouchGhost();
     resetTouchDrag();
   };
 
@@ -313,7 +340,7 @@ export function BlueprintGame({ level, challenge, onBack, onComplete }) {
                       setDraggingCardId(card.id);
                     }}
                     onDragEnd={clearDragState}
-                    onPointerDown={(event) => handleTouchDragStart(event, card.id)}
+                    onPointerDown={(event) => handleTouchDragStart(event, card)}
                     onPointerMove={(event) => handleTouchDragMove(event, card.id)}
                     onPointerUp={(event) => handleTouchDragEnd(event, card.id)}
                     onPointerCancel={(event) => handleTouchDragCancel(event, card.id)}
@@ -375,6 +402,19 @@ export function BlueprintGame({ level, challenge, onBack, onComplete }) {
           </div>
         </>
       )}
+
+      <div
+        ref={touchGhostRef}
+        data-testid="blueprint-touch-ghost"
+        aria-hidden="true"
+        style={{
+          ...S.blueprintTouchGhost,
+          visibility: touchGhost.visible ? "visible" : "hidden",
+          opacity: touchGhost.visible ? 0.96 : 0,
+        }}
+      >
+        <pre style={S.blueprintCardCode}>{touchGhost.text}</pre>
+      </div>
 
       {phase === "executing" ? (
         <BlueprintExecution

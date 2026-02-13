@@ -1,5 +1,12 @@
+import { useEffect, useState } from "react";
+
 import { S } from "../../styles";
-import { DIFF_COLOR, getChallengeBadgeColor, getLevelStars } from "./shared";
+import { BlueprintDailyView } from "./BlueprintDailyView";
+import { BlueprintMapView } from "./BlueprintMapView";
+import { BlueprintWorldDetailView } from "./BlueprintWorldDetailView";
+
+const TAB_MAP = "map";
+const TAB_DAILY = "daily";
 
 export function BlueprintMenu({
   goMenu,
@@ -10,189 +17,79 @@ export function BlueprintMenu({
   startChallenge,
   totalStars,
 }) {
+  const [menuView, setMenuView] = useState(TAB_MAP);
+
+  useEffect(() => {
+    if (menuView !== "world") return;
+    if (selectedWorld?.isUnlocked) return;
+    setMenuView(TAB_MAP);
+  }, [menuView, selectedWorld]);
+
+  const openWorldDetail = (worldId) => {
+    setSelectedWorldId(worldId);
+    setMenuView("world");
+  };
+
+  const activeTab = menuView === TAB_DAILY ? TAB_DAILY : TAB_MAP;
+
   return (
-    <div style={S.blueprintContainer}>
+    <div style={S.blueprintMenuContainer}>
       <div style={S.topBar}>
-        <button onClick={goMenu} style={S.backBtn}>
-          {" "}back
+        <button onClick={goMenu} style={{ ...S.backBtn, minHeight: 44, minWidth: 44 }}>
+          back
         </button>
         <span style={S.blueprintTitle}>Blueprint Builder</span>
         <div style={S.blueprintTopMeta}>stars: {totalStars}</div>
       </div>
 
-      <div style={S.blueprintMenuIntro}>
-        Worlds are grouped by pattern family. Each stage reveals one tier at a time so you only see the next two problems.
-      </div>
+      {menuView === TAB_MAP ? (
+        <BlueprintMapView
+          campaign={campaign}
+          completed={completed}
+          onOpenDaily={() => setMenuView(TAB_DAILY)}
+          onOpenWorld={openWorldDetail}
+          onContinue={startChallenge}
+        />
+      ) : null}
 
-      {campaign.dailyChallenge ? (
+      {menuView === "world" ? (
+        <BlueprintWorldDetailView
+          world={selectedWorld}
+          completed={completed}
+          onBack={() => setMenuView(TAB_MAP)}
+          onStartChallenge={startChallenge}
+        />
+      ) : null}
+
+      {menuView === TAB_DAILY ? (
+        <BlueprintDailyView
+          dailyChallenge={campaign.dailyChallenge}
+          completed={completed}
+          onBack={() => setMenuView(TAB_MAP)}
+          onStartChallenge={startChallenge}
+        />
+      ) : null}
+
+      <div aria-hidden="true" style={S.blueprintTabFade} />
+      <div style={S.blueprintTabBar}>
         <button
-          className="hover-row"
-          onClick={() => startChallenge(campaign.dailyChallenge.challenge)}
-          style={{
-            ...S.blueprintMenuCard,
-            borderColor: "rgba(245, 158, 11, 0.45)",
-            background: "rgba(245, 158, 11, 0.08)",
-          }}
+          className="pressable-200"
+          onClick={() => setMenuView(TAB_MAP)}
+          style={{ ...S.blueprintTabBtn, ...(activeTab === TAB_MAP ? S.blueprintTabBtnActive : null) }}
         >
-          <div style={S.blueprintMenuCardTop}>
-            <span style={{ ...S.diffBadge, color: "var(--warn)", borderColor: "rgba(245, 158, 11, 0.45)" }}>Daily Problem</span>
-            <span style={S.blueprintPatternBadge}>{campaign.dailyChallenge.dateKey}</span>
-          </div>
-          <h3 style={S.blueprintLevelTitle}>{campaign.dailyChallenge.level?.title}</h3>
-          <p style={S.blueprintLevelDesc}>From World {campaign.dailyChallenge.worldId}. Keeps pattern-switching sharp.</p>
-          <div style={S.blueprintStarRow}>
-            {[1, 2, 3].map((n) => (
-              <span
-                key={n}
-                style={{
-                  ...S.blueprintStar,
-                  color: n <= getLevelStars(completed, campaign.dailyChallenge.levelId) ? "var(--warn)" : "var(--faint)",
-                }}
-              >
-                *
-              </span>
-            ))}
-          </div>
+          Map
         </button>
-      ) : null}
-
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(230px, 1fr))", gap: 10 }}>
-        {campaign.worlds.map((world) => {
-          const isSelected = selectedWorld?.id === world.id;
-          return (
-            <button
-              key={world.id}
-              className="hover-row"
-              onClick={() => world.isUnlocked && setSelectedWorldId(world.id)}
-              disabled={!world.isUnlocked}
-              style={{
-                ...S.blueprintMenuCard,
-                opacity: world.isUnlocked ? 1 : 0.55,
-                cursor: world.isUnlocked ? "pointer" : "not-allowed",
-                borderColor: isSelected ? "rgba(16, 185, 129, 0.45)" : "var(--border)",
-                background: isSelected ? "rgba(16, 185, 129, 0.08)" : "var(--surface-1)",
-              }}
-            >
-              <div style={S.blueprintMenuCardTop}>
-                <span
-                  style={{
-                    ...S.diffBadge,
-                    color: world.isUnlocked ? "var(--accent)" : "var(--dim)",
-                    borderColor: "var(--border)",
-                  }}
-                >
-                  {world.name}
-                </span>
-                <span style={S.blueprintPatternBadge}>{world.family}</span>
-              </div>
-              <div style={{ fontSize: 12, color: "var(--dim)", fontFamily: "'DM Mono', monospace" }}>
-                problems: {world.totalCount} ({world.problemRange})
-              </div>
-              <div style={{ fontSize: 12, color: world.isComplete ? "var(--accent)" : "var(--faint)" }}>
-                {world.completedCount}/{world.totalCount} complete
-              </div>
-              {!world.isUnlocked ? <div style={{ fontSize: 12, color: "var(--warn)" }}>{world.unlockRule.label}</div> : null}
-            </button>
-          );
-        })}
+        <button
+          className="pressable-200"
+          onClick={() => setMenuView(TAB_DAILY)}
+          style={{ ...S.blueprintTabBtn, ...(activeTab === TAB_DAILY ? S.blueprintTabBtnActive : null) }}
+        >
+          Daily
+        </button>
+        <button className="pressable-200" disabled style={{ ...S.blueprintTabBtn, opacity: 0.45, cursor: "not-allowed" }}>
+          Stats
+        </button>
       </div>
-
-      {selectedWorld ? (
-        <div style={{ ...S.blueprintProblemCard, marginTop: 4 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-            <div>
-              <div style={S.blueprintLevelTitle}>
-                {selectedWorld.name}: {selectedWorld.family}
-              </div>
-              <div style={{ fontSize: 12, color: "var(--dim)" }}>
-                {selectedWorld.activeStage?.label || "Set 1"} | {selectedWorld.activeTier?.label || "Tier 1"}
-              </div>
-            </div>
-            <div style={{ ...S.blueprintTopMeta, minWidth: "auto" }}>
-              progress: {selectedWorld.progressPct}%
-            </div>
-          </div>
-
-          {!selectedWorld.isUnlocked ? (
-            <div style={S.blueprintLevelDesc}>{selectedWorld.unlockRule.label}</div>
-          ) : (
-            <>
-              {selectedWorld.visibleChallenges.length === 0 ? (
-                <div style={S.blueprintLevelDesc}>World complete. Replay daily or choose another world.</div>
-              ) : (
-                <div style={S.blueprintMenuList}>
-                  {selectedWorld.visibleChallenges.map((challenge) => {
-                    const item = challenge.level;
-                    const stars = getLevelStars(completed, challenge.levelId);
-                    return (
-                      <button
-                        key={challenge.id}
-                        className="hover-row"
-                        onClick={() => startChallenge(challenge)}
-                        style={{
-                          ...S.blueprintMenuCard,
-                          borderColor: `${getChallengeBadgeColor(challenge)}55`,
-                        }}
-                      >
-                        <div style={S.blueprintMenuCardTop}>
-                          <span
-                            style={{
-                              ...S.diffBadge,
-                              color: getChallengeBadgeColor(challenge),
-                              borderColor: `${getChallengeBadgeColor(challenge)}55`,
-                            }}
-                          >
-                            {challenge.tierIcon} {challenge.tierRole}
-                          </span>
-                          <span style={{ ...S.diffBadge, color: DIFF_COLOR[item.difficulty] || "var(--dim)", borderColor: "var(--border)" }}>
-                            {item.difficulty}
-                          </span>
-                          <span style={S.blueprintPatternBadge}>{challenge.showPatternLabel ? item.pattern : "pattern hidden"}</span>
-                        </div>
-                        <h3 style={S.blueprintLevelTitle}>{item.title}</h3>
-                        <p style={S.blueprintLevelDesc}>{item.description}</p>
-                        <div style={{ ...S.blueprintTopMeta, minWidth: "auto", textAlign: "left" }}>
-                          time limit: {Math.round(challenge.timeLimitSec / 60)}m
-                        </div>
-                        <div style={S.blueprintStarRow}>
-                          {[1, 2, 3].map((n) => (
-                            <span key={n} style={{ ...S.blueprintStar, color: n <= stars ? "var(--warn)" : "var(--faint)" }}>
-                              *
-                            </span>
-                          ))}
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-
-              {selectedWorld.lockedSilhouettes.length > 0 ? (
-                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                  {selectedWorld.lockedSilhouettes.map((silhouette) => (
-                    <div
-                      key={silhouette.tierIndex}
-                      style={{
-                        ...S.blueprintMenuCard,
-                        borderStyle: "dashed",
-                        borderColor: "var(--border)",
-                        opacity: 0.65,
-                        cursor: "default",
-                      }}
-                    >
-                      <div style={S.blueprintMenuCardTop}>
-                        <span style={{ ...S.diffBadge, color: "var(--dim)", borderColor: "var(--border)" }}>{silhouette.label}</span>
-                        <span style={S.blueprintPatternBadge}>locked</span>
-                      </div>
-                      <div style={S.blueprintLevelDesc}>Complete current tier to unlock {silhouette.count} more problems.</div>
-                    </div>
-                  ))}
-                </div>
-              ) : null}
-            </>
-          )}
-        </div>
-      ) : null}
     </div>
   );
 }
