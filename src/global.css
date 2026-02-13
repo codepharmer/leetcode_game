@@ -167,8 +167,10 @@ a {
   }
 }
 
-.hover-row:hover {
-  background: rgba(240, 240, 248, 0.04) !important;
+@media (hover: hover) and (pointer: fine) {
+  .hover-row:hover {
+    background: rgba(240, 240, 248, 0.04) !important;
+  }
 }
 
 pre::-webkit-scrollbar {

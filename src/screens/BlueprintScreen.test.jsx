@@ -62,6 +62,55 @@ describe("screens/BlueprintScreen", () => {
     expect(within(setupSlot).getByText("remove")).toBeInTheDocument();
   });
 
+  it("supports touch dragging a deck card into a slot", () => {
+    render(<BlueprintScreen goMenu={vi.fn()} initialStars={{}} onSaveStars={vi.fn()} />);
+    fireEvent.click(screen.getByRole("button", { name: /Two Sum/i }));
+
+    const deckCardsBefore = screen.getAllByTestId(/blueprint-deck-card-/);
+    const draggedCard = deckCardsBefore[0];
+    const setupSlot = screen.getByTestId("blueprint-slot-setup");
+
+    const originalElementFromPoint = document.elementFromPoint;
+    const elementFromPointMock = vi.fn(() => setupSlot);
+    Object.defineProperty(document, "elementFromPoint", {
+      configurable: true,
+      writable: true,
+      value: elementFromPointMock,
+    });
+
+    fireEvent.pointerDown(draggedCard, {
+      pointerId: 1,
+      pointerType: "touch",
+      clientX: 20,
+      clientY: 20,
+    });
+    fireEvent.pointerMove(draggedCard, {
+      pointerId: 1,
+      pointerType: "touch",
+      clientX: 20,
+      clientY: 36,
+    });
+    fireEvent.pointerUp(draggedCard, {
+      pointerId: 1,
+      pointerType: "touch",
+      clientX: 20,
+      clientY: 36,
+    });
+
+    if (originalElementFromPoint) {
+      Object.defineProperty(document, "elementFromPoint", {
+        configurable: true,
+        writable: true,
+        value: originalElementFromPoint,
+      });
+    } else {
+      delete document.elementFromPoint;
+    }
+
+    expect(screen.getAllByTestId(/blueprint-deck-card-/).length).toBe(deckCardsBefore.length - 1);
+    expect(within(setupSlot).getByText("remove")).toBeInTheDocument();
+  });
+
   it("keeps run disabled until all solution cards are placed", () => {
     render(<BlueprintScreen goMenu={vi.fn()} initialStars={{}} onSaveStars={vi.fn()} />);
     fireEvent.click(screen.getByRole("button", { name: /Two Sum/i }));

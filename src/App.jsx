@@ -58,61 +58,64 @@ export default function App() {
     setExpandedResult({});
   }, [gameType]);
 
-  const setModeStats = useCallback(
-    (nextStats) => {
+  const updateModeProgress = useCallback(
+    (updater) => {
       const currentProgress = progressRef.current;
       const currentModeProgress = getModeProgress(currentProgress, gameType);
-      const nextProgress = setModeProgress(currentProgress, gameType, { ...currentModeProgress, stats: nextStats });
+      const nextModeProgress =
+        typeof updater === "function" ? updater(currentModeProgress) : updater || currentModeProgress;
+      const nextProgress = setModeProgress(currentProgress, gameType, nextModeProgress);
       progressRef.current = nextProgress;
       setProgress(nextProgress);
+      return { nextModeProgress, nextProgress };
     },
     [gameType, progressRef, setProgress]
+  );
+
+  const setModeStats = useCallback(
+    (nextStats) => {
+      updateModeProgress((currentModeProgress) => ({ ...currentModeProgress, stats: nextStats }));
+    },
+    [updateModeProgress]
   );
 
   const setModeHistory = useCallback(
     (updater) => {
-      const currentProgress = progressRef.current;
-      const currentModeProgress = getModeProgress(currentProgress, gameType);
-      const prevHistory = currentModeProgress.history || {};
-      const nextHistory = typeof updater === "function" ? updater(prevHistory) : updater || {};
-      const nextProgress = setModeProgress(currentProgress, gameType, { ...currentModeProgress, history: nextHistory });
-      progressRef.current = nextProgress;
-      setProgress(nextProgress);
-      return nextHistory;
+      let resolvedHistory = {};
+      updateModeProgress((currentModeProgress) => {
+        const prevHistory = currentModeProgress.history || {};
+        resolvedHistory = typeof updater === "function" ? updater(prevHistory) : updater || {};
+        return { ...currentModeProgress, history: resolvedHistory };
+      });
+      return resolvedHistory;
     },
-    [gameType, progressRef, setProgress]
+    [updateModeProgress]
   );
 
   const setModeMeta = useCallback(
     (updater) => {
-      const currentProgress = progressRef.current;
-      const currentModeProgress = getModeProgress(currentProgress, gameType);
-      const prevMeta = currentModeProgress.meta || {};
-      const nextMeta = typeof updater === "function" ? updater(prevMeta) : updater || {};
-      const nextProgress = setModeProgress(currentProgress, gameType, { ...currentModeProgress, meta: nextMeta });
-      progressRef.current = nextProgress;
-      setProgress(nextProgress);
-      return nextMeta;
+      let resolvedMeta = {};
+      updateModeProgress((currentModeProgress) => {
+        const prevMeta = currentModeProgress.meta || {};
+        resolvedMeta = typeof updater === "function" ? updater(prevMeta) : updater || {};
+        return { ...currentModeProgress, meta: resolvedMeta };
+      });
+      return resolvedMeta;
     },
-    [gameType, progressRef, setProgress]
+    [updateModeProgress]
   );
 
   const persistModeProgress = useCallback(
     (nextStats, nextHistory, nextMeta) => {
-      const currentProgress = progressRef.current;
-      const currentModeProgress = getModeProgress(currentProgress, gameType);
-      const nextProgress = setModeProgress(currentProgress, gameType, {
+      const { nextProgress } = updateModeProgress((currentModeProgress) => ({
         ...currentModeProgress,
         stats: nextStats,
         history: nextHistory || {},
         meta: (nextMeta ?? currentModeProgress.meta) || {},
-      });
-
-      progressRef.current = nextProgress;
-      setProgress(nextProgress);
+      }));
       void persistProgress(nextProgress);
     },
-    [gameType, persistProgress, progressRef, setProgress]
+    [persistProgress, updateModeProgress]
   );
 
   const resetViewport = useCallback(() => {
@@ -210,6 +213,39 @@ export default function App() {
     [activeGame.items, browseFilter]
   );
 
+  const menuScreenProps = {
+    gameType,
+    setGameType,
+    gameTypeOptions: GAME_TYPE_OPTIONS,
+    menuSubtitle: activeGame.menuSubtitle,
+    roundNoun: activeGame.roundNoun,
+    stats,
+    lifetimePct,
+    masteredCount,
+    totalAvailableQuestions: activeGame.items.length,
+    weakSpots,
+    history,
+    user,
+    authError,
+    onGoogleSuccess: handleGoogleSuccess,
+    onGoogleError: handleGoogleError,
+    onSignOut: handleSignOut,
+    filterDifficulty,
+    setFilterDifficulty,
+    totalQuestions,
+    setTotalQuestions,
+    startGame: startSelectedMode,
+    goBrowse: () => setMode(MODES.BROWSE),
+    goTemplates: () => setMode(MODES.TEMPLATES),
+    supportsBrowse: activeGame.supportsBrowse !== false,
+    supportsTemplates: activeGame.supportsTemplates !== false,
+    supportsDifficultyFilter: activeGame.supportsDifficultyFilter !== false,
+    supportsQuestionCount: activeGame.supportsQuestionCount !== false,
+    showResetConfirm,
+    setShowResetConfirm,
+    resetAllData,
+  };
+
   if (!loaded) {
     return (
       <div style={{ ...S.root, display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh" }}>
@@ -221,38 +257,7 @@ export default function App() {
   return (
     <div style={S.root}>
       {mode === MODES.MENU && (
-        <MenuScreen
-          gameType={gameType}
-          setGameType={setGameType}
-          gameTypeOptions={GAME_TYPE_OPTIONS}
-          menuSubtitle={activeGame.menuSubtitle}
-          roundNoun={activeGame.roundNoun}
-          stats={stats}
-          lifetimePct={lifetimePct}
-          masteredCount={masteredCount}
-          totalAvailableQuestions={activeGame.items.length}
-          weakSpots={weakSpots}
-          history={history}
-          user={user}
-          authError={authError}
-          onGoogleSuccess={handleGoogleSuccess}
-          onGoogleError={handleGoogleError}
-          onSignOut={handleSignOut}
-          filterDifficulty={filterDifficulty}
-          setFilterDifficulty={setFilterDifficulty}
-          totalQuestions={totalQuestions}
-          setTotalQuestions={setTotalQuestions}
-          startGame={startSelectedMode}
-          goBrowse={() => setMode(MODES.BROWSE)}
-          goTemplates={() => setMode(MODES.TEMPLATES)}
-          supportsBrowse={activeGame.supportsBrowse !== false}
-          supportsTemplates={activeGame.supportsTemplates !== false}
-          supportsDifficultyFilter={activeGame.supportsDifficultyFilter !== false}
-          supportsQuestionCount={activeGame.supportsQuestionCount !== false}
-          showResetConfirm={showResetConfirm}
-          setShowResetConfirm={setShowResetConfirm}
-          resetAllData={resetAllData}
-        />
+        <MenuScreen {...menuScreenProps} />
       )}
 
       {mode === MODES.PLAY && (

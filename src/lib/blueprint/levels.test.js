@@ -4,6 +4,25 @@ import { QUESTIONS } from "../questions";
 import { BLUEPRINT_LEVELS } from "./levels";
 
 describe("lib/blueprint/levels", () => {
+  const OUTLINE_PLACEHOLDERS = new Set([
+    "initialize core state",
+    "initialize best answer",
+    "iterate through candidates",
+    "update running state",
+    "check invariant / improve answer",
+    "return the best answer",
+    "generate next choices",
+    "prune invalid choices",
+    "if complete solution: record it",
+    "choose -> recurse -> unchoose",
+    "return collected results",
+    "handle base case / memo hit",
+    "select branches / subproblems",
+    "prune invalid branch",
+    "recurse into next state",
+    "combine child results",
+  ]);
+
   it("includes an auto-generated blueprint level for every question", () => {
     const autoLevels = BLUEPRINT_LEVELS.filter((level) => String(level.id).startsWith("q-"));
     expect(autoLevels).toHaveLength(QUESTIONS.length);
@@ -23,6 +42,14 @@ describe("lib/blueprint/levels", () => {
       expect(level.cards.every((card) => !!card.correctSlot)).toBe(true);
       expect(level.testCases?.length).toBeGreaterThan(0);
       expect(typeof level.testCases[0].expected).toBe("string");
+    }
+  });
+
+  it("builds generated levels from concrete code steps instead of outline placeholders", () => {
+    const autoLevels = BLUEPRINT_LEVELS.filter((level) => String(level.id).startsWith("q-"));
+    for (const level of autoLevels) {
+      expect(level.cards.some((card) => /[=()]/.test(card.text) || /\b(for|while|if|return)\b/.test(card.text))).toBe(true);
+      expect(level.cards.some((card) => OUTLINE_PLACEHOLDERS.has(card.text))).toBe(false);
     }
   });
 });

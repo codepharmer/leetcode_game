@@ -1,4 +1,5 @@
 import { QUESTIONS } from "../questions";
+import { PATTERN_TO_TEMPLATES, UNIVERSAL_TEMPLATE } from "../templates";
 import {
   BACKTRACKING_TEMPLATE_ID,
   DEFAULT_BLUEPRINT_TEMPLATE_ID,
@@ -150,153 +151,224 @@ function pickTemplateId(pattern) {
   return DEFAULT_BLUEPRINT_TEMPLATE_ID;
 }
 
-function buildStandardCards(levelId) {
-  return [
-    {
-      id: `${levelId}-c1`,
-      text: "initialize core state",
-      correctSlot: "setup",
-      correctOrder: 0,
-      key: "std-setup-state",
-      hint: "Setup",
-    },
-    {
-      id: `${levelId}-c2`,
-      text: "initialize best answer",
-      correctSlot: "setup",
-      correctOrder: 1,
-      key: "std-setup-best",
-      hint: "Setup",
-    },
-    {
-      id: `${levelId}-c3`,
-      text: "iterate through candidates",
-      correctSlot: "loop",
-      correctOrder: 0,
-      key: "std-loop-iterate",
-      hint: "Loop",
-    },
-    {
-      id: `${levelId}-c4`,
-      text: "update running state",
-      correctSlot: "update",
-      correctOrder: 0,
-      key: "std-update-state",
-      hint: "Update",
-    },
-    {
-      id: `${levelId}-c5`,
-      text: "check invariant / improve answer",
-      correctSlot: "check",
-      correctOrder: 0,
-      key: "std-check-answer",
-      hint: "Check",
-    },
-    {
-      id: `${levelId}-c6`,
-      text: "return the best answer",
-      correctSlot: "return",
-      correctOrder: 0,
-      key: "std-return-answer",
-      hint: "Return",
-    },
-  ];
+const DIFFICULTY_TEMPLATE_INDEX = {
+  Tutorial: 0,
+  Easy: 0,
+  Practice: 1,
+  Medium: 1,
+  Boss: 2,
+  Hard: 2,
+};
+
+const FALLBACK_CODE_BY_TEMPLATE_ID = {
+  [DEFAULT_BLUEPRINT_TEMPLATE_ID]: `state = init()
+best = init_best()
+for item in items:
+    update_state(state, item)
+    if improves_answer(state, best):
+        best = extract_answer(state)
+return best`,
+  [BACKTRACKING_TEMPLATE_ID]: `results = []
+path = []
+
+def backtrack(start):
+    if complete(path):
+        results.append(path[:])
+        return
+    for choice in choices(start):
+        if not valid(choice):
+            continue
+        path.append(choice)
+        backtrack(next_start(choice))
+        path.pop()
+
+backtrack(0)
+return results`,
+  [RECURSIVE_TOP_DOWN_TEMPLATE_ID]: `memo = {}
+
+def solve(node):
+    if base_case(node):
+        return base_value
+    if node in memo:
+        return memo[node]
+    result = init_result()
+    for nxt in children(node):
+        if invalid(nxt):
+            continue
+        result = combine(result, solve(nxt))
+    memo[node] = result
+    return memo[node]`,
+};
+
+function titleCaseSlot(slotId) {
+  return String(slotId || "")
+    .split("-")
+    .filter(Boolean)
+    .map((part) => part[0].toUpperCase() + part.slice(1))
+    .join(" ");
 }
 
-function buildBacktrackingCards(levelId) {
-  return [
-    {
-      id: `${levelId}-c1`,
-      text: "generate next choices",
-      correctSlot: "choose",
-      correctOrder: 0,
-      key: "bt-choose-options",
-      hint: "Choose",
-    },
-    {
-      id: `${levelId}-c2`,
-      text: "prune invalid choices",
-      correctSlot: "constrain",
-      correctOrder: 0,
-      key: "bt-constrain-prune",
-      hint: "Constrain",
-    },
-    {
-      id: `${levelId}-c3`,
-      text: "if complete solution: record it",
-      correctSlot: "base",
-      correctOrder: 0,
-      key: "bt-base-record",
-      hint: "Base",
-    },
-    {
-      id: `${levelId}-c4`,
-      text: "choose -> recurse -> unchoose",
-      correctSlot: "explore",
-      correctOrder: 0,
-      key: "bt-explore-recurse",
-      hint: "Explore",
-    },
-    {
-      id: `${levelId}-c5`,
-      text: "return collected results",
-      correctSlot: "return",
-      correctOrder: 0,
-      key: "bt-return-results",
-      hint: "Return",
-    },
-  ];
+function getTemplateSnippetForQuestion(question, templateId) {
+  const patternEntry = PATTERN_TO_TEMPLATES[question.pattern];
+  const templates = patternEntry?.templates || [];
+  if (!templates.length) {
+    return {
+      code: FALLBACK_CODE_BY_TEMPLATE_ID[templateId] || UNIVERSAL_TEMPLATE.code,
+      name: "fallback template",
+    };
+  }
+
+  const preferredIndex = DIFFICULTY_TEMPLATE_INDEX[question.difficulty] || 0;
+  const selected = templates[Math.min(preferredIndex, templates.length - 1)] || templates[0];
+  return {
+    code: selected.code || FALLBACK_CODE_BY_TEMPLATE_ID[templateId] || UNIVERSAL_TEMPLATE.code,
+    name: selected.name || patternEntry?.category || question.pattern,
+  };
 }
 
-function buildRecursiveTopDownCards(levelId) {
-  return [
-    {
-      id: `${levelId}-c1`,
-      text: "handle base case / memo hit",
-      correctSlot: "base",
-      correctOrder: 0,
-      key: "rt-base-case",
-      hint: "Base",
-    },
-    {
-      id: `${levelId}-c2`,
-      text: "select branches / subproblems",
-      correctSlot: "choose",
-      correctOrder: 0,
-      key: "rt-choose-branches",
-      hint: "Choose",
-    },
-    {
-      id: `${levelId}-c3`,
-      text: "prune invalid branch",
-      correctSlot: "constrain",
-      correctOrder: 0,
-      key: "rt-constrain-prune",
-      hint: "Constrain",
-    },
-    {
-      id: `${levelId}-c4`,
-      text: "recurse into next state",
-      correctSlot: "explore",
-      correctOrder: 0,
-      key: "rt-explore-recurse",
-      hint: "Explore",
-    },
-    {
-      id: `${levelId}-c5`,
-      text: "combine child results",
-      correctSlot: "combine",
-      correctOrder: 0,
-      key: "rt-combine-results",
-      hint: "Combine",
-    },
-  ];
+function extractCodeLines(code) {
+  return String(code || "")
+    .split("\n")
+    .map((line) => line.replace(/\r/g, "").replace(/\s+$/g, "").trim())
+    .filter((line) => line.length > 0)
+    .filter((line) => !line.startsWith("#"))
+    .filter((line) => line !== "pass");
 }
 
-function buildCardsForTemplate(levelId, templateId) {
-  if (templateId === BACKTRACKING_TEMPLATE_ID) return buildBacktrackingCards(levelId);
-  if (templateId === RECURSIVE_TOP_DOWN_TEMPLATE_ID) return buildRecursiveTopDownCards(levelId);
-  return buildStandardCards(levelId);
+function isLoopLine(lower) {
+  return lower.startsWith("for ") || lower.startsWith("while ");
+}
+
+function isConditionLine(lower) {
+  return lower.startsWith("if ") || lower.startsWith("elif ") || lower.startsWith("else");
+}
+
+function isReturnLine(lower) {
+  return lower.startsWith("return");
+}
+
+function classifyStandardLine(line, context) {
+  const lower = line.toLowerCase();
+  if (isReturnLine(lower)) return "return";
+  if (isLoopLine(lower)) {
+    context.seenLoop = true;
+    return "loop";
+  }
+  if (isConditionLine(lower) || lower === "continue" || lower === "break") return "check";
+  if (!context.seenLoop) return "setup";
+  return "update";
+}
+
+function classifyBacktrackingLine(line) {
+  const lower = line.toLowerCase();
+
+  if (isReturnLine(lower)) {
+    if (/\b(ans|results|res|output)\b/.test(lower)) return "return";
+    return "base";
+  }
+  if (
+    lower.startsWith("if done") ||
+    lower.startsWith("if complete") ||
+    lower.startsWith("if base") ||
+    lower.includes("ans.append") ||
+    lower.includes("results.append")
+  ) {
+    return "base";
+  }
+  if (isLoopLine(lower) || lower.includes("choices(") || lower.includes("choices_from(")) return "choose";
+  if (
+    lower === "continue" ||
+    lower.startsWith("if not ") ||
+    lower.includes("not allowed") ||
+    lower.includes("invalid") ||
+    lower.includes("out_of_bounds") ||
+    lower.includes("bad_cell")
+  ) {
+    return "constrain";
+  }
+  return "explore";
+}
+
+function classifyRecursiveTopDownLine(line, context) {
+  const lower = line.toLowerCase();
+
+  if (isReturnLine(lower)) {
+    if (
+      lower.includes("combine") ||
+      lower.includes("len(") ||
+      lower.includes("order") ||
+      lower.includes("best") ||
+      lower.includes("ans") ||
+      lower.includes("dp[") ||
+      lower.includes("memo[") ||
+      lower.includes("tails")
+    ) {
+      return "combine";
+    }
+    return "base";
+  }
+  if (isConditionLine(lower)) {
+    if (
+      lower.includes("invalid") ||
+      lower.includes("out_of_bounds") ||
+      lower.includes("bad_cell") ||
+      lower.includes("not allowed") ||
+      lower.includes("cycle")
+    ) {
+      return "constrain";
+    }
+    return "base";
+  }
+  if (isLoopLine(lower)) return context.seenExplore ? "explore" : "choose";
+  if (lower.includes("dfs(") || lower.includes("bfs(") || lower.includes("solve(") || lower.includes("search(") || lower.includes("ok(")) {
+    context.seenExplore = true;
+    return "explore";
+  }
+  if (
+    lower.includes("memo") ||
+    lower.includes("dp[") ||
+    lower.includes("graph") ||
+    lower.includes("adj") ||
+    lower.includes("queue") ||
+    lower.includes("stack")
+  ) {
+    return "choose";
+  }
+  if (lower.includes("combine") || lower.includes("append") || lower.includes("max(") || lower.includes("min(")) {
+    return "combine";
+  }
+  return context.seenExplore ? "combine" : "choose";
+}
+
+function classifyLineForTemplate(templateId, line, context) {
+  if (templateId === BACKTRACKING_TEMPLATE_ID) return classifyBacktrackingLine(line);
+  if (templateId === RECURSIVE_TOP_DOWN_TEMPLATE_ID) return classifyRecursiveTopDownLine(line, context);
+  return classifyStandardLine(line, context);
+}
+
+function buildCardsForTemplate(levelId, templateId, question) {
+  const snippet = getTemplateSnippetForQuestion(question, templateId);
+  const lines = extractCodeLines(snippet.code);
+  const fallbackLines = lines.length ? lines : extractCodeLines(FALLBACK_CODE_BY_TEMPLATE_ID[templateId] || UNIVERSAL_TEMPLATE.code);
+  const perSlotOrder = {};
+  const context = { seenLoop: false, seenExplore: false };
+
+  const cards = fallbackLines.map((line, index) => {
+    const slotId = classifyLineForTemplate(templateId, line, context);
+    const order = perSlotOrder[slotId] || 0;
+    perSlotOrder[slotId] = order + 1;
+
+    return {
+      id: `${levelId}-c${index + 1}`,
+      text: line,
+      correctSlot: slotId,
+      correctOrder: order,
+      key: `auto-${slotId}-${index + 1}`,
+      hint: titleCaseSlot(slotId),
+    };
+  });
+
+  return { cards, snippetName: snippet.name };
 }
 
 function buildSlotLimits(cards) {
@@ -331,10 +403,16 @@ function summarizeDescription(desc) {
   return first.endsWith(".") ? first : `${first}.`;
 }
 
+function buildExamplePreview(cards, pattern, snippetName) {
+  if (!cards.length) return `Pattern: ${pattern}`;
+  const preview = cards.slice(0, 4).map((card) => card.text).join("\n");
+  return cards.length > 4 ? `${preview}\n... (${snippetName})` : `${preview}\n(${snippetName})`;
+}
+
 const AUTO_BLUEPRINT_LEVELS = QUESTIONS.map((question) => {
   const levelId = `q-${question.id}`;
   const templateId = pickTemplateId(question.pattern);
-  const cards = buildCardsForTemplate(levelId, templateId);
+  const { cards, snippetName } = buildCardsForTemplate(levelId, templateId, question);
 
   return {
     id: levelId,
@@ -343,7 +421,7 @@ const AUTO_BLUEPRINT_LEVELS = QUESTIONS.map((question) => {
     pattern: question.pattern,
     difficulty: question.difficulty || "Medium",
     description: summarizeDescription(question.desc),
-    example: `Pattern: ${question.pattern}`,
+    example: buildExamplePreview(cards, question.pattern, snippetName),
     hints: false,
     slotLimits: buildSlotLimits(cards),
     cards,

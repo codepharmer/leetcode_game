@@ -289,6 +289,7 @@ export const S = {
     textAlign: "left",
     cursor: "pointer",
     transition: "background 0.15s ease",
+    touchAction: "manipulation",
   },
   blueprintMenuCardTop: { display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" },
   blueprintPatternBadge: {
