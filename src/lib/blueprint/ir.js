@@ -1,4 +1,4 @@
-import { getTemplateSlotIds } from "./templates";
+import { TEMPLATE_CANONICAL_SLOT_ROLE_MAP, getTemplateSlotIds } from "./templates";
 
 function titleCaseSlot(slotId) {
   return String(slotId || "")
@@ -12,10 +12,12 @@ export function buildCardsFromIr({ levelId, templateId, irNodes }) {
   const slotIds = getTemplateSlotIds(templateId);
   const slotIdSet = new Set(slotIds);
   const nextOrderBySlot = Object.fromEntries(slotIds.map((slotId) => [slotId, 0]));
+  const slotRoleMap = TEMPLATE_CANONICAL_SLOT_ROLE_MAP[templateId] || {};
 
   const cards = [];
   for (const node of irNodes || []) {
-    const slotId = String(node?.slot || "");
+    const rawSlotId = String(node?.slot || "");
+    const slotId = slotIdSet.has(rawSlotId) ? rawSlotId : (slotRoleMap[rawSlotId] || rawSlotId);
     const text = String(node?.text || "").trim();
     if (!slotIdSet.has(slotId) || !text) continue;
 

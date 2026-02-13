@@ -1,0 +1,616 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pattern Match Skeleton</title>
+  <style>
+    @import url("https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700&family=Outfit:wght@500;600;700;800&display=swap");
+    :root {
+      --bg-page: #0a0a12;
+      --surface-1: #111120;
+      --surface-2: #151528;
+      --border: #1a1a2a;
+      --text: #f0f1f4;
+      --text-strong: #f0f1f4;
+      --muted: #c0c4d0;
+      --dim: #8b8fa3;
+      --accent: #10b981;
+      --info: #3b82f6;
+      --warn: #f59e0b;
+      --danger: #ef4444;
+      --shadow-soft: 0 12px 32px rgba(0, 0, 0, 0.35);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background:
+        radial-gradient(ellipse 80% 50% at 50% -20%, rgba(16, 185, 129, 0.07), transparent),
+        radial-gradient(ellipse 60% 40% at 80% 100%, rgba(59, 130, 246, 0.05), transparent),
+        var(--bg-page);
+      color: var(--text);
+      font: 15px "DM Sans", system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      min-height: 100vh;
+      padding: 14px 16px 52px;
+    }
+    #app { width: min(920px, 100%); margin: 0 auto; }
+    .screen { display: none; animation: fadeSlideIn 0.25s ease; }
+    .screen.active { display: block; }
+    .card {
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      background: var(--surface-1);
+      box-shadow: var(--shadow-soft);
+      padding: 22px;
+    }
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 14px;
+    }
+    .btn {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: transparent;
+      color: var(--dim);
+      padding: 8px 14px;
+      cursor: pointer;
+      font: inherit;
+    }
+    .btn-primary {
+      width: 100%;
+      border: none;
+      background: #86efac;
+      color: #0f1117;
+      font-family: Outfit, "DM Sans", sans-serif;
+      font-weight: 700;
+      padding: 15px;
+    }
+    .btn:hover { filter: brightness(1.05); }
+    .user {
+      display: inline-flex;
+      gap: 10px;
+      align-items: center;
+      color: var(--muted);
+    }
+    .avatar {
+      width: 32px; height: 32px; border-radius: 99px;
+      background: linear-gradient(135deg, var(--accent), var(--info));
+      display: grid; place-items: center;
+      font: 700 14px Outfit, sans-serif;
+    }
+    .brand { text-align: center; margin-bottom: 10px; }
+    .brand-name {
+      font: 800 34px/1 Outfit, "DM Sans", sans-serif;
+      margin-top: 8px;
+    }
+    .accent { color: var(--accent); font-family: "DM Mono", monospace; }
+    .muted { color: var(--muted); }
+    .faint { color: var(--dim); }
+    .menu-grid { display: flex; flex-direction: column; gap: 12px; }
+    .label {
+      font: 11px "DM Mono", monospace;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--dim);
+      margin-bottom: 8px;
+    }
+    .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 10px; }
+    .pill { border: 1px solid var(--border); border-radius: 999px; padding: 7px 14px; background: transparent; color: var(--dim); cursor: pointer; }
+    .pill.active { color: var(--accent); border-color: rgba(16,185,129,.5); background: rgba(16,185,129,.1); }
+    .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .stat { display: flex; gap: 10px; align-items: center; }
+    .ring {
+      width: 48px; height: 48px; border-radius: 50%;
+      background: conic-gradient(var(--accent) calc(var(--pct) * 1%), var(--surface-2) 0);
+      display: grid; place-items: center;
+      border: 1px solid var(--border);
+    }
+    .ring-inner {
+      width: 38px; height: 38px;
+      border-radius: 50%;
+      background: var(--surface-1);
+      display: grid; place-items: center;
+      font: 700 12px/1 Outfit;
+      color: var(--text-strong);
+    }
+    .notice { display: none; margin-bottom: 12px; background: var(--surface-1); border: 1px solid var(--border); border-radius: 12px; padding: 12px; }
+    .notice.active { display: block; }
+    .difficulty { display: inline-flex; border: 1px solid currentColor; border-radius: 999px; padding: 3px 10px; font-size: 11px; text-transform: uppercase; }
+    .play-progress { height: 4px; background: var(--border); border-radius: 999px; margin: 10px 0; }
+    .play-progress-inner { height: 100%; background: var(--accent); width: 0; border-radius: 999px; }
+    .q-title { font: 800 30px/1.2 Outfit; margin: 10px 0; text-align: center; }
+    .desc, .code, .template {
+      margin-top: 10px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: var(--surface-2);
+      padding: 10px;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+    .desc.hidden, .code.hidden, .template.hidden { display: none; }
+    .prompt { color: var(--muted); }
+    .choices { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 14px; }
+    .choice {
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: var(--surface-1);
+      display: flex; gap: 10px; align-items: center;
+      text-align: left; padding: 12px;
+      font: 14px inherit;
+    }
+    .choice-num {
+      width: 22px; height: 22px; border-radius: 7px;
+      border: 1px solid var(--border);
+      display: grid; place-items: center;
+      color: var(--dim);
+      font: 700 11px "DM Mono", monospace;
+    }
+    .choice.correct { background: rgba(16,185,129,.1); border-color: rgba(16,185,129,.5); color: var(--accent); }
+    .choice.wrong { background: rgba(239,68,68,.1); border-color: rgba(239,68,68,.5); color: var(--danger); }
+    .play-footer { margin-top: 10px; display: flex; justify-content: space-between; align-items: center; }
+    .hidden { display: none !important; }
+    .browse-grid, .template-grid, .challenge-grid { display: flex; flex-direction: column; gap: 10px; }
+    .pattern-card, .challenge-card, .template-card {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: var(--surface-1);
+      padding: 12px;
+    }
+    .pattern-head { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
+    .dot { width: 8px; height: 8px; border-radius: 99px; background: currentColor; }
+    .pattern-name { font: 700 15px Outfit; }
+    .count { margin-left: auto; color: var(--dim); font: 11px "DM Mono", monospace; }
+    .qrow { border-top: 1px solid var(--border); padding: 8px 0; display: flex; gap: 8px; align-items: center; cursor: pointer; }
+    .qrow:first-child { border-top: 0; }
+    .qrow-detail { padding: 6px 16px 10px; color: var(--dim); font-size: 12px; display: none; }
+    .qrow-detail.show { display: block; }
+    .result-summary {
+      font: 800 56px Outfit;
+      text-align: center;
+      margin-top: 8px;
+    }
+    .actions { display: flex; gap: 10px; justify-content: center; margin-top: 12px; }
+    @media (max-width: 700px) { .choices { grid-template-columns: 1fr; } .stat-grid { grid-template-columns: 1fr; } .q-title { font-size: 25px; } }
+    @keyframes fadeSlideIn {
+      from { opacity: 0; transform: translateY(12px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <section id="screen-menu" class="screen active">
+      <div class="topbar">
+        <div class="user"><div class="avatar">G</div>Guest</div>
+        <button class="btn">local only</button>
+      </div>
+      <div class="brand">
+        <div class="brand-name"><span class="accent">$</span>pattern<span class="accent">.</span><span class="muted">match</span></div>
+        <p id="menuSubtitle" class="muted">Map Blind 75 questions to their solution patterns</p>
+      </div>
+      <div id="routeNotice" class="notice"></div>
+      <div class="menu-grid">
+        <div class="card">
+          <div class="label">your progress</div>
+          <div class="stat-grid">
+            <div class="stat"><div class="ring" style="--pct:65"><div class="ring-inner">14</div></div><span>games</span></div>
+            <div class="stat"><div class="ring" style="--pct:48"><div class="ring-inner">48%</div></div><span>accuracy</span></div>
+            <div class="stat"><div class="ring" style="--pct:40"><div class="ring-inner">9</div></div><span>best streak</span></div>
+            <div class="stat"><div class="ring" style="--pct:24"><div class="ring-inner">4</div></div><span>mastered / 20</span></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="label">round settings</div>
+          <div class="row"><span class="faint">Mode</span>
+            <button class="pill active" data-mode="question_to_pattern">question -> pattern</button>
+            <button class="pill" data-mode="template_to_pattern">template -> pattern</button>
+            <button class="pill" data-mode="blueprint_builder">blueprint builder</button>
+          </div>
+          <div class="row"><span class="faint">Difficulty</span>
+            <button class="pill active" data-diff="All">all</button>
+            <button class="pill" data-diff="Easy">easy</button>
+            <button class="pill" data-diff="Medium">medium</button>
+            <button class="pill" data-diff="Hard">hard</button>
+          </div>
+          <div class="row"><span class="faint">Questions</span>
+            <button class="pill active" data-count="10">10</button>
+            <button class="pill" data-count="20">20</button>
+            <button class="pill" data-count="40">40</button>
+            <button class="pill" data-count="all">all</button>
+          </div>
+          <p id="settingsSummary" class="faint">Practice 20 questions across all difficulties.</p>
+        </div>
+
+        <button id="startMode" class="btn-primary">Start Round</button>
+        <div class="actions">
+          <button id="browseBtn" class="btn">browse patterns</button>
+          <button id="templatesBtn" class="btn">view templates</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="screen-play" class="screen">
+      <div class="topbar">
+        <button id="playBack" class="btn">back</button>
+        <div><span id="playProgressText">1/1</span> · <span id="playScore">0</span> correct</div>
+      </div>
+      <div class="card">
+        <div id="playDiff" class="difficulty">Easy</div>
+        <div class="play-progress"><div id="playBar" class="play-progress-inner"></div></div>
+        <h2 id="playTitle" class="q-title">question</h2>
+        <button id="toggleDesc" class="btn">show description <span class="faint">D</span></button>
+        <div id="playDesc" class="desc hidden">description</div>
+        <pre id="playCode" class="code hidden"></pre>
+        <p id="playPrompt" class="prompt"></p>
+        <div id="playChoices" class="choices"></div>
+        <div class="play-footer">
+          <span id="playFeedback" class="faint"></span>
+          <button id="playNext" class="btn hidden">see results</button>
+        </div>
+        <div id="playTemplate" class="template hidden">Template preview: while (cond) { ... }</div>
+      </div>
+    </section>
+
+    <section id="screen-results" class="screen">
+      <div class="card">
+        <div class="label">results</div>
+        <div id="resultPct" class="result-summary">0%</div>
+        <p id="resultSummary" class="faint">0/1 correct</p>
+      </div>
+      <div id="resultItems" class="template-grid" style="margin-top:12px"></div>
+      <div class="actions">
+        <button id="resultReplay" class="btn-primary">play again</button>
+        <button id="resultMenu" class="btn">menu</button>
+      </div>
+    </section>
+
+    <section id="screen-browse" class="screen">
+      <div class="topbar">
+        <button id="browseBack" class="btn">back</button>
+        <div>
+          <button class="pill active" data-filter="All">all</button>
+          <button class="pill" data-filter="Easy">easy</button>
+          <button class="pill" data-filter="Medium">medium</button>
+          <button class="pill" data-filter="Hard">hard</button>
+        </div>
+      </div>
+      <h2 class="brand-name" style="font-size: 30px">All Patterns</h2>
+      <div id="browseGrid" class="browse-grid" style="margin-top: 10px;"></div>
+    </section>
+
+    <section id="screen-templates" class="screen">
+      <div class="topbar"><button id="templatesBack" class="btn">back</button><span class="label">all templates</span></div>
+      <div class="template-grid">
+        <div class="template-card"><div class="label">Universal Interview Skeleton</div><pre class="code">function solve(input) {\n  // placeholder\n}</pre></div>
+        <div class="template-card"><div class="label">Two Sum</div><pre class="code">const seen = new Map();\n// ...</pre></div>
+      </div>
+    </section>
+
+    <section id="screen-bp-map" class="screen">
+      <div class="topbar"><button id="bpMapBack" class="btn">back</button><span class="label">blueprint</span></div>
+      <div class="card">
+        <div class="brand-name" style="font-size: 28px">Blueprint Campaign</div>
+        <p class="faint">Open map, world, and challenge screens like the opening flow.</p>
+        <button id="openDaily" class="btn-primary" style="margin-top: 10px;">open daily challenge</button>
+      </div>
+      <div class="challenge-grid" style="margin-top: 12px;">
+        <button class="challenge-card" data-world="fundamentals">World 1 — Fundamentals</button>
+        <button class="challenge-card" data-world="graphs">World 2 — Graphs</button>
+        <button class="challenge-card" data-world="dp">World 3 — DP</button>
+      </div>
+    </section>
+
+    <section id="screen-bp-world" class="screen">
+      <div class="topbar">
+        <button id="bpWorldBack" class="btn">back</button>
+        <button id="bpMapBtn" class="btn">campaign map</button>
+      </div>
+      <div class="card">
+        <div id="bpWorldTitle" class="brand-name" style="font-size: 26px;">World</div>
+        <p id="bpWorldDesc" class="faint">world details</p>
+        <div id="bpChallenges" class="challenge-grid" style="margin-top: 10px;"></div>
+      </div>
+      <div class="actions">
+        <button id="bpOpenSelected" class="btn-primary">open selected</button>
+      </div>
+    </section>
+
+    <section id="screen-bp-challenge" class="screen">
+      <div class="topbar"><button id="bpChallengeBack" class="btn">back</button><span class="label">challenge</span></div>
+      <div class="card">
+        <h2 id="bpChallengeTitle" class="brand-name" style="font-size: 28px">Challenge</h2>
+        <p id="bpChallengeDiff" class="faint"></p>
+        <p id="bpChallengeDesc" class="faint"></p>
+        <button id="bpRun" class="btn-primary" style="margin-top: 8px;">start execution trace</button>
+        <p id="bpHint" class="faint">Skeleton only. No gameplay logic is running.</p>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    (() => {
+      const DIFF_COLOR = { Easy: "#10b981", Medium: "#f59e0b", Hard: "#ef4444" };
+      const MODES = { Q: "question_to_pattern", T: "template_to_pattern", B: "blueprint_builder" };
+      const subtitleByMode = {
+        [MODES.Q]: "Map Blind 75 questions to their solution patterns",
+        [MODES.T]: "Match code snippets to their strongest solution patterns",
+        [MODES.B]: "Build algorithm blueprints card by card and step through execution traces",
+      };
+      const modePrompt = {
+        [MODES.Q]: "What pattern solves this?",
+        [MODES.T]: "Which pattern is this template most connected to?",
+      };
+
+      const playSeed = {
+        [MODES.Q]: {
+          title: "Contains Duplicate",
+          difficulty: "Easy",
+          desc: "Given an integer array, return true if any value appears twice.",
+          choices: ["Hash Set", "Sliding Window", "Two Pointers", "DFS"],
+          answer: "Hash Set",
+          kind: "question",
+        },
+        [MODES.T]: {
+          title: "Template Prompt",
+          difficulty: "Medium",
+          code: "for (let i = 0; i < nums.length; i++) {\n  const need = target - nums[i];\n  if (seen.has(need)) return [seen.get(need), i];\n  seen.set(nums[i], i);\n}",
+          choices: ["Binary Search", "Dynamic Programming", "Hash Map", "Heap"],
+          answer: "Hash Map",
+          kind: "code",
+        },
+      };
+
+      const browseSource = [
+        { name: "Hash Map", color: "#e06c75", items: [
+          { id: "h1", title: "Two Sum", difficulty: "Easy", desc: "Store seen values in map." },
+          { id: "h2", title: "Subarray Sum", difficulty: "Medium", desc: "Prefix sums with map." },
+        ]},
+        { name: "Sliding Window", color: "#56b6c2", items: [
+          { id: "s1", title: "Min Window", difficulty: "Hard", desc: "Expand and shrink dynamic range." },
+        ]},
+      ];
+
+      const worlds = {
+        fundamentals: { title: "Fundamentals", desc: "Core patterns and intro challenges.", challenges: [
+          { id: "f1", title: "Build Prefix Trace", difficulty: "Easy", desc: "Track accumulated values." },
+          { id: "f2", title: "Queue Basics", difficulty: "Medium", desc: "Use head/tail movement." },
+        ]},
+        graphs: { title: "Graphs", desc: "Traversal and marking patterns.", challenges: [
+          { id: "g1", title: "Clone Tree Graph", difficulty: "Hard", desc: "Maintain visited map." },
+        ]},
+        dp: { title: "Dynamic Programming", desc: "State transitions and memoization.", challenges: [
+          { id: "d1", title: "Coin Change", difficulty: "Medium", desc: "Build from smaller sub-problems." },
+        ]},
+      };
+
+      const state = {
+        mode: MODES.Q,
+        diff: "All",
+        count: "20",
+        play: { mode: MODES.Q, item: null, score: 0, answered: false, selected: null },
+        browseFilter: "All",
+        bpWorld: "fundamentals",
+        bpChallengeId: null,
+      };
+
+      const show = (id) => {
+        document.querySelectorAll(".screen").forEach((s) => s.classList.remove("active"));
+        document.getElementById(id).classList.add("active");
+      };
+
+        const setMode = (mode) => {
+          state.mode = mode;
+          document.querySelectorAll("[data-mode]").forEach((button) => {
+            button.classList.toggle("active", button.dataset.mode === mode);
+          });
+          document.querySelectorAll("[data-diff]").forEach((button) => {
+            button.classList.toggle("active", button.dataset.diff === state.diff);
+          });
+          document.querySelectorAll("[data-count]").forEach((button) => {
+            button.classList.toggle("active", button.dataset.count === state.count);
+          });
+          document.getElementById("menuSubtitle").textContent = subtitleByMode[mode];
+          const label = mode === MODES.B ? "Open Blueprint Builder" : "Start Round";
+          document.getElementById("startMode").textContent = label;
+        const countLabel = mode === MODES.B ? "levels" : "questions";
+        const selected = state.count === "all" ? "all" : state.count;
+        const diffLabel = state.diff === "All" ? "all difficulties" : `${state.diff.toLowerCase()} only`;
+        document.getElementById("settingsSummary").textContent = `Practice ${selected} ${countLabel} across ${diffLabel}.`;
+      };
+
+      const active = (sel, all) => {
+        all.forEach((b) => b.classList.toggle("active", b.getAttribute(sel) === state[sel.slice(1)]));
+      };
+
+      const renderPlay = () => {
+        const seed = playSeed[state.mode];
+        state.play.mode = state.mode;
+        state.play.item = { ...seed };
+        state.play.score = 0;
+        state.play.answered = false;
+        state.play.selected = null;
+        document.getElementById("playDiff").style.color = DIFF_COLOR[state.play.item.difficulty];
+        document.getElementById("playDiff").style.borderColor = DIFF_COLOR[state.play.item.difficulty];
+        document.getElementById("playDiff").textContent = state.play.item.difficulty;
+        document.getElementById("playBar").style.width = "0%";
+        document.getElementById("playTitle").textContent = state.play.item.title;
+        document.getElementById("playPrompt").textContent = state.mode === MODES.Q ? modePrompt[MODES.Q] : modePrompt[MODES.T];
+        document.getElementById("playProgressText").innerHTML = "1<small>/1</small>";
+        document.getElementById("playScore").textContent = 0;
+
+        const desc = document.getElementById("playDesc");
+        const code = document.getElementById("playCode");
+        if (state.play.item.kind === "code") {
+          desc.classList.add("hidden");
+          code.classList.remove("hidden");
+          code.textContent = state.play.item.code;
+          document.getElementById("toggleDesc").classList.add("hidden");
+        } else {
+          code.classList.add("hidden");
+          desc.classList.remove("hidden");
+          desc.textContent = state.play.item.desc;
+          document.getElementById("toggleDesc").classList.remove("hidden");
+          document.getElementById("toggleDesc").innerHTML = "hide description <span class=\"faint\">D</span>";
+        }
+
+        const choices = document.getElementById("playChoices");
+        choices.innerHTML = "";
+        state.play.item.choices.forEach((choice) => {
+          const btn = document.createElement("button");
+          btn.className = "choice";
+          btn.type = "button";
+          btn.innerHTML = `<span class="choice-num">${choices.children.length + 1}</span>${choice}`;
+          btn.addEventListener("click", () => {
+            if (state.play.answered) return;
+            state.play.answered = true;
+            state.play.selected = choice;
+            const correct = choice === state.play.item.answer;
+            const feedback = document.getElementById("playFeedback");
+            feedback.textContent = correct ? "correct" : `answer: ${state.play.item.answer}`;
+            feedback.style.color = correct ? "var(--accent)" : "var(--danger)";
+            document.getElementById("playScore").textContent = correct ? 1 : 0;
+            btn.classList.add(correct ? "correct" : "wrong");
+            Array.from(choices.children).forEach((b) => {
+              const label = b.textContent.slice(1);
+              if (label === state.play.item.answer) b.classList.add("correct");
+              b.disabled = true;
+            });
+            if (state.mode === MODES.Q) document.getElementById("playTemplate").classList.remove("hidden");
+            document.getElementById("playBar").style.width = "100%";
+            document.getElementById("playNext").classList.remove("hidden");
+          });
+          choices.append(btn);
+        });
+
+        document.getElementById("playFeedback").textContent = "";
+        document.getElementById("playNext").classList.add("hidden");
+        document.getElementById("playTemplate").classList.add("hidden");
+        show("screen-play");
+      };
+
+      const renderResults = () => {
+        const pct = 100;
+        document.getElementById("resultPct").textContent = pct + "%";
+        document.getElementById("resultSummary").textContent = `${state.play.score}/1 correct`;
+        document.getElementById("resultItems").innerHTML = `<div class="pattern-card"><strong>${state.play.item.title}</strong><p class="faint" style="margin-top:6px">${state.play.selected || "not answered"}</p></div>`;
+        show("screen-results");
+      };
+
+      const renderBrowse = () => {
+        document.querySelectorAll("#screen-browse [data-filter]").forEach((button) => {
+          button.classList.toggle("active", button.dataset.filter === state.browseFilter);
+        });
+        const grid = document.getElementById("browseGrid");
+        grid.innerHTML = "";
+        browseSource.forEach((group) => {
+          const filtered = group.items.filter((q) => state.browseFilter === "All" || q.difficulty === state.browseFilter);
+          if (!filtered.length) return;
+          const card = document.createElement("div");
+          card.className = "pattern-card";
+          card.innerHTML = `<div class="pattern-head"><span class="dot" style="color:${group.color}"></span><span class="pattern-name">${group.name}</span><span class="count">${filtered.length}</span></div>`;
+          filtered.forEach((q) => {
+            const row = document.createElement("div");
+            row.className = "qrow";
+            row.innerHTML = `<span class=\"dot\" style=\"color:${DIFF_COLOR[q.difficulty]}\"></span><span>${q.title}</span><span class=\"faint\">${q.difficulty}</span>`;
+            const detail = document.createElement("div");
+            detail.className = "qrow-detail";
+            detail.textContent = q.desc;
+            row.addEventListener("click", () => detail.classList.toggle("show"));
+            card.append(row, detail);
+          });
+          grid.append(card);
+        });
+        show("screen-browse");
+      };
+
+      const renderBpWorld = () => {
+        const world = worlds[state.bpWorld] || worlds.fundamentals;
+        state.bpChallengeId = world.challenges[0].id;
+        document.getElementById("bpWorldTitle").textContent = world.title;
+        document.getElementById("bpWorldDesc").textContent = world.desc;
+        const list = document.getElementById("bpChallenges");
+        list.innerHTML = "";
+        world.challenges.forEach((c) => {
+          const row = document.createElement("button");
+          row.className = "challenge-card";
+          row.type = "button";
+          row.textContent = `${c.title} (${c.difficulty})`;
+          row.addEventListener("click", () => {
+            state.bpChallengeId = c.id;
+          });
+          list.appendChild(row);
+        });
+        show("screen-bp-world");
+      };
+
+      const renderBpChallenge = () => {
+        const world = worlds[state.bpWorld] || worlds.fundamentals;
+        const c = world.challenges.find((x) => x.id === state.bpChallengeId) || world.challenges[0];
+        document.getElementById("bpChallengeTitle").textContent = c.title;
+        document.getElementById("bpChallengeDiff").textContent = `difficulty: ${c.difficulty}`;
+        document.getElementById("bpChallengeDesc").textContent = c.desc;
+        show("screen-bp-challenge");
+      };
+
+      document.querySelectorAll("[data-mode]").forEach((b) => {
+        b.addEventListener("click", () => { state.mode = b.dataset.mode; setMode(state.mode); });
+      });
+      document.querySelectorAll("[data-diff]").forEach((b) => b.addEventListener("click", () => {
+        state.diff = b.dataset.diff;
+        setMode(state.mode);
+      }));
+      document.querySelectorAll("[data-count]").forEach((b) => b.addEventListener("click", () => {
+        state.count = b.dataset.count;
+        setMode(state.mode);
+      }));
+
+      document.getElementById("startMode").addEventListener("click", () => {
+        if (state.mode === MODES.B) return show("screen-bp-map");
+        renderPlay();
+      });
+      document.getElementById("playBack").addEventListener("click", () => show("screen-menu"));
+      document.getElementById("toggleDesc").addEventListener("click", () => {
+        document.getElementById("playDesc").classList.toggle("hidden");
+      });
+      document.getElementById("playNext").addEventListener("click", renderResults);
+      document.getElementById("resultReplay").addEventListener("click", renderPlay);
+      document.getElementById("resultMenu").addEventListener("click", () => show("screen-menu"));
+      document.getElementById("browseBtn").addEventListener("click", renderBrowse);
+      document.getElementById("templatesBtn").addEventListener("click", () => show("screen-templates"));
+      document.getElementById("browseBack").addEventListener("click", () => show("screen-menu"));
+      document.querySelectorAll("#screen-browse [data-filter]").forEach((b) => {
+        b.addEventListener("click", () => {
+          state.browseFilter = b.dataset.filter;
+          renderBrowse();
+        });
+      });
+      document.getElementById("templatesBack").addEventListener("click", () => show("screen-menu"));
+      document.getElementById("bpMapBack").addEventListener("click", () => show("screen-menu"));
+      document.querySelectorAll(".challenge-card[data-world]").forEach((b) => {
+        b.addEventListener("click", () => {
+          state.bpWorld = b.dataset.world;
+          renderBpWorld();
+        });
+      });
+      document.getElementById("openDaily").addEventListener("click", () => {
+        state.bpWorld = "fundamentals";
+        state.bpChallengeId = "f1";
+        renderBpChallenge();
+      });
+      document.getElementById("bpWorldBack").addEventListener("click", () => show("screen-bp-map"));
+      document.getElementById("bpMapBtn").addEventListener("click", () => show("screen-bp-map"));
+      document.getElementById("bpOpenSelected").addEventListener("click", renderBpChallenge);
+      document.getElementById("bpChallengeBack").addEventListener("click", renderBpWorld);
+      document.getElementById("bpRun").addEventListener("click", () => {
+        document.getElementById("bpHint").textContent = "Execution trace placeholder. No game logic is active.";
+      });
+
+      setMode(state.mode);
+    })();
+  </script>
+</body>
+</html>

@@ -1,7 +1,16 @@
 import {
+  ARRAY_HASHING_TEMPLATE_ID,
   BACKTRACKING_TEMPLATE_ID,
+  BINARY_SEARCH_TEMPLATE_ID,
   DEFAULT_BLUEPRINT_TEMPLATE_ID,
+  DP_STATE_TEMPLATE_ID,
+  INTERVAL_GREEDY_TEMPLATE_ID,
+  LINKED_LIST_TEMPLATE_ID,
   RECURSIVE_TOP_DOWN_TEMPLATE_ID,
+  SLIDING_WINDOW_TEMPLATE_ID,
+  STACK_HEAP_TEMPLATE_ID,
+  TREE_GRAPH_TEMPLATE_ID,
+  TWO_POINTERS_TEMPLATE_ID,
 } from "./templates";
 
 export const WAVE_IDS = {
@@ -25,23 +34,23 @@ export const WAVE_TEMPLATE_STRATEGY_IDS = {
 export const ARCHETYPE_DEFINITIONS = {
   "arrays-hashing": {
     id: "arrays-hashing",
-    slotSetId: DEFAULT_BLUEPRINT_TEMPLATE_ID,
-    templateId: DEFAULT_BLUEPRINT_TEMPLATE_ID,
+    slotSetId: ARRAY_HASHING_TEMPLATE_ID,
+    templateId: ARRAY_HASHING_TEMPLATE_ID,
   },
   "stack-heap-search": {
     id: "stack-heap-search",
-    slotSetId: DEFAULT_BLUEPRINT_TEMPLATE_ID,
-    templateId: DEFAULT_BLUEPRINT_TEMPLATE_ID,
+    slotSetId: STACK_HEAP_TEMPLATE_ID,
+    templateId: STACK_HEAP_TEMPLATE_ID,
   },
   "linked-list-intervals-greedy": {
     id: "linked-list-intervals-greedy",
-    slotSetId: DEFAULT_BLUEPRINT_TEMPLATE_ID,
-    templateId: DEFAULT_BLUEPRINT_TEMPLATE_ID,
+    slotSetId: LINKED_LIST_TEMPLATE_ID,
+    templateId: LINKED_LIST_TEMPLATE_ID,
   },
   "tree-trie-backtracking": {
     id: "tree-trie-backtracking",
-    slotSetId: RECURSIVE_TOP_DOWN_TEMPLATE_ID,
-    templateId: RECURSIVE_TOP_DOWN_TEMPLATE_ID,
+    slotSetId: TREE_GRAPH_TEMPLATE_ID,
+    templateId: TREE_GRAPH_TEMPLATE_ID,
   },
   "pure-backtracking": {
     id: "pure-backtracking",
@@ -50,13 +59,13 @@ export const ARCHETYPE_DEFINITIONS = {
   },
   graphs: {
     id: "graphs",
-    slotSetId: RECURSIVE_TOP_DOWN_TEMPLATE_ID,
-    templateId: RECURSIVE_TOP_DOWN_TEMPLATE_ID,
+    slotSetId: TREE_GRAPH_TEMPLATE_ID,
+    templateId: TREE_GRAPH_TEMPLATE_ID,
   },
   "dp-bit-matrix": {
     id: "dp-bit-matrix",
-    slotSetId: RECURSIVE_TOP_DOWN_TEMPLATE_ID,
-    templateId: RECURSIVE_TOP_DOWN_TEMPLATE_ID,
+    slotSetId: DP_STATE_TEMPLATE_ID,
+    templateId: DP_STATE_TEMPLATE_ID,
   },
 };
 
@@ -64,140 +73,140 @@ const PATTERN_BLUEPRINT_PROFILE = {
   "Hash Map": {
     wave: WAVE_IDS.WAVE_1,
     archetypeId: "arrays-hashing",
-    templateId: DEFAULT_BLUEPRINT_TEMPLATE_ID,
+    templateId: ARRAY_HASHING_TEMPLATE_ID,
   },
   "Hash Set": {
     wave: WAVE_IDS.WAVE_1,
     archetypeId: "arrays-hashing",
-    templateId: DEFAULT_BLUEPRINT_TEMPLATE_ID,
+    templateId: ARRAY_HASHING_TEMPLATE_ID,
   },
   "Bucket Sort": {
     wave: WAVE_IDS.WAVE_1,
     archetypeId: "arrays-hashing",
-    templateId: DEFAULT_BLUEPRINT_TEMPLATE_ID,
+    templateId: ARRAY_HASHING_TEMPLATE_ID,
   },
   "Prefix/Suffix": {
     wave: WAVE_IDS.WAVE_1,
     archetypeId: "arrays-hashing",
-    templateId: DEFAULT_BLUEPRINT_TEMPLATE_ID,
+    templateId: ARRAY_HASHING_TEMPLATE_ID,
   },
   Design: {
     wave: WAVE_IDS.WAVE_1,
     archetypeId: "arrays-hashing",
-    templateId: DEFAULT_BLUEPRINT_TEMPLATE_ID,
+    templateId: ARRAY_HASHING_TEMPLATE_ID,
   },
   "Two Pointers": {
     wave: WAVE_IDS.WAVE_1,
     archetypeId: "arrays-hashing",
-    templateId: DEFAULT_BLUEPRINT_TEMPLATE_ID,
+    templateId: TWO_POINTERS_TEMPLATE_ID,
   },
   "Sliding Window": {
     wave: WAVE_IDS.WAVE_1,
     archetypeId: "arrays-hashing",
-    templateId: DEFAULT_BLUEPRINT_TEMPLATE_ID,
+    templateId: SLIDING_WINDOW_TEMPLATE_ID,
   },
   "Expand Around Center": {
     wave: WAVE_IDS.WAVE_1,
     archetypeId: "arrays-hashing",
-    templateId: DEFAULT_BLUEPRINT_TEMPLATE_ID,
+    templateId: TWO_POINTERS_TEMPLATE_ID,
   },
 
   Stack: {
     wave: WAVE_IDS.WAVE_2,
     archetypeId: "stack-heap-search",
-    templateId: DEFAULT_BLUEPRINT_TEMPLATE_ID,
+    templateId: STACK_HEAP_TEMPLATE_ID,
   },
   "Monotonic Stack": {
     wave: WAVE_IDS.WAVE_2,
     archetypeId: "stack-heap-search",
-    templateId: DEFAULT_BLUEPRINT_TEMPLATE_ID,
+    templateId: STACK_HEAP_TEMPLATE_ID,
   },
   "Binary Search": {
     wave: WAVE_IDS.WAVE_2,
     archetypeId: "stack-heap-search",
-    templateId: DEFAULT_BLUEPRINT_TEMPLATE_ID,
+    templateId: BINARY_SEARCH_TEMPLATE_ID,
   },
   "Heap / Divide & Conquer": {
     wave: WAVE_IDS.WAVE_2,
     archetypeId: "stack-heap-search",
-    templateId: DEFAULT_BLUEPRINT_TEMPLATE_ID,
+    templateId: STACK_HEAP_TEMPLATE_ID,
   },
   "Two Heaps": {
     wave: WAVE_IDS.WAVE_2,
     archetypeId: "stack-heap-search",
-    templateId: DEFAULT_BLUEPRINT_TEMPLATE_ID,
+    templateId: STACK_HEAP_TEMPLATE_ID,
   },
   "Heap / Sorting": {
     wave: WAVE_IDS.WAVE_2,
     archetypeId: "stack-heap-search",
-    templateId: DEFAULT_BLUEPRINT_TEMPLATE_ID,
+    templateId: STACK_HEAP_TEMPLATE_ID,
   },
   "BST Property / Binary Search": {
     wave: WAVE_IDS.WAVE_2,
     archetypeId: "stack-heap-search",
-    templateId: DEFAULT_BLUEPRINT_TEMPLATE_ID,
+    templateId: BINARY_SEARCH_TEMPLATE_ID,
   },
 
   "Linked List": {
     wave: WAVE_IDS.WAVE_3,
     archetypeId: "linked-list-intervals-greedy",
-    templateId: DEFAULT_BLUEPRINT_TEMPLATE_ID,
+    templateId: LINKED_LIST_TEMPLATE_ID,
   },
   "Fast & Slow Pointers": {
     wave: WAVE_IDS.WAVE_3,
     archetypeId: "linked-list-intervals-greedy",
-    templateId: DEFAULT_BLUEPRINT_TEMPLATE_ID,
+    templateId: LINKED_LIST_TEMPLATE_ID,
   },
   Intervals: {
     wave: WAVE_IDS.WAVE_3,
     archetypeId: "linked-list-intervals-greedy",
-    templateId: DEFAULT_BLUEPRINT_TEMPLATE_ID,
+    templateId: INTERVAL_GREEDY_TEMPLATE_ID,
   },
   Sorting: {
     wave: WAVE_IDS.WAVE_3,
     archetypeId: "linked-list-intervals-greedy",
-    templateId: DEFAULT_BLUEPRINT_TEMPLATE_ID,
+    templateId: INTERVAL_GREEDY_TEMPLATE_ID,
   },
   Greedy: {
     wave: WAVE_IDS.WAVE_3,
     archetypeId: "linked-list-intervals-greedy",
-    templateId: DEFAULT_BLUEPRINT_TEMPLATE_ID,
+    templateId: INTERVAL_GREEDY_TEMPLATE_ID,
   },
   "Kadane's Algorithm": {
     wave: WAVE_IDS.WAVE_3,
     archetypeId: "linked-list-intervals-greedy",
-    templateId: DEFAULT_BLUEPRINT_TEMPLATE_ID,
+    templateId: INTERVAL_GREEDY_TEMPLATE_ID,
   },
 
   DFS: {
     wave: WAVE_IDS.WAVE_4,
     archetypeId: "tree-trie-backtracking",
-    templateId: RECURSIVE_TOP_DOWN_TEMPLATE_ID,
+    templateId: TREE_GRAPH_TEMPLATE_ID,
   },
   BFS: {
     wave: WAVE_IDS.WAVE_4,
     archetypeId: "tree-trie-backtracking",
-    templateId: RECURSIVE_TOP_DOWN_TEMPLATE_ID,
+    templateId: TREE_GRAPH_TEMPLATE_ID,
   },
   "BFS / DFS": {
     wave: WAVE_IDS.WAVE_4,
     archetypeId: "tree-trie-backtracking",
-    templateId: RECURSIVE_TOP_DOWN_TEMPLATE_ID,
+    templateId: TREE_GRAPH_TEMPLATE_ID,
   },
   "DFS (Inorder)": {
     wave: WAVE_IDS.WAVE_4,
     archetypeId: "tree-trie-backtracking",
-    templateId: RECURSIVE_TOP_DOWN_TEMPLATE_ID,
+    templateId: TREE_GRAPH_TEMPLATE_ID,
   },
   "DFS + Hash Map": {
     wave: WAVE_IDS.WAVE_4,
     archetypeId: "tree-trie-backtracking",
-    templateId: RECURSIVE_TOP_DOWN_TEMPLATE_ID,
+    templateId: TREE_GRAPH_TEMPLATE_ID,
   },
   Trie: {
     wave: WAVE_IDS.WAVE_4,
     archetypeId: "tree-trie-backtracking",
-    templateId: RECURSIVE_TOP_DOWN_TEMPLATE_ID,
+    templateId: TREE_GRAPH_TEMPLATE_ID,
   },
   Backtracking: {
     wave: WAVE_IDS.WAVE_4,
@@ -213,38 +222,38 @@ const PATTERN_BLUEPRINT_PROFILE = {
   "DFS / BFS": {
     wave: WAVE_IDS.WAVE_5,
     archetypeId: "graphs",
-    templateId: RECURSIVE_TOP_DOWN_TEMPLATE_ID,
+    templateId: TREE_GRAPH_TEMPLATE_ID,
   },
   "Topological Sort": {
     wave: WAVE_IDS.WAVE_5,
     archetypeId: "graphs",
-    templateId: RECURSIVE_TOP_DOWN_TEMPLATE_ID,
+    templateId: TREE_GRAPH_TEMPLATE_ID,
   },
   "Union Find / DFS": {
     wave: WAVE_IDS.WAVE_5,
     archetypeId: "graphs",
-    templateId: RECURSIVE_TOP_DOWN_TEMPLATE_ID,
+    templateId: TREE_GRAPH_TEMPLATE_ID,
   },
 
   "Dynamic Programming": {
     wave: WAVE_IDS.WAVE_6,
     archetypeId: "dp-bit-matrix",
-    templateId: RECURSIVE_TOP_DOWN_TEMPLATE_ID,
+    templateId: DP_STATE_TEMPLATE_ID,
   },
   "DP + Binary Search (Patience Sorting)": {
     wave: WAVE_IDS.WAVE_6,
     archetypeId: "dp-bit-matrix",
-    templateId: RECURSIVE_TOP_DOWN_TEMPLATE_ID,
+    templateId: BINARY_SEARCH_TEMPLATE_ID,
   },
   "Bit Manipulation": {
     wave: WAVE_IDS.WAVE_6,
     archetypeId: "dp-bit-matrix",
-    templateId: RECURSIVE_TOP_DOWN_TEMPLATE_ID,
+    templateId: DP_STATE_TEMPLATE_ID,
   },
   Matrix: {
     wave: WAVE_IDS.WAVE_6,
     archetypeId: "dp-bit-matrix",
-    templateId: RECURSIVE_TOP_DOWN_TEMPLATE_ID,
+    templateId: DP_STATE_TEMPLATE_ID,
   },
 };
 

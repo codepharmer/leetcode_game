@@ -62,7 +62,7 @@ describe("screens/BlueprintScreen", () => {
 
     const deckCardsBefore = screen.getAllByTestId(/blueprint-deck-card-/);
     const draggedCard = deckCardsBefore[0];
-    const setupSlot = screen.getByTestId("blueprint-slot-setup");
+    const targetSlot = screen.getAllByTestId(/blueprint-slot-/)[0];
 
     const dataTransfer = {
       data: {},
@@ -77,12 +77,12 @@ describe("screens/BlueprintScreen", () => {
     };
 
     fireEvent.dragStart(draggedCard, { dataTransfer });
-    fireEvent.dragOver(setupSlot, { dataTransfer });
-    fireEvent.drop(setupSlot, { dataTransfer });
+    fireEvent.dragOver(targetSlot, { dataTransfer });
+    fireEvent.drop(targetSlot, { dataTransfer });
     fireEvent.dragEnd(draggedCard, { dataTransfer });
 
     expect(screen.getAllByTestId(/blueprint-deck-card-/).length).toBe(deckCardsBefore.length - 1);
-    expect(within(setupSlot).getByText("remove")).toBeInTheDocument();
+    expect(within(targetSlot).getByText("remove")).toBeInTheDocument();
   });
 
   it("supports touch dragging a deck card into a slot", () => {
@@ -91,10 +91,10 @@ describe("screens/BlueprintScreen", () => {
 
     const deckCardsBefore = screen.getAllByTestId(/blueprint-deck-card-/);
     const draggedCard = deckCardsBefore[0];
-    const setupSlot = screen.getByTestId("blueprint-slot-setup");
+    const targetSlot = screen.getAllByTestId(/blueprint-slot-/)[0];
 
     const originalElementFromPoint = document.elementFromPoint;
-    const elementFromPointMock = vi.fn(() => setupSlot);
+    const elementFromPointMock = vi.fn(() => targetSlot);
     Object.defineProperty(document, "elementFromPoint", {
       configurable: true,
       writable: true,
@@ -134,7 +134,7 @@ describe("screens/BlueprintScreen", () => {
     }
 
     expect(screen.getAllByTestId(/blueprint-deck-card-/).length).toBe(deckCardsBefore.length - 1);
-    expect(within(setupSlot).getByText("remove")).toBeInTheDocument();
+    expect(within(targetSlot).getByText("remove")).toBeInTheDocument();
   });
 
   it("keeps run disabled until all solution cards are placed", () => {
@@ -145,10 +145,32 @@ describe("screens/BlueprintScreen", () => {
     expect(runButton).toBeDisabled();
 
     const firstDeckCard = screen.getAllByTestId(/blueprint-deck-card-/)[0];
-    const setupSlot = screen.getByTestId("blueprint-slot-setup");
+    const targetSlot = screen.getAllByTestId(/blueprint-slot-/)[0];
     fireEvent.click(firstDeckCard);
-    fireEvent.click(setupSlot);
+    fireEvent.click(targetSlot);
 
     expect(runButton).toBeDisabled();
+  });
+
+  it("does not loop when initialStars prop identity changes with same values", () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const view = renderBlueprint({ initialStars: { "q-1": 2 } });
+
+    for (let i = 0; i < 8; i += 1) {
+      view.rerender(
+        <MemoryRouter initialEntries={["/blueprint"]}>
+          <Routes>
+            <Route
+              path="/blueprint/*"
+              element={<BlueprintScreen goMenu={vi.fn()} initialStars={{ "q-1": 2 }} onSaveStars={vi.fn()} />}
+            />
+          </Routes>
+        </MemoryRouter>
+      );
+    }
+
+    const depthWarning = errorSpy.mock.calls.find((call) => String(call?.[0] || "").includes("Maximum update depth exceeded"));
+    expect(depthWarning).toBeFalsy();
+    errorSpy.mockRestore();
   });
 });

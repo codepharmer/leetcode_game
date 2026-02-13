@@ -1,8 +1,19 @@
 import { PATTERN_TO_TEMPLATES, UNIVERSAL_TEMPLATE } from "../templates";
 import {
+  ARRAY_HASHING_TEMPLATE_ID,
   BACKTRACKING_TEMPLATE_ID,
+  BINARY_SEARCH_TEMPLATE_ID,
   DEFAULT_BLUEPRINT_TEMPLATE_ID,
+  DP_STATE_TEMPLATE_ID,
+  INTERVAL_GREEDY_TEMPLATE_ID,
+  LINKED_LIST_TEMPLATE_ID,
   RECURSIVE_TOP_DOWN_TEMPLATE_ID,
+  SLIDING_WINDOW_TEMPLATE_ID,
+  STACK_HEAP_TEMPLATE_ID,
+  TEMPLATE_CANONICAL_SLOT_ROLE_MAP,
+  TEMPLATE_CLASSIFICATION_FAMILY,
+  TREE_GRAPH_TEMPLATE_ID,
+  TWO_POINTERS_TEMPLATE_ID,
 } from "./templates";
 import { getQuestionTemplateId } from "./taxonomy";
 
@@ -23,6 +34,55 @@ for item in items:
     if improves_answer(state, best):
         best = extract_answer(state)
 return best`,
+  [ARRAY_HASHING_TEMPLATE_ID]: `state = init_map_or_set()
+for value in values:
+    if has_match(state, value):
+        return build_answer(state, value)
+    record(state, value)
+return finalize(state)`,
+  [TWO_POINTERS_TEMPLATE_ID]: `left, right = init_pointers()
+while left < right:
+    score = evaluate(left, right)
+    if done(score):
+        return emit(left, right)
+    left, right = shift(left, right, score)
+return fallback_answer()`,
+  [SLIDING_WINDOW_TEMPLATE_ID]: `left = 0
+state = init_window()
+for right in range(len(data)):
+    add(data[right], state)
+    while invalid(state):
+        remove(data[left], state)
+        left += 1
+    update_best(state, left, right)
+return emit_best(state)`,
+  [STACK_HEAP_TEMPLATE_ID]: `structure = init_structure()
+for item in items:
+    while should_resolve(structure, item):
+        resolve(structure, item)
+    push_item(structure, item)
+return emit(structure)`,
+  [BINARY_SEARCH_TEMPLATE_ID]: `left, right = initial_bounds()
+while left <= right:
+    mid = (left + right) // 2
+    if is_answer(mid):
+        return emit(mid)
+    left, right = move_bounds(left, right, mid)
+return not_found()`,
+  [LINKED_LIST_TEMPLATE_ID]: `prev = init_prev()
+cur = head
+while cur:
+    if should_relink(cur):
+        relink(prev, cur)
+    prev, cur = advance(prev, cur)
+return emit_head()`,
+  [INTERVAL_GREEDY_TEMPLATE_ID]: `ordered = sort_candidates(items)
+state = init_result()
+for item in ordered:
+    if conflicts(state, item):
+        continue
+    commit(state, item)
+return emit(state)`,
   [BACKTRACKING_TEMPLATE_ID]: `results = []
 path = []
 
@@ -53,6 +113,34 @@ def solve(node):
         result = combine(result, solve(nxt))
     memo[node] = result
     return memo[node]`,
+  [TREE_GRAPH_TEMPLATE_ID]: `seen = set()
+
+def traverse(node):
+    if base_case(node):
+        return base_value
+    if node in seen:
+        return skip_value
+    seen.add(node)
+    result = init_result()
+    for nxt in neighbors(node):
+        if invalid(nxt):
+            continue
+        result = aggregate(result, traverse(nxt))
+    return result`,
+  [DP_STATE_TEMPLATE_ID]: `memo = {}
+
+def solve(state):
+    if base_state(state):
+        return base_value
+    if state in memo:
+        return memo[state]
+    best = init_value()
+    for prev in subproblems(state):
+        if invalid(prev):
+            continue
+        best = transition(best, solve(prev))
+    memo[state] = best
+    return best`,
 };
 
 export function getTemplateSnippetForQuestion(question, explicitTemplateId = null) {
@@ -192,9 +280,15 @@ function classifyRecursiveTopDownLine(line, context) {
 }
 
 export function classifyLineForTemplate(templateId, line, context) {
-  if (templateId === BACKTRACKING_TEMPLATE_ID) return classifyBacktrackingLine(line);
-  if (templateId === RECURSIVE_TOP_DOWN_TEMPLATE_ID) return classifyRecursiveTopDownLine(line, context);
-  return classifyStandardLine(line, context);
+  const family = TEMPLATE_CLASSIFICATION_FAMILY[templateId] || "standard";
+  const slotMap = TEMPLATE_CANONICAL_SLOT_ROLE_MAP[templateId] || TEMPLATE_CANONICAL_SLOT_ROLE_MAP[DEFAULT_BLUEPRINT_TEMPLATE_ID];
+
+  let canonicalSlot = "setup";
+  if (family === "backtracking") canonicalSlot = classifyBacktrackingLine(line);
+  else if (family === "recursive") canonicalSlot = classifyRecursiveTopDownLine(line, context);
+  else canonicalSlot = classifyStandardLine(line, context);
+
+  return slotMap[canonicalSlot] || canonicalSlot;
 }
 
 export function buildTemplateIrForQuestion(question, explicitTemplateId = null) {

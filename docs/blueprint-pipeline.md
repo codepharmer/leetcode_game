@@ -10,6 +10,7 @@ This document defines the current blueprint generation pipeline for all 87 auto-
 
 2. `src/lib/blueprint/taxonomy.js`
 - Maps patterns to archetypes, slot sets, wave IDs, and default strategy families.
+- Maps each pattern to a concrete UI slot template (not just universal `setup/loop/update/check/return`).
 
 3. `src/lib/blueprint/strategies/`
 - `firstTenStrategies.js`: handcrafted strategy plans for questions `q-1..q-10`.
@@ -18,6 +19,7 @@ This document defines the current blueprint generation pipeline for all 87 auto-
 
 4. `src/lib/blueprint/templatePlan.js`
 - Converts question templates into IR nodes with template-aware slot classification.
+- Remaps canonical solve phases into template-specific slot ids (for example `bounds/halve/mid-check` for binary search).
 
 5. `src/lib/blueprint/solutionPipeline.js`
 - Contract -> strategy -> semantic verification -> IR -> cards.

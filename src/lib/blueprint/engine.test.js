@@ -38,7 +38,8 @@ describe("lib/blueprint/engine", () => {
   it("detects divergence from the expected trace", () => {
     const level = BLUEPRINT_LEVELS[2];
     const cards = level.cards.filter((card) => card.correctSlot && card.key !== "move-right");
-    const wrongCard = { ...level.cards.find((card) => card.key === "move-right-wrong"), correctSlot: "check", correctOrder: 2 };
+    const compareSlot = level.cards.find((card) => card.key === "move-right")?.correctSlot || "compare";
+    const wrongCard = { ...level.cards.find((card) => card.key === "move-right-wrong"), correctSlot: compareSlot, correctOrder: 2 };
     const slots = toSlots(level, [...cards, wrongCard]);
 
     const playerTrace = runAllTests(level, slots)[0].trace;

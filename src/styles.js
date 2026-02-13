@@ -21,7 +21,9 @@ const ACCENT = "var(--accent)";
 const CARD_BG = C.surface1;
 const CARD = {
   background: CARD_BG,
-  border: `1px solid ${C.border}`,
+  borderWidth: 1,
+  borderStyle: "solid",
+  borderColor: C.border,
   boxShadow: "var(--shadow-soft)",
 };
 
@@ -80,7 +82,6 @@ export const S = {
     flexDirection: "column",
     gap: 8,
     background: C.surface1,
-    border: `1px solid ${C.border}`,
   },
   syncBannerTitle: { fontSize: 13, fontWeight: 700, color: C.textStrong, letterSpacing: "0.02em" },
   syncBannerText: { fontSize: 13, color: C.muted, lineHeight: 1.5 },
@@ -116,7 +117,9 @@ export const S = {
   pill: {
     padding: "7px 16px",
     borderRadius: 999,
-    border: `1px solid ${C.border}`,
+    borderWidth: 1,
+    borderStyle: "solid",
+    borderColor: C.border,
     background: "transparent",
     color: C.dim,
     fontSize: 12.5,
@@ -128,7 +131,9 @@ export const S = {
   pillSmall: {
     padding: "7px 14px",
     borderRadius: 999,
-    border: `1px solid ${C.border}`,
+    borderWidth: 1,
+    borderStyle: "solid",
+    borderColor: C.border,
     background: "transparent",
     color: C.dim,
     fontSize: 12,
@@ -453,7 +458,9 @@ export const S = {
   blueprintTabBtn: {
     minHeight: 44,
     borderRadius: 10,
-    border: `1px solid transparent`,
+    borderWidth: 1,
+    borderStyle: "solid",
+    borderColor: "transparent",
     background: "transparent",
     color: C.dim,
     fontSize: 12,

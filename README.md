@@ -71,6 +71,12 @@ npm run coverage
 npm run blueprint:report
 ```
 
+### Standalone UI skeleton
+
+For a single-file HTML/CSS/JS mock of the main menu and each mode's opening flow (no real gameplay/data), open:
+
+- `ui-skeleton.html`
+
 ## Environment Variables
 
 Create `.env.local` for local development:
@@ -99,6 +105,7 @@ Base URL for the storage/session API (Lambda Function URL or equivalent).
 4. Blueprint generation:
 - All 87 questions use strategy-driven generation with semantic verification.
 - Production fallback is disabled by default and only enabled via explicit dev flag.
+- Auto and tutorial levels now render pattern-family slot flows (for example: two pointers, sliding window, binary search, stack/heap, linked list, intervals/greedy, tree/graph, DP-state, backtracking) instead of one universal slot scaffold.
 
 ## Repository Map (Directories)
 
@@ -159,6 +166,9 @@ Vite + Vitest + coverage config.
 
 - `index.html`
 HTML entry shell that mounts the React app.
+
+- `ui-skeleton.html`
+Standalone single-file UI skeleton (menu + opening screens for each game mode).
 
 - `.env.local`
 Local environment values (`VITE_*`).

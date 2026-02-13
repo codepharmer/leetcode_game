@@ -1,4 +1,4 @@
-import { DEFAULT_BLUEPRINT_TEMPLATE_ID } from "../templates";
+import { ARRAY_HASHING_TEMPLATE_ID, TWO_POINTERS_TEMPLATE_ID } from "../templates";
 import {
   canonicalGroupOutput,
   canonicalTriplets,
@@ -435,7 +435,7 @@ export function createFirstTenStrategies() {
       name: "Two Sum Hash Map Strategy",
       appliesTo: (contract) => contract?.strategyId === "two-sum-hash-map",
       buildPlan: (contract) => ({
-        templateId: DEFAULT_BLUEPRINT_TEMPLATE_ID,
+        templateId: ARRAY_HASHING_TEMPLATE_ID,
         snippetName: "Two Sum | Hash map lookup",
         ir: [
           irStep("setup", "init-index-map", "const indexByValue = new Map()", "declare"),
@@ -465,7 +465,7 @@ export function createFirstTenStrategies() {
       name: "Valid Anagram Frequency Strategy",
       appliesTo: (contract) => contract?.strategyId === "valid-anagram-frequency",
       buildPlan: (contract) => ({
-        templateId: DEFAULT_BLUEPRINT_TEMPLATE_ID,
+        templateId: ARRAY_HASHING_TEMPLATE_ID,
         snippetName: "Valid Anagram | Frequency map",
         ir: [
           irStep("check", "len-check", "if (s.length !== t.length) return false", "branch"),
@@ -489,7 +489,7 @@ export function createFirstTenStrategies() {
       name: "Contains Duplicate Set Strategy",
       appliesTo: (contract) => contract?.strategyId === "contains-duplicate-set",
       buildPlan: (contract) => ({
-        templateId: DEFAULT_BLUEPRINT_TEMPLATE_ID,
+        templateId: ARRAY_HASHING_TEMPLATE_ID,
         snippetName: "Contains Duplicate | Hash set",
         ir: [
           irStep("setup", "init-seen", "const seen = new Set()", "declare"),
@@ -510,7 +510,7 @@ export function createFirstTenStrategies() {
       name: "Group Anagrams Signature Strategy",
       appliesTo: (contract) => contract?.strategyId === "group-anagrams-signature",
       buildPlan: (contract) => ({
-        templateId: DEFAULT_BLUEPRINT_TEMPLATE_ID,
+        templateId: ARRAY_HASHING_TEMPLATE_ID,
         snippetName: "Group Anagrams | Signature hash map",
         ir: [
           irStep("setup", "init-groups", "const groups = new Map()", "declare"),
@@ -533,7 +533,7 @@ export function createFirstTenStrategies() {
       name: "Top K Frequent Bucket Strategy",
       appliesTo: (contract) => contract?.strategyId === "top-k-frequent-bucket",
       buildPlan: (contract) => ({
-        templateId: DEFAULT_BLUEPRINT_TEMPLATE_ID,
+        templateId: ARRAY_HASHING_TEMPLATE_ID,
         snippetName: "Top K Frequent | Bucket walk",
         ir: [
           irStep("setup", "init-freq", "const freq = new Map()", "declare"),
@@ -559,7 +559,7 @@ export function createFirstTenStrategies() {
       name: "Product Except Self Prefix/Suffix Strategy",
       appliesTo: (contract) => contract?.strategyId === "product-except-self-prefix-suffix",
       buildPlan: (contract) => ({
-        templateId: DEFAULT_BLUEPRINT_TEMPLATE_ID,
+        templateId: ARRAY_HASHING_TEMPLATE_ID,
         snippetName: "Product Except Self | Prefix + suffix",
         ir: [
           irStep("setup", "init-out", "const out = Array(nums.length).fill(1)", "declare"),
@@ -585,7 +585,7 @@ export function createFirstTenStrategies() {
       name: "Encode Decode Length Prefix Strategy",
       appliesTo: (contract) => contract?.strategyId === "encode-decode-length-prefix",
       buildPlan: (contract) => ({
-        templateId: DEFAULT_BLUEPRINT_TEMPLATE_ID,
+        templateId: ARRAY_HASHING_TEMPLATE_ID,
         snippetName: "Encode/Decode | Length-prefix protocol",
         ir: [
           irStep("setup", "init-encoded", "let encoded = ''", "declare"),
@@ -610,7 +610,7 @@ export function createFirstTenStrategies() {
       name: "Longest Consecutive Set Strategy",
       appliesTo: (contract) => contract?.strategyId === "longest-consecutive-set",
       buildPlan: (contract) => ({
-        templateId: DEFAULT_BLUEPRINT_TEMPLATE_ID,
+        templateId: ARRAY_HASHING_TEMPLATE_ID,
         snippetName: "Longest Consecutive | Sequence starts",
         ir: [
           irStep("setup", "init-seen", "const seen = new Set(nums)", "declare"),
@@ -634,7 +634,7 @@ export function createFirstTenStrategies() {
       name: "Valid Palindrome Two Pointers Strategy",
       appliesTo: (contract) => contract?.strategyId === "valid-palindrome-two-pointers",
       buildPlan: (contract) => ({
-        templateId: DEFAULT_BLUEPRINT_TEMPLATE_ID,
+        templateId: TWO_POINTERS_TEMPLATE_ID,
         snippetName: "Valid Palindrome | Two pointers",
         ir: [
           irStep("setup", "normalize", "const text = s.toLowerCase()", "declare"),
@@ -659,7 +659,7 @@ export function createFirstTenStrategies() {
       name: "3Sum Sorted Two Pointers Strategy",
       appliesTo: (contract) => contract?.strategyId === "three-sum-two-pointers",
       buildPlan: (contract) => ({
-        templateId: DEFAULT_BLUEPRINT_TEMPLATE_ID,
+        templateId: TWO_POINTERS_TEMPLATE_ID,
         snippetName: "3Sum | Sort + two pointers",
         ir: [
           irStep("setup", "sort-input", "nums.sort((a, b) => a - b)", "declare"),

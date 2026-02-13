@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>PatternMatch Skeleton</title>
+  <style>
+    @import url("https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;600;700&family=Outfit:wght@500;700;800&display=swap");
+    :root{--bg:#0a0a12;--s1:#111120;--s2:#151528;--b:#1a1a2a;--t:#f0f1f4;--m:#c0c4d0;--d:#8b8fa3;--f:#60657b;--a:#10b981;--w:#f59e0b;--x:#ef4444}
+    *{box-sizing:border-box;margin:0;padding:0}body{background:radial-gradient(ellipse 80% 50% at 50% -20%,rgba(16,185,129,.07),transparent),var(--bg);color:var(--t);font:15px/1.55 "DM Sans",system-ui,sans-serif;padding:0 16px 48px}
+    button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+    .app{max-width:520px;margin:0 auto;padding-top:16px;display:flex;flex-direction:column;gap:14px}.wide{max-width:760px}
+    .top{display:flex;justify-content:space-between;align-items:center}.mono{font:11px "DM Mono",monospace;color:var(--f)}
+    .card{background:var(--s1);border:1px solid var(--b);border-radius:14px;padding:16px}.sec{font:10px "DM Mono",monospace;letter-spacing:1.5px;text-transform:uppercase;color:var(--f);margin-bottom:10px}
+    .logo{text-align:center;padding:10px 0}.logo h1{font:800 28px "Outfit",sans-serif;letter-spacing:-.5px}.logo .sig{color:var(--a);font-family:"DM Mono",monospace;font-weight:500}.logo .dim{color:var(--d);font-weight:500}
+    .logo p{font-size:13px;color:var(--f);margin-top:6px}
+    .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.label{min-width:84px;font:11px "DM Mono",monospace;color:var(--f);text-transform:uppercase;letter-spacing:1px}
+    .pill{border:1px solid var(--b);border-radius:999px;padding:6px 12px;color:var(--d);font:12px "DM Mono",monospace}.pill.on{color:var(--a);border-color:rgba(16,185,129,.35);background:rgba(16,185,129,.1)}
+    .start{width:100%;border-radius:12px;background:#86efac;color:#0f1117;padding:14px;font:600 16px "Outfit",sans-serif}
+    .btn{border:1px solid var(--b);border-radius:10px;background:var(--s1);color:var(--d);padding:7px 11px;font:12px "DM Mono",monospace}
+    .settings{padding:0;overflow:hidden}.set-head{width:100%;display:flex;justify-content:space-between;padding:14px 16px}.set-body{border-top:1px solid var(--b);padding:12px 16px;display:flex;flex-direction:column;gap:10px}
+    .sum{border-top:1px solid var(--b);padding-top:8px;font-size:13px;color:var(--f)}.sum b{color:var(--m);font-weight:500}
+    .stats{display:flex;gap:14px;font:700 14px "Outfit",sans-serif}.stats .dim{color:var(--d);font-weight:500}.stats .a{color:var(--a)}
+    .track{height:4px;background:var(--b);border-radius:999px;overflow:hidden}.track span{display:block;height:100%;background:var(--a)}
+    .qa{display:flex;flex-direction:column;align-items:center;gap:9px;padding-top:6px}.badge{border:1px solid rgba(255,255,255,.15);border-radius:999px;padding:3px 10px;font:700 11px "DM Mono",monospace}
+    .title{font:700 24px "Outfit",sans-serif;letter-spacing:-.3px;text-align:center}.mut{font-size:14px;color:var(--d)}
+    .desc,.code{width:min(560px,100%);border:1px solid var(--b);border-radius:12px;padding:12px}.desc{color:var(--m)}.code{background:rgba(0,0,0,.22);font:12px/1.5 "DM Mono",monospace}
+    .choices{display:grid;grid-template-columns:1fr 1fr;gap:8px}.choice{border:1px solid var(--b);border-radius:12px;background:var(--s1);text-align:left;padding:11px;display:flex;gap:8px;align-items:center}
+    .choice.ok{border-color:var(--a);background:rgba(16,185,129,.14);color:var(--a)}.choice.bad{border-color:var(--x);background:rgba(239,68,68,.12);color:var(--x)}
+    .n{width:21px;height:21px;border-radius:7px;background:var(--s2);border:1px solid var(--b);display:inline-flex;align-items:center;justify-content:center;font:700 12px "DM Mono",monospace;color:var(--d)}
+    .next{display:flex;justify-content:space-between;align-items:center}.oktxt{color:var(--a);font-weight:600}.badtxt{color:var(--x);font-weight:600}
+    .world{border:1px solid var(--b);border-radius:12px;background:var(--s1);padding:10px;text-align:left}.world.lock{opacity:.42}.world b{font:700 15px "Outfit",sans-serif}.world p{font:12px "DM Mono",monospace;color:var(--d)}
+    .tabs{position:fixed;left:50%;transform:translateX(-50%);bottom:16px;width:min(420px,calc(100vw - 32px));border:1px solid var(--b);border-radius:12px;background:var(--s1);padding:6px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px}
+    .tab{min-height:42px;border-radius:8px;border:1px solid transparent;color:var(--d);font:12px "DM Mono",monospace}.tab.on{background:var(--s2);border-color:#222238;color:var(--t)}
+    .hint{margin-top:10px;border:1px solid rgba(16,185,129,.45);background:rgba(16,185,129,.08);border-radius:10px;padding:10px;font-size:13px;color:var(--m)}
+    @media(max-width:740px){.choices{grid-template-columns:1fr}.label{min-width:100%}}
+  </style>
+</head>
+<body>
+  <main id="app"></main>
+  <script>
+    (() => {
+      const MODE = { Q: "q", T: "t", B: "b" };
+      const cfg = {
+        q: { label: "question -> pattern", sub: "Map Blind 75 questions to their solution patterns", noun: "questions", prompt: "What pattern solves this?", start: "Start Round", d: true, c: true },
+        t: { label: "template -> pattern", sub: "Match code snippets to their strongest solution patterns", noun: "snippets", prompt: "Which pattern is this template most connected to?", start: "Start Round", d: true, c: true },
+        b: { label: "blueprint builder", sub: "Build algorithm blueprints card by card and step through execution traces", noun: "levels", prompt: "", start: "Open Blueprint Builder", d: false, c: false }
+      };
+      const openers = {
+        q: { title: "Two Sum (placeholder)", diff: "Easy", desc: "Given an array of integers and a target, return indices of two numbers that add up to target.", ans: "Hash Map", ch: ["Hash Map", "Two Pointers", "Binary Search", "Dynamic Programming"], tpl: "seen = {}\\nfor i, n in enumerate(nums):\\n  if target - n in seen: return [seen[target - n], i]\\n  seen[n] = i" },
+        t: { title: "Code Template", diff: "Medium", code: "left = 0\\nfor right in range(len(nums)):\\n  add(nums[right])\\n  while invalid():\\n    remove(nums[left]); left += 1", ans: "Sliding Window", ch: ["Sliding Window", "Hash Map", "Binary Search", "Dynamic Programming"] }
+      };
+      const worlds = [
+        { id: 1, on: true, n: "Array Frontier", f: "Hashing + Two Pointers", p: "2/4", c: [{ id: "w1c1", n: "Two Sum Blueprint" }, { id: "w1c2", n: "3Sum Blueprint" }] },
+        { id: 2, on: true, n: "Graph Reach", f: "BFS + DFS", p: "1/3", c: [{ id: "w2c1", n: "Number of Islands Blueprint" }] },
+        { id: 3, on: false, n: "DP Summit", f: "1D/2D Dynamic Programming", p: "0/3", lock: "Complete 2 worlds to unlock.", c: [] }
+      ];
+      const s = { screen: "menu", mode: MODE.Q, open: false, diff: "All", count: 20, sel: null, showDesc: false, showTpl: false, bpTab: "map", world: 1, ran: false };
+      const app = document.getElementById("app");
+      const e = (x) => String(x).replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#39;");
+      const m = () => cfg[s.mode];
+      const o = () => openers[s.mode] || openers.q;
+
+      function menu() {
+        const c = m(), all = s.mode === MODE.B ? 12 : 75;
+        const sum = c.d || c.c ? `Practice <b>${s.count === all ? "all available" : s.count} ${c.noun}</b> across <b>${s.diff === "All" ? "all difficulties" : s.diff.toLowerCase() + " " + c.noun}</b>.` : "This mode tracks level completion with star ratings.";
+        return `<section class="app">
+          <div class="top"><div class="row"><span class="avatar">G</span><span style="font-size:14px;color:var(--m)">Guest</span></div><span class="mono">local only</span></div>
+          <div class="logo"><h1><span class="sig">$</span>pattern<span class="sig">.</span><span class="dim">match</span></h1><p>${e(c.sub)}</p></div>
+          <div class="card"><div class="sec">save your results</div><div style="font-size:13px;color:var(--m)">Sign in and cloud sync are visual-only in this skeleton.</div></div>
+          <div class="card settings">
+            <button class="set-head" data-a="open"><span class="sec" style="margin:0">round settings</span><span class="mono">${e(c.label)} | ${s.open ? "hide" : "show"}</span></button>
+            ${s.open ? `<div class="set-body">
+              <div class="setting-line"><span class="label">Mode</span><div class="row">${Object.keys(cfg).map(k => `<button class="pill ${s.mode === k ? "on" : ""}" data-a="mode" data-m="${k}">${e(cfg[k].label)}</button>`).join("")}</div></div>
+              ${c.d ? `<div class="setting-line"><span class="label">Difficulty</span><div class="row">${["All","Easy","Medium","Hard"].map(d => `<button class="pill ${s.diff === d ? "on" : ""}" data-a="diff" data-d="${d}">${d.toLowerCase()}</button>`).join("")}</div></div>` : ""}
+              ${c.c ? `<div class="setting-line"><span class="label">${e(c.noun)}</span><div class="row">${[10,20,40,all].map(n => `<button class="pill ${s.count === n ? "on" : ""}" data-a="count" data-c="${n}">${n === all ? "all" : n}</button>`).join("")}</div></div>` : ""}
+              <div class="sum">${sum}</div>
+            </div>` : ""}
+          </div>
+          <button class="start" data-a="start">${e(c.start)}</button>
+          <div class="card"><div class="sec">needs work</div>
+            <div class="progress-item"><div class="row" style="justify-content:space-between;font-size:13px"><span>Word Break (placeholder)</span><span style="color:var(--w)">32%</span></div><div class="bar"><span style="width:32%"></span></div></div>
+            <div class="progress-item"><div class="row" style="justify-content:space-between;font-size:13px"><span>Clone Graph (placeholder)</span><span style="color:var(--w)">41%</span></div><div class="bar"><span style="width:41%"></span></div></div>
+          </div>
+        </section>`;
+      }
+
+      function play() {
+        const q = o(), c = m(), t = s.mode === MODE.T, sel = s.sel;
+        return `<section class="app wide">
+          <div class="top"><button class="btn" data-a="menu">back</button><div class="stats"><span>1<span class="dim">/1</span></span><span class="a">${sel === q.ans ? 1 : 0}<span class="dim"> correct</span></span></div></div>
+          <div class="track"><span style="width:100%"></span></div>
+          <div class="qa">
+            <span class="badge">${e(q.diff)}</span><h2 class="title">${e(q.title)}</h2>
+            ${t ? `<pre class="code">${e(q.code)}</pre>` : `<button class="btn" data-a="desc">${s.showDesc ? "hide description" : "show description"}</button>${s.showDesc ? `<div class="desc">${e(q.desc)}</div>` : ""}`}
+            <p class="mut">${e(c.prompt)}</p>
+          </div>
+          <div class="choices">${q.ch.map((ch, i) => `<button class="choice ${sel ? (ch === q.ans ? "ok" : (ch === sel ? "bad" : "")) : ""}" data-a="ans" data-i="${i}" ${sel ? "disabled" : ""}><span class="n">${i + 1}</span><span>${e(ch)}</span></button>`).join("")}</div>
+          ${sel ? `<div><div class="next">${sel === q.ans ? `<span class="oktxt">correct</span>` : `<span class="badtxt">answer: <span style="color:var(--t)">${e(q.ans)}</span></span>`}<button class="btn" data-a="next">next</button></div>${s.mode === MODE.Q ? `<div class="card" style="margin-top:10px"><button class="btn" data-a="tpl">${s.showTpl ? "hide template" : "show template"}</button>${s.showTpl ? `<pre class="code" style="margin-top:8px">${e(q.tpl)}</pre>` : ""}</div>` : ""}</div>` : ""}
+        </section>`;
+      }
+
+      function blueprint() {
+        const w = worlds.find(x => x.id === s.world) || worlds[0];
+        const mapPanel = `<button class="world" data-a="daily"><b>Daily Challenge</b><p>Number of Islands Blueprint</p></button>
+          <button class="world" data-a="challenge" style="background:linear-gradient(135deg,#93c5fd,#60a5fa);color:#0f1117;border-color:rgba(96,165,250,.65)"><b>Continue</b><p style="color:rgba(15,17,23,.75)">Array Frontier | 3Sum Blueprint</p></button>
+          ${worlds.map(x => `<button class="world ${x.on ? "" : "lock"}" ${x.on ? `data-a="world" data-w="${x.id}"` : ""}><b>World ${x.id}: ${e(x.n)}</b><p>${e(x.f)}</p><p>${e(x.p)} complete ${x.on ? "" : "| [LOCK] " + e(x.lock)}</p></button>`).join("")}`;
+        const dailyPanel = `<div class="card"><div class="sec">daily challenge [2026-02-13]</div><div style="font:700 22px 'Outfit',sans-serif">Number of Islands Blueprint</div><div class="mono" style="margin-top:6px">difficulty: medium | pattern: DFS</div><button class="start" style="margin-top:10px;background:linear-gradient(135deg,rgba(245,158,11,.95),rgba(234,179,8,.92))" data-a="challenge">Start Challenge</button></div>`;
+        const worldPanel = `<div class="card"><div class="sec">${e(w.f)}</div><div style="font:700 22px 'Outfit',sans-serif">${e(w.n)}</div><div style="margin-top:10px;display:flex;flex-direction:column;gap:8px">${w.c.map(c => `<button class="challenge-row" data-a="challenge"><div class="name">${e(c.n)}</div><div class="meta">opening challenge screen</div></button>`).join("") || `<div class="mono">No opening challenges yet.</div>`}</div></div>`;
+        const challengePanel = `<section class="app wide" style="padding-top:0">
+          <div class="top"><button class="btn" data-a="world" data-w="${w.id}">worlds</button><span style="font:800 18px 'Outfit',sans-serif">Blueprint Opening Screen</span><span class="mono">attempts: ${s.ran ? 1 : 0}</span></div>
+          <div class="card"><div class="sec">challenge intro</div><div style="font:700 20px 'Outfit',sans-serif">Assemble The Flow (placeholder)</div><pre class="code" style="margin-top:8px">input: nums = [2,7,11,15], target = 9\\noutput: [0,1]</pre></div>
+          <div class="card"><div class="sec">slots + deck</div><div class="slot"><div class="head">setup</div><div class="body">initialize state</div></div><div class="slot"><div class="head">iterate</div><div class="body">scan input</div></div><div class="slot"><div class="head">return</div><div class="body">emit answer</div></div><div class="row" style="margin-top:10px;overflow:auto"><div class="deck-card">seen = {}</div><div class="deck-card">for i, n in enumerate(nums)</div><div class="deck-card">if target - n in seen: return ...</div></div><div class="row" style="justify-content:space-between;margin-top:10px"><button class="btn" data-a="reset">reset</button><button class="start" style="width:auto;padding:10px 18px" data-a="run">Run Blueprint</button></div>${s.ran ? `<div class="hint">Execution trace preview shown. Real gameplay/test engine is intentionally omitted.</div>` : ""}</div>
+        </section>`;
+        if (s.bpTab === "challenge") return challengePanel;
+        return `<section class="blueprint-menu">
+          <div class="top"><button class="btn" data-a="menu" style="min-height:44px;min-width:44px">back</button><span style="font:800 18px 'Outfit',sans-serif">Blueprint Builder</span><span class="mono">stars: 9</span></div>
+          ${s.bpTab === "map" ? mapPanel : s.bpTab === "daily" ? dailyPanel : worldPanel}
+          <div class="tabs"><button class="tab ${s.bpTab === "map" ? "on" : ""}" data-a="map">Map</button><button class="tab ${s.bpTab === "daily" ? "on" : ""}" data-a="daily">Daily</button><button class="tab" disabled style="opacity:.45">Stats</button></div>
+        </section>`;
+      }
+
+      function render() { app.innerHTML = s.screen === "menu" ? menu() : s.screen === "play" ? play() : blueprint(); }
+      function resetPlay() { s.sel = null; s.showDesc = false; s.showTpl = false; }
+
+      app.addEventListener("click", (ev) => {
+        const el = ev.target.closest("[data-a]"); if (!el || el.disabled) return;
+        const a = el.dataset.a;
+        if (a === "open") s.open = !s.open;
+        if (a === "mode") s.mode = el.dataset.m;
+        if (a === "diff") s.diff = el.dataset.d;
+        if (a === "count") s.count = Number(el.dataset.c || 20);
+        if (a === "start") { resetPlay(); s.screen = s.mode === MODE.B ? "bp" : "play"; s.bpTab = "map"; s.ran = false; }
+        if (a === "menu") s.screen = "menu";
+        if (a === "desc") s.showDesc = !s.showDesc;
+        if (a === "tpl") s.showTpl = !s.showTpl;
+        if (a === "ans") { const q = o(); s.sel = q.ch[Number(el.dataset.i)] || null; }
+        if (a === "next") resetPlay();
+        if (a === "map") s.bpTab = "map";
+        if (a === "daily") s.bpTab = "daily";
+        if (a === "world") { s.world = Number(el.dataset.w || 1); s.bpTab = "world"; }
+        if (a === "challenge") s.bpTab = "challenge";
+        if (a === "run") s.ran = true;
+        if (a === "reset") s.ran = false;
+        render();
+      });
+      render();
+    })();
+  </script>
+</body>
+</html>

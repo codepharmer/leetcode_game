@@ -1,3 +1,5 @@
+import { TEMPLATE_CANONICAL_SLOT_ROLE_MAP } from "./templates";
+
 function getCardKeys(slots, slotName) {
   return (slots[slotName] || []).map((card) => card.key);
 }
@@ -292,7 +294,19 @@ function executeAssemblyLevel(level, slots) {
 
 function runLevelExecutor(level, slots, input) {
   const executor = EXECUTORS[level.id];
-  if (typeof executor === "function") return executor(slots, input);
+  if (typeof executor === "function") {
+    const canonicalSlots = {};
+    const roleMap = TEMPLATE_CANONICAL_SLOT_ROLE_MAP[level.templateId] || {};
+    const reverseRoleMap = Object.fromEntries(Object.entries(roleMap).map(([canonical, slotId]) => [slotId, canonical]));
+
+    for (const [slotId, cards] of Object.entries(slots || {})) {
+      const canonicalSlot = reverseRoleMap[slotId] || slotId;
+      if (!canonicalSlots[canonicalSlot]) canonicalSlots[canonicalSlot] = [];
+      canonicalSlots[canonicalSlot].push(...cards);
+    }
+
+    return executor(canonicalSlots, input);
+  }
   return executeAssemblyLevel(level, slots);
 }
 

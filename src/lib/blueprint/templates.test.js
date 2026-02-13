@@ -2,9 +2,18 @@ import { describe, expect, it } from "vitest";
 
 import { BLUEPRINT_LEVELS } from "./levels";
 import {
+  ARRAY_HASHING_TEMPLATE_ID,
   BACKTRACKING_TEMPLATE_ID,
+  BINARY_SEARCH_TEMPLATE_ID,
   DEFAULT_BLUEPRINT_TEMPLATE_ID,
+  DP_STATE_TEMPLATE_ID,
+  INTERVAL_GREEDY_TEMPLATE_ID,
+  LINKED_LIST_TEMPLATE_ID,
   RECURSIVE_TOP_DOWN_TEMPLATE_ID,
+  SLIDING_WINDOW_TEMPLATE_ID,
+  STACK_HEAP_TEMPLATE_ID,
+  TREE_GRAPH_TEMPLATE_ID,
+  TWO_POINTERS_TEMPLATE_ID,
   getBlueprintTemplate,
   getTemplateSlotIds,
 } from "./templates";
@@ -49,5 +58,17 @@ describe("lib/blueprint/templates", () => {
 
     const recursive = getBlueprintTemplate(RECURSIVE_TOP_DOWN_TEMPLATE_ID);
     expect(recursive.slots.find((slot) => slot.id === "combine")?.desc).toContain("subresults");
+  });
+
+  it("defines specialized pattern templates beyond the universal flow", () => {
+    expect(getTemplateSlotIds(ARRAY_HASHING_TEMPLATE_ID)).toEqual(["seed", "scan", "record", "match", "emit"]);
+    expect(getTemplateSlotIds(TWO_POINTERS_TEMPLATE_ID)).toEqual(["anchors", "converge", "shift", "compare", "emit"]);
+    expect(getTemplateSlotIds(SLIDING_WINDOW_TEMPLATE_ID)).toEqual(["bootstrap", "expand", "shrink", "window-check", "emit"]);
+    expect(getTemplateSlotIds(STACK_HEAP_TEMPLATE_ID)).toEqual(["init-structure", "iterate", "push-pop", "resolve", "emit"]);
+    expect(getTemplateSlotIds(BINARY_SEARCH_TEMPLATE_ID)).toEqual(["bounds", "halve", "move-bounds", "mid-check", "emit"]);
+    expect(getTemplateSlotIds(LINKED_LIST_TEMPLATE_ID)).toEqual(["anchors", "walk", "relink", "guard", "emit"]);
+    expect(getTemplateSlotIds(INTERVAL_GREEDY_TEMPLATE_ID)).toEqual(["order", "sweep", "commit", "overlap", "emit"]);
+    expect(getTemplateSlotIds(TREE_GRAPH_TEMPLATE_ID)).toEqual(["base-case", "branch", "prune", "traverse", "aggregate"]);
+    expect(getTemplateSlotIds(DP_STATE_TEMPLATE_ID)).toEqual(["base-state", "subproblem", "state-guard", "transition", "memoize"]);
   });
 });

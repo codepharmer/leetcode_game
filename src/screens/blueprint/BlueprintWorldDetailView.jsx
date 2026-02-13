@@ -56,18 +56,23 @@ function ProblemRow({ challenge, stars, accent, canPlay, onStart }) {
 export function BlueprintWorldDetailView({ world, completed, onBack, onStartChallenge }) {
   const accent = getWorldAccent(world?.id || 1);
   const [expandedByTier, setExpandedByTier] = useState({ 0: true });
+  const worldId = world?.id ?? null;
+  const activeTierIndex = world?.activeTierIndex || 0;
 
   useEffect(() => {
-    if (!world) {
-      setExpandedByTier({ 0: true });
-      return;
-    }
-
-    setExpandedByTier({
-      0: true,
-      [world.activeTierIndex || 0]: true,
+    setExpandedByTier((prev) => {
+      const next = {
+        0: true,
+        [activeTierIndex]: true,
+      };
+      const prevKeys = Object.keys(prev);
+      const nextKeys = Object.keys(next);
+      const isSame =
+        prevKeys.length === nextKeys.length &&
+        nextKeys.every((key) => prev[key] === next[key]);
+      return isSame ? prev : next;
     });
-  }, [world]);
+  }, [activeTierIndex, worldId]);
 
   const stage = useMemo(() => world?.activeStage || world?.stages?.[0] || null, [world]);
   const tiers = stage?.tiers || [];

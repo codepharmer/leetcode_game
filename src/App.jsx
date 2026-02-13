@@ -164,11 +164,15 @@ export default function App() {
       }),
     [browseFilter, filterDifficulty, gameType, totalQuestions]
   );
+  const normalizedLocationSearch = useMemo(
+    () => buildRouteSearch(parseRouteSettings(location.search)),
+    [location.search]
+  );
 
   useEffect(() => {
-    if (location.search === currentSearch) return;
+    if (normalizedLocationSearch === currentSearch) return;
     navigate({ pathname: location.pathname, search: currentSearch }, { replace: true });
-  }, [currentSearch, location.pathname, location.search, navigate]);
+  }, [currentSearch, location.pathname, navigate, normalizedLocationSearch]);
 
   const navigateWithSearch = useCallback(
     (pathname, options) => {

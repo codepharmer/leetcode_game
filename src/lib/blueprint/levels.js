@@ -2,7 +2,7 @@ import { QUESTIONS } from "../questions";
 import { buildCardsFromIr, buildSlotLimits } from "./ir";
 import { buildGeneratedSolutionForQuestion } from "./solutionPipeline";
 import { buildTemplateIrForQuestion } from "./templatePlan";
-import { DEFAULT_BLUEPRINT_TEMPLATE_ID, getTemplateSlotIds } from "./templates";
+import { DEFAULT_BLUEPRINT_TEMPLATE_ID, TWO_POINTERS_TEMPLATE_ID, getTemplateSlotIds } from "./templates";
 import { getQuestionTemplateId } from "./taxonomy";
 
 const BASE_BLUEPRINT_LEVELS = [
@@ -92,7 +92,7 @@ const BASE_BLUEPRINT_LEVELS = [
   },
   {
     id: 3,
-    templateId: DEFAULT_BLUEPRINT_TEMPLATE_ID,
+    templateId: TWO_POINTERS_TEMPLATE_ID,
     title: "Pair With Target Sum",
     pattern: "Two Pointers",
     difficulty: "Boss",
@@ -101,20 +101,20 @@ const BASE_BLUEPRINT_LEVELS = [
     hints: false,
     slotLimits: { loop: 1, return: 1 },
     cards: [
-      { id: "3-c1", text: "let left = 0", correctSlot: "setup", correctOrder: 0, key: "init-left" },
-      { id: "3-c2", text: "let right = nums.length - 1", correctSlot: "setup", correctOrder: 1, key: "init-right-end" },
-      { id: "3-c3", text: "while left < right", correctSlot: "loop", correctOrder: 0, key: "while-lt" },
+      { id: "3-c1", text: "let left = 0", correctSlot: "anchors", correctOrder: 0, key: "init-left" },
+      { id: "3-c2", text: "let right = nums.length - 1", correctSlot: "anchors", correctOrder: 1, key: "init-right-end" },
+      { id: "3-c3", text: "while left < right", correctSlot: "converge", correctOrder: 0, key: "while-lt" },
       {
         id: "3-c4",
         text: "let sum = nums[left]\n         + nums[right]",
-        correctSlot: "update",
+        correctSlot: "shift",
         correctOrder: 0,
         key: "calc-sum",
       },
-      { id: "3-c5", text: "if sum === target:\n  return [left, right]", correctSlot: "check", correctOrder: 0, key: "found" },
-      { id: "3-c6", text: "if sum < target: left++", correctSlot: "check", correctOrder: 1, key: "move-left" },
-      { id: "3-c7", text: "if sum > target: right--", correctSlot: "check", correctOrder: 2, key: "move-right" },
-      { id: "3-c8", text: "return [-1, -1]", correctSlot: "return", correctOrder: 0, key: "ret-notfound" },
+      { id: "3-c5", text: "if sum === target:\n  return [left, right]", correctSlot: "compare", correctOrder: 0, key: "found" },
+      { id: "3-c6", text: "if sum < target: left++", correctSlot: "compare", correctOrder: 1, key: "move-left" },
+      { id: "3-c7", text: "if sum > target: right--", correctSlot: "compare", correctOrder: 2, key: "move-right" },
+      { id: "3-c8", text: "return [-1, -1]", correctSlot: "emit", correctOrder: 0, key: "ret-notfound" },
       { id: "3-d1", text: "let left = 1", correctSlot: null, key: "init-left-1", isDistractor: true },
       { id: "3-d2", text: "if sum < target: right--", correctSlot: null, key: "move-right-wrong", isDistractor: true },
       { id: "3-d3", text: "while left <= right", correctSlot: null, key: "while-lte", isDistractor: true },

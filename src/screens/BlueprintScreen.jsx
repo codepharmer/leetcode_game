@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { Navigate, Route, Routes, useNavigate, useParams } from "react-router-dom";
 
 import {
@@ -89,11 +89,7 @@ function BlueprintChallengeRoute({ campaign, onBackFromChallenge, onCompleteChal
 
 export function BlueprintScreen({ goMenu, initialStars, onSaveStars }) {
   const navigate = useNavigate();
-  const [completed, setCompleted] = useState(() => normalizeStars(initialStars));
-
-  useEffect(() => {
-    setCompleted(normalizeStars(initialStars));
-  }, [initialStars]);
+  const completed = useMemo(() => normalizeStars(initialStars), [initialStars]);
 
   const campaign = useMemo(() => getBlueprintCampaign(completed), [completed]);
 
@@ -122,7 +118,6 @@ export function BlueprintScreen({ goMenu, initialStars, onSaveStars }) {
   const onCompleteChallenge = (challenge, id, stars) => {
     const safeId = String(id);
     const nextStars = Math.max(Number(completed?.[safeId] || 0), Number(stars || 0));
-    setCompleted((prev) => ({ ...prev, [safeId]: nextStars }));
     onSaveStars?.(safeId, nextStars);
 
     if (challenge?.worldId) {
