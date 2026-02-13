@@ -370,7 +370,7 @@ World stage/tier detail and challenge launch UI.
 Daily challenge detail/start screen.
 
 - `src/screens/blueprint/BlueprintGame.jsx`
-Card deck/slot placement UX, drag/drop/touch support, run/reset controls.
+Card deck/slot placement UX, drag/drop/touch support (including moving already placed cards between slots and placing multiple cards in the same step), run/reset controls.
 
 - `src/screens/blueprint/BlueprintExecution.jsx`
 Execution trace stepping and feedback display.
@@ -444,7 +444,7 @@ Strategy pipeline pass/fallback behavior.
 Blueprint template definitions.
 
 - `src/screens/BlueprintScreen.test.jsx`
-Blueprint navigation and drag/touch interactions.
+Blueprint navigation and drag/touch interactions, including moving placed cards between slots.
 
 - `src/screens/BrowseScreen.test.jsx`
 Browse UI grouping/expansion.

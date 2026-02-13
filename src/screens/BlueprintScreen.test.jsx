@@ -85,6 +85,104 @@ describe("screens/BlueprintScreen", () => {
     expect(within(targetSlot).getByText("remove")).toBeInTheDocument();
   });
 
+  it("supports dragging a placed card to a different slot", () => {
+    renderBlueprint();
+    fireEvent.click(screen.getByRole("button", { name: /Two Sum/i }));
+
+    const slots = screen.getAllByTestId(/blueprint-slot-/);
+    const sourceSlot = slots[0];
+    const targetSlot = slots[1];
+    const deckCard = screen.getAllByTestId(/blueprint-deck-card-/)[0];
+
+    const firstTransfer = {
+      data: {},
+      setData(type, value) {
+        this.data[type] = value;
+      },
+      getData(type) {
+        return this.data[type] || "";
+      },
+      effectAllowed: "move",
+      dropEffect: "move",
+    };
+
+    fireEvent.dragStart(deckCard, { dataTransfer: firstTransfer });
+    fireEvent.dragOver(sourceSlot, { dataTransfer: firstTransfer });
+    fireEvent.drop(sourceSlot, { dataTransfer: firstTransfer });
+    fireEvent.dragEnd(deckCard, { dataTransfer: firstTransfer });
+
+    const deckCountAfterPlacement = screen.getAllByTestId(/blueprint-deck-card-/).length;
+    const placedCard = within(sourceSlot).getByTestId(/blueprint-placed-card-/);
+
+    const secondTransfer = {
+      data: {},
+      setData(type, value) {
+        this.data[type] = value;
+      },
+      getData(type) {
+        return this.data[type] || "";
+      },
+      effectAllowed: "move",
+      dropEffect: "move",
+    };
+
+    fireEvent.dragStart(placedCard, { dataTransfer: secondTransfer });
+    fireEvent.dragOver(targetSlot, { dataTransfer: secondTransfer });
+    fireEvent.drop(targetSlot, { dataTransfer: secondTransfer });
+    fireEvent.dragEnd(placedCard, { dataTransfer: secondTransfer });
+
+    expect(screen.getAllByTestId(/blueprint-deck-card-/).length).toBe(deckCountAfterPlacement);
+    expect(within(sourceSlot).queryByTestId(/blueprint-placed-card-/)).not.toBeInTheDocument();
+    expect(within(targetSlot).getByTestId(/blueprint-placed-card-/)).toBeInTheDocument();
+  });
+
+  it("supports dropping multiple cards into the same step", () => {
+    renderBlueprint();
+    fireEvent.click(screen.getByRole("button", { name: /Two Sum/i }));
+
+    const slotCandidates = screen.getAllByTestId(/blueprint-slot-/);
+    const targetSlot =
+      slotCandidates.find((slot) => within(slot).queryByText(/\(target 1\)/i) || within(slot).queryByText(/\/1\b/)) ||
+      slotCandidates[0];
+    const [firstCard, secondCard] = screen.getAllByTestId(/blueprint-deck-card-/);
+
+    const firstTransfer = {
+      data: {},
+      setData(type, value) {
+        this.data[type] = value;
+      },
+      getData(type) {
+        return this.data[type] || "";
+      },
+      effectAllowed: "move",
+      dropEffect: "move",
+    };
+
+    fireEvent.dragStart(firstCard, { dataTransfer: firstTransfer });
+    fireEvent.dragOver(targetSlot, { dataTransfer: firstTransfer });
+    fireEvent.drop(targetSlot, { dataTransfer: firstTransfer });
+    fireEvent.dragEnd(firstCard, { dataTransfer: firstTransfer });
+
+    const secondTransfer = {
+      data: {},
+      setData(type, value) {
+        this.data[type] = value;
+      },
+      getData(type) {
+        return this.data[type] || "";
+      },
+      effectAllowed: "move",
+      dropEffect: "move",
+    };
+
+    fireEvent.dragStart(secondCard, { dataTransfer: secondTransfer });
+    fireEvent.dragOver(targetSlot, { dataTransfer: secondTransfer });
+    fireEvent.drop(targetSlot, { dataTransfer: secondTransfer });
+    fireEvent.dragEnd(secondCard, { dataTransfer: secondTransfer });
+
+    expect(within(targetSlot).getAllByTestId(/blueprint-placed-card-/).length).toBe(2);
+  });
+
   it("supports touch dragging a deck card into a slot", () => {
     renderBlueprint();
     fireEvent.click(screen.getByRole("button", { name: /Two Sum/i }));
@@ -135,6 +233,80 @@ describe("screens/BlueprintScreen", () => {
 
     expect(screen.getAllByTestId(/blueprint-deck-card-/).length).toBe(deckCardsBefore.length - 1);
     expect(within(targetSlot).getByText("remove")).toBeInTheDocument();
+  });
+
+  it("supports touch dragging a placed card to a different slot", () => {
+    renderBlueprint();
+    fireEvent.click(screen.getByRole("button", { name: /Two Sum/i }));
+
+    const slots = screen.getAllByTestId(/blueprint-slot-/);
+    const sourceSlot = slots[0];
+    const targetSlot = slots[1];
+    const deckCard = screen.getAllByTestId(/blueprint-deck-card-/)[0];
+
+    const originalElementFromPoint = document.elementFromPoint;
+    const elementFromPointMock = vi.fn(() => sourceSlot);
+    Object.defineProperty(document, "elementFromPoint", {
+      configurable: true,
+      writable: true,
+      value: elementFromPointMock,
+    });
+
+    fireEvent.pointerDown(deckCard, {
+      pointerId: 1,
+      pointerType: "touch",
+      clientX: 20,
+      clientY: 20,
+    });
+    fireEvent.pointerMove(deckCard, {
+      pointerId: 1,
+      pointerType: "touch",
+      clientX: 20,
+      clientY: 36,
+    });
+    fireEvent.pointerUp(deckCard, {
+      pointerId: 1,
+      pointerType: "touch",
+      clientX: 20,
+      clientY: 36,
+    });
+
+    const deckCountAfterPlacement = screen.getAllByTestId(/blueprint-deck-card-/).length;
+    const placedCard = within(sourceSlot).getByTestId(/blueprint-placed-card-/);
+    elementFromPointMock.mockImplementation(() => targetSlot);
+
+    fireEvent.pointerDown(placedCard, {
+      pointerId: 2,
+      pointerType: "touch",
+      clientX: 20,
+      clientY: 36,
+    });
+    fireEvent.pointerMove(placedCard, {
+      pointerId: 2,
+      pointerType: "touch",
+      clientX: 20,
+      clientY: 52,
+    });
+    fireEvent.pointerUp(placedCard, {
+      pointerId: 2,
+      pointerType: "touch",
+      clientX: 20,
+      clientY: 52,
+    });
+
+    if (originalElementFromPoint) {
+      Object.defineProperty(document, "elementFromPoint", {
+        configurable: true,
+        writable: true,
+        value: originalElementFromPoint,
+      });
+    } else {
+      delete document.elementFromPoint;
+    }
+
+    expect(screen.getAllByTestId(/blueprint-deck-card-/).length).toBe(deckCountAfterPlacement);
+    expect(within(sourceSlot).queryByTestId(/blueprint-placed-card-/)).not.toBeInTheDocument();
+    expect(within(targetSlot).getByTestId(/blueprint-placed-card-/)).toBeInTheDocument();
   });
 
   it("keeps run disabled until all solution cards are placed", () => {

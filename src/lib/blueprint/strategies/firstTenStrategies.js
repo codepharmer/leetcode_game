@@ -250,15 +250,36 @@ function isAlphaNumeric(ch) {
   return isDigit || isUpper || isLower;
 }
 
+function normalizedAlphaCodeAt(text, index) {
+  const code = text.charCodeAt(index);
+  const isDigit = code >= 48 && code <= 57;
+  if (isDigit) return code;
+  const isUpper = code >= 65 && code <= 90;
+  if (isUpper) return code + 32;
+  const isLower = code >= 97 && code <= 122;
+  if (isLower) return code;
+  return -1;
+}
+
 function solveValidPalindrome(input) {
-  const text = String(input?.s || "").toLowerCase();
+  const text = String(input?.s || "");
   let left = 0;
   let right = text.length - 1;
 
   while (left < right) {
-    while (left < right && !isAlphaNumeric(text[left])) left += 1;
-    while (left < right && !isAlphaNumeric(text[right])) right -= 1;
-    if (text[left] !== text[right]) return false;
+    let leftCode = normalizedAlphaCodeAt(text, left);
+    while (left < right && leftCode < 0) {
+      left += 1;
+      leftCode = normalizedAlphaCodeAt(text, left);
+    }
+
+    let rightCode = normalizedAlphaCodeAt(text, right);
+    while (left < right && rightCode < 0) {
+      right -= 1;
+      rightCode = normalizedAlphaCodeAt(text, right);
+    }
+
+    if (leftCode !== rightCode) return false;
     left += 1;
     right -= 1;
   }
@@ -276,7 +297,8 @@ function validPalindromeOracle(input) {
 }
 
 function solveThreeSum(input) {
-  const nums = [...(input?.nums || [])].sort((a, b) => a - b);
+  const nums = Array.isArray(input?.nums) ? input.nums : [];
+  nums.sort((a, b) => a - b);
   const out = [];
 
   for (let i = 0; i < nums.length - 2; i += 1) {

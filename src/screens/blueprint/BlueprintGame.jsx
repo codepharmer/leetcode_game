@@ -177,6 +177,24 @@ export function BlueprintGame({ level, challenge, onBack, onComplete }) {
     handleCardClick(card);
   };
 
+  const handlePlacedCardClick = (event, card, slotId) => {
+    event.stopPropagation();
+    if (suppressClickCardIdRef.current === card.id) {
+      suppressClickCardIdRef.current = null;
+      return;
+    }
+    removeFromSlot(card, slotId);
+  };
+
+  const handleDesktopDragStart = (event, cardId) => {
+    if (phase !== "build") return;
+    if (event.dataTransfer) {
+      event.dataTransfer.setData("text/plain", cardId);
+      event.dataTransfer.effectAllowed = "move";
+    }
+    setDraggingCardId(cardId);
+  };
+
   return (
     <div style={S.blueprintContainer}>
       <div style={S.topBar}>
@@ -258,7 +276,7 @@ export function BlueprintGame({ level, challenge, onBack, onComplete }) {
                     <span style={{ ...S.blueprintSlotIcon, color: displayMeta.color }}>{displayMeta.icon}</span>
                     <span style={{ ...S.blueprintSlotName, color: displayMeta.color }}>{displayMeta.name}</span>
                     <span style={S.blueprintSlotDesc}>{displayMeta.desc}</span>
-                    {limit ? <span style={S.blueprintSlotLimit}>{cards.length}/{limit}</span> : null}
+                    {limit ? <span style={S.blueprintSlotLimit}>{cards.length} (target {limit})</span> : null}
                   </div>
 
                   <div style={S.blueprintSlotCards}>
@@ -271,13 +289,19 @@ export function BlueprintGame({ level, challenge, onBack, onComplete }) {
                     {cards.map((card, idx) => (
                       <div key={card.id} style={S.blueprintPlacedRow}>
                         <button
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            removeFromSlot(card, slotId);
-                          }}
+                          data-testid={`blueprint-placed-card-${card.id}`}
+                          draggable={phase === "build"}
+                          onDragStart={(event) => handleDesktopDragStart(event, card.id)}
+                          onDragEnd={clearDragState}
+                          onPointerDown={(event) => handleTouchDragStart(event, card)}
+                          onPointerMove={(event) => handleTouchDragMove(event, card.id)}
+                          onPointerUp={(event) => handleTouchDragEnd(event, card.id)}
+                          onPointerCancel={(event) => handleTouchDragCancel(event, card.id)}
+                          onClick={(event) => handlePlacedCardClick(event, card, slotId)}
                           style={{
                             ...S.blueprintPlacedCard,
                             borderLeftColor: displayMeta.color,
+                            touchAction: "none",
                           }}
                         >
                           <pre style={S.blueprintCardCode}>{card.text}</pre>
@@ -332,13 +356,7 @@ export function BlueprintGame({ level, challenge, onBack, onComplete }) {
                     key={card.id}
                     data-testid={`blueprint-deck-card-${card.id}`}
                     draggable={phase === "build"}
-                    onDragStart={(event) => {
-                      if (event.dataTransfer) {
-                        event.dataTransfer.setData("text/plain", card.id);
-                        event.dataTransfer.effectAllowed = "move";
-                      }
-                      setDraggingCardId(card.id);
-                    }}
+                    onDragStart={(event) => handleDesktopDragStart(event, card.id)}
                     onDragEnd={clearDragState}
                     onPointerDown={(event) => handleTouchDragStart(event, card)}
                     onPointerMove={(event) => handleTouchDragMove(event, card.id)}

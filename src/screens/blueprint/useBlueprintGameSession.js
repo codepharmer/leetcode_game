@@ -89,9 +89,7 @@ export function useBlueprintGameSession({ level, challenge }) {
     if (!getCardById(cardId)) return false;
     const current = slots[slotId] || [];
     if (current.some((card) => card.id === cardId)) return true;
-    const limit = level.slotLimits?.[slotId];
-    if (!limit) return true;
-    return current.length < limit;
+    return true;
   };
 
   const placeCardInSlot = (cardId, slotId) => {
