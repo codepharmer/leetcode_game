@@ -1,5 +1,3 @@
-import { useEffect, useState } from "react";
-
 import { S } from "../../styles";
 import { BlueprintDailyView } from "./BlueprintDailyView";
 import { BlueprintMapView } from "./BlueprintMapView";
@@ -13,23 +11,13 @@ export function BlueprintMenu({
   campaign,
   completed,
   selectedWorld,
-  setSelectedWorldId,
   startChallenge,
   totalStars,
+  menuView = TAB_MAP,
+  onOpenMap,
+  onOpenDaily,
+  onOpenWorld,
 }) {
-  const [menuView, setMenuView] = useState(TAB_MAP);
-
-  useEffect(() => {
-    if (menuView !== "world") return;
-    if (selectedWorld?.isUnlocked) return;
-    setMenuView(TAB_MAP);
-  }, [menuView, selectedWorld]);
-
-  const openWorldDetail = (worldId) => {
-    setSelectedWorldId(worldId);
-    setMenuView("world");
-  };
-
   const activeTab = menuView === TAB_DAILY ? TAB_DAILY : TAB_MAP;
 
   return (
@@ -46,8 +34,8 @@ export function BlueprintMenu({
         <BlueprintMapView
           campaign={campaign}
           completed={completed}
-          onOpenDaily={() => setMenuView(TAB_DAILY)}
-          onOpenWorld={openWorldDetail}
+          onOpenDaily={onOpenDaily}
+          onOpenWorld={onOpenWorld}
           onContinue={startChallenge}
         />
       ) : null}
@@ -56,7 +44,7 @@ export function BlueprintMenu({
         <BlueprintWorldDetailView
           world={selectedWorld}
           completed={completed}
-          onBack={() => setMenuView(TAB_MAP)}
+          onBack={onOpenMap}
           onStartChallenge={startChallenge}
         />
       ) : null}
@@ -65,7 +53,7 @@ export function BlueprintMenu({
         <BlueprintDailyView
           dailyChallenge={campaign.dailyChallenge}
           completed={completed}
-          onBack={() => setMenuView(TAB_MAP)}
+          onBack={onOpenMap}
           onStartChallenge={startChallenge}
         />
       ) : null}
@@ -74,14 +62,14 @@ export function BlueprintMenu({
       <div style={S.blueprintTabBar}>
         <button
           className="pressable-200"
-          onClick={() => setMenuView(TAB_MAP)}
+          onClick={onOpenMap}
           style={{ ...S.blueprintTabBtn, ...(activeTab === TAB_MAP ? S.blueprintTabBtnActive : null) }}
         >
           Map
         </button>
         <button
           className="pressable-200"
-          onClick={() => setMenuView(TAB_DAILY)}
+          onClick={onOpenDaily}
           style={{ ...S.blueprintTabBtn, ...(activeTab === TAB_DAILY ? S.blueprintTabBtnActive : null) }}
         >
           Daily

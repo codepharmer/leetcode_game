@@ -1,7 +1,60 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { MODES } from "../lib/constants";
 import { shuffle } from "../lib/utils";
+
+const EMPTY_SNAPSHOT = {
+  roundItems: [],
+  currentIdx: 0,
+  choices: [],
+  selected: null,
+  score: 0,
+  results: [],
+  streak: 0,
+  bestStreak: 0,
+  showNext: false,
+  showDesc: false,
+  showTemplate: false,
+};
+
+function toSafeNumber(value, fallback = 0) {
+  const next = Number(value);
+  if (!Number.isFinite(next)) return fallback;
+  return next;
+}
+
+function normalizeRoundSnapshot(snapshot) {
+  if (!snapshot || typeof snapshot !== "object") return EMPTY_SNAPSHOT;
+
+  const roundItems = Array.isArray(snapshot.roundItems) ? snapshot.roundItems.filter(Boolean) : [];
+  const maxIdx = Math.max(0, roundItems.length - 1);
+  const currentIdx = Math.min(maxIdx, Math.max(0, Math.floor(toSafeNumber(snapshot.currentIdx, 0))));
+
+  const choices = Array.isArray(snapshot.choices)
+    ? snapshot.choices.filter((choice) => typeof choice === "string" && choice.length > 0)
+    : [];
+
+  const selected = typeof snapshot.selected === "string" ? snapshot.selected : null;
+  const results = Array.isArray(snapshot.results) ? snapshot.results.filter(Boolean) : [];
+
+  return {
+    roundItems,
+    currentIdx,
+    choices,
+    selected,
+    score: Math.max(0, Math.floor(toSafeNumber(snapshot.score, 0))),
+    results,
+    streak: Math.max(0, Math.floor(toSafeNumber(snapshot.streak, 0))),
+    bestStreak: Math.max(0, Math.floor(toSafeNumber(snapshot.bestStreak, 0))),
+    showNext: snapshot.showNext === true,
+    showDesc: snapshot.showDesc === true,
+    showTemplate: snapshot.showTemplate === true,
+  };
+}
+
+function hasRecoverableRound(snapshot) {
+  return Array.isArray(snapshot.roundItems) && snapshot.roundItems.length > 0;
+}
 
 export function useGameSession({
   mode,
@@ -17,21 +70,25 @@ export function useGameSession({
   persistModeProgress,
   resetViewport,
   onRoundComplete,
+  initialRoundState,
+  initialRoundStateKey,
 }) {
-  const [roundItems, setRoundItems] = useState([]);
-  const [currentIdx, setCurrentIdx] = useState(0);
-  const [choices, setChoices] = useState([]);
-  const [selected, setSelected] = useState(null);
+  const initialSnapshot = useMemo(() => normalizeRoundSnapshot(initialRoundState), [initialRoundState, initialRoundStateKey]);
 
-  const [score, setScore] = useState(0);
-  const [results, setResults] = useState([]);
+  const [roundItems, setRoundItems] = useState(initialSnapshot.roundItems);
+  const [currentIdx, setCurrentIdx] = useState(initialSnapshot.currentIdx);
+  const [choices, setChoices] = useState(initialSnapshot.choices);
+  const [selected, setSelected] = useState(initialSnapshot.selected);
 
-  const [streak, setStreak] = useState(0);
-  const [bestStreak, setBestStreak] = useState(0);
+  const [score, setScore] = useState(initialSnapshot.score);
+  const [results, setResults] = useState(initialSnapshot.results);
 
-  const [showNext, setShowNext] = useState(false);
-  const [showDesc, setShowDesc] = useState(false);
-  const [showTemplate, setShowTemplate] = useState(false);
+  const [streak, setStreak] = useState(initialSnapshot.streak);
+  const [bestStreak, setBestStreak] = useState(initialSnapshot.bestStreak);
+
+  const [showNext, setShowNext] = useState(initialSnapshot.showNext);
+  const [showDesc, setShowDesc] = useState(initialSnapshot.showDesc);
+  const [showTemplate, setShowTemplate] = useState(initialSnapshot.showTemplate);
 
   const currentItem = roundItems[currentIdx];
   const historyRef = useRef(history || {});
@@ -47,6 +104,46 @@ export function useGameSession({
     },
     [buildChoices]
   );
+
+  const clearRoundState = useCallback(() => {
+    setRoundItems([]);
+    setCurrentIdx(0);
+    setChoices([]);
+    setSelected(null);
+    setScore(0);
+    setResults([]);
+    setStreak(0);
+    setBestStreak(0);
+    setShowNext(false);
+    setShowDesc(false);
+    setShowTemplate(false);
+  }, []);
+
+  useEffect(() => {
+    const snapshot = normalizeRoundSnapshot(initialRoundState);
+    if (!hasRecoverableRound(snapshot)) {
+      clearRoundState();
+      return;
+    }
+
+    setRoundItems(snapshot.roundItems);
+    setCurrentIdx(snapshot.currentIdx);
+    setChoices(snapshot.choices);
+    setSelected(snapshot.selected);
+    setScore(snapshot.score);
+    setResults(snapshot.results);
+    setStreak(snapshot.streak);
+    setBestStreak(snapshot.bestStreak);
+    setShowNext(snapshot.showNext);
+    setShowDesc(snapshot.showDesc);
+    setShowTemplate(snapshot.showTemplate);
+  }, [clearRoundState, initialRoundState, initialRoundStateKey]);
+
+  useEffect(() => {
+    if (!currentItem) return;
+    if (choices.length > 0) return;
+    setChoices(getChoices(currentItem.pattern));
+  }, [choices.length, currentItem, getChoices]);
 
   const startGame = useCallback(() => {
     let pool = itemsPool || [];
@@ -176,7 +273,7 @@ export function useGameSession({
       }
 
       if (!showNext && selected === null) {
-        const number = parseInt(event.key, 10);
+        const number = Number.parseInt(event.key, 10);
         if (number >= 1 && number <= 4 && choices[number - 1]) handleSelect(choices[number - 1]);
       }
     };

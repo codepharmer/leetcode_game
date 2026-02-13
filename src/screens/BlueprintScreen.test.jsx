@@ -1,12 +1,35 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
 
 import { BlueprintScreen } from "./BlueprintScreen";
+
+function renderBlueprint({
+  path = "/blueprint",
+  goMenu = vi.fn(),
+  initialStars = {},
+  onSaveStars = vi.fn(),
+} = {}) {
+  return {
+    goMenu,
+    onSaveStars,
+    ...render(
+      <MemoryRouter initialEntries={[path]}>
+        <Routes>
+          <Route
+            path="/blueprint/*"
+            element={<BlueprintScreen goMenu={goMenu} initialStars={initialStars} onSaveStars={onSaveStars} />}
+          />
+        </Routes>
+      </MemoryRouter>
+    ),
+  };
+}
 
 describe("screens/BlueprintScreen", () => {
   it("renders world menu and supports returning to app menu", () => {
     const goMenu = vi.fn();
-    render(<BlueprintScreen goMenu={goMenu} initialStars={{ 1: 2 }} onSaveStars={vi.fn()} />);
+    renderBlueprint({ goMenu, initialStars: { 1: 2 } });
 
     expect(screen.getByText("Blueprint Builder")).toBeInTheDocument();
     expect(screen.getByText(/Hash Maps & Sets/i)).toBeInTheDocument();
@@ -17,24 +40,24 @@ describe("screens/BlueprintScreen", () => {
   });
 
   it("opens a challenge and can navigate back to world list", () => {
-    render(<BlueprintScreen goMenu={vi.fn()} initialStars={{}} onSaveStars={vi.fn()} />);
+    renderBlueprint();
 
     fireEvent.click(screen.getByRole("button", { name: /Two Sum/i }));
     expect(screen.getByText("Run Blueprint")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: /worlds/i }));
-    expect(screen.getByText(/World 10/i)).toBeInTheDocument();
+    expect(screen.getByText(/Hash Maps & Sets/i)).toBeInTheDocument();
   });
 
   it("shows soft-gated worlds", () => {
-    render(<BlueprintScreen goMenu={vi.fn()} initialStars={{}} onSaveStars={vi.fn()} />);
+    renderBlueprint();
 
     expect(screen.getAllByText(/Complete 2 worlds to unlock/i).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/Complete 5 worlds to unlock/i).length).toBeGreaterThan(0);
   });
 
   it("supports dragging a deck card into a slot", () => {
-    render(<BlueprintScreen goMenu={vi.fn()} initialStars={{}} onSaveStars={vi.fn()} />);
+    renderBlueprint();
     fireEvent.click(screen.getByRole("button", { name: /Two Sum/i }));
 
     const deckCardsBefore = screen.getAllByTestId(/blueprint-deck-card-/);
@@ -63,7 +86,7 @@ describe("screens/BlueprintScreen", () => {
   });
 
   it("supports touch dragging a deck card into a slot", () => {
-    render(<BlueprintScreen goMenu={vi.fn()} initialStars={{}} onSaveStars={vi.fn()} />);
+    renderBlueprint();
     fireEvent.click(screen.getByRole("button", { name: /Two Sum/i }));
 
     const deckCardsBefore = screen.getAllByTestId(/blueprint-deck-card-/);
@@ -115,7 +138,7 @@ describe("screens/BlueprintScreen", () => {
   });
 
   it("keeps run disabled until all solution cards are placed", () => {
-    render(<BlueprintScreen goMenu={vi.fn()} initialStars={{}} onSaveStars={vi.fn()} />);
+    renderBlueprint();
     fireEvent.click(screen.getByRole("button", { name: /Two Sum/i }));
 
     const runButton = screen.getByRole("button", { name: /run blueprint/i });

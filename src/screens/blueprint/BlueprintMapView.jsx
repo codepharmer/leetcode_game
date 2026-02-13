@@ -1,9 +1,10 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { S } from "../../styles";
 import { getNextUnsolvedChallenge, getRemainingWorldUnlockCount, getWorldAccent, getWorldIcon } from "./viewShared";
 
 const TRAIL_X = [26, 50, 74];
+const MOBILE_BREAKPOINT = 640;
 
 function ProgressRing({ progressPct, accent, icon, worldId, locked }) {
   const safePct = Math.max(0, Math.min(100, Number(progressPct) || 0));
@@ -50,9 +51,61 @@ function ProgressRing({ progressPct, accent, icon, worldId, locked }) {
   );
 }
 
+function WorldNodeButton({ world, index, accent, isLocked, unlockCountLabel, onOpenWorld, style }) {
+  return (
+    <button
+      className="hover-row hover-accent pressable-200"
+      disabled={!world.isUnlocked}
+      onClick={() => world.isUnlocked && onOpenWorld(world.id)}
+      style={{
+        ...style,
+        opacity: isLocked ? 0.35 : 1,
+        cursor: world.isUnlocked ? "pointer" : "not-allowed",
+        borderColor: isLocked ? "var(--border)" : accent.ring,
+        animation: `fadeSlideIn 0.34s ease ${index * 0.05}s both`,
+        "--hover-accent": accent.soft,
+        "--hover-accent-border": accent.ring,
+      }}
+    >
+      <ProgressRing
+        progressPct={world.progressPct}
+        accent={accent}
+        icon={getWorldIcon(world)}
+        worldId={world.id}
+        locked={isLocked}
+      />
+
+      <div style={{ display: "flex", flexDirection: "column", gap: 3, minWidth: 0, textAlign: "left" }}>
+        <div style={{ ...S.blueprintNodeTitle, fontSize: 15 }}>{world.name}</div>
+        <div style={{ ...S.blueprintNodeMeta, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{world.family}</div>
+        <div style={S.blueprintNodeMeta}>
+          {world.completedCount}/{world.totalCount} complete | {world.problemRange} problems
+        </div>
+        {isLocked ? (
+          <div style={{ ...S.blueprintNodeMeta, color: "var(--warn)" }}>
+            [LOCK] Complete {unlockCountLabel} worlds to unlock
+          </div>
+        ) : null}
+      </div>
+    </button>
+  );
+}
+
 export function BlueprintMapView({ campaign, completed, onOpenDaily, onOpenWorld, onContinue }) {
   const nextChallenge = useMemo(() => getNextUnsolvedChallenge(campaign, completed), [campaign, completed]);
   const nextAccent = getWorldAccent(nextChallenge?.world?.id || campaign?.dailyChallenge?.worldId || 1);
+  const [isMobileLayout, setIsMobileLayout] = useState(() => (
+    typeof window !== "undefined" ? window.innerWidth <= MOBILE_BREAKPOINT : false
+  ));
+  const worlds = campaign?.worlds || [];
+
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+    const onResize = () => setIsMobileLayout(window.innerWidth <= MOBILE_BREAKPOINT);
+    onResize();
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
 
   return (
     <div style={S.blueprintViewPane}>
@@ -87,18 +140,44 @@ export function BlueprintMapView({ campaign, completed, onOpenDaily, onOpenWorld
         </div>
       )}
 
-      <div style={S.blueprintTrailWrap}>
-        {(campaign?.worlds || []).map((world, index) => {
+      <div style={isMobileLayout ? S.blueprintTrailWrapMobile : S.blueprintTrailWrap}>
+        {worlds.map((world, index) => {
           const x = TRAIL_X[index % TRAIL_X.length];
           const nextX = TRAIL_X[(index + 1) % TRAIL_X.length];
-          const nextWorld = campaign.worlds[index + 1];
+          const nextWorld = worlds[index + 1];
           const accent = getWorldAccent(world.id);
           const remainingUnlockCount = getRemainingWorldUnlockCount(world, campaign.completedCoreWorlds);
           const unlockCountLabel = remainingUnlockCount || world.unlockRule.requiredCompletedWorlds;
           const isLocked = !world.isUnlocked;
 
+          if (isMobileLayout) {
+            return (
+              <div key={world.id} style={S.blueprintTrailRowMobile}>
+                {nextWorld ? (
+                  <span
+                    aria-hidden="true"
+                    style={{
+                      ...S.blueprintTrailRailMobile,
+                      borderLeftColor: nextWorld.isUnlocked ? "var(--border-strong)" : "var(--faint)",
+                      borderLeftStyle: nextWorld.isUnlocked ? "solid" : "dashed",
+                    }}
+                  />
+                ) : null}
+                <WorldNodeButton
+                  world={world}
+                  index={index}
+                  accent={accent}
+                  isLocked={isLocked}
+                  unlockCountLabel={unlockCountLabel}
+                  onOpenWorld={onOpenWorld}
+                  style={S.blueprintWorldNodeMobile}
+                />
+              </div>
+            );
+          }
+
           return (
-            <div key={world.id} style={{ ...S.blueprintTrailRow, minHeight: index === campaign.worlds.length - 1 ? 110 : 128 }}>
+            <div key={world.id} style={{ ...S.blueprintTrailRow, minHeight: index === worlds.length - 1 ? 110 : 128 }}>
               {nextWorld ? (
                 <svg viewBox="0 0 100 110" preserveAspectRatio="none" style={S.blueprintTrailSvg} aria-hidden="true">
                   <path
@@ -111,43 +190,19 @@ export function BlueprintMapView({ campaign, completed, onOpenDaily, onOpenWorld
                 </svg>
               ) : null}
 
-              <button
-                className="hover-row hover-accent pressable-200"
-                disabled={!world.isUnlocked}
-                onClick={() => world.isUnlocked && onOpenWorld(world.id)}
+              <WorldNodeButton
+                world={world}
+                index={index}
+                accent={accent}
+                isLocked={isLocked}
+                unlockCountLabel={unlockCountLabel}
+                onOpenWorld={onOpenWorld}
                 style={{
                   ...S.blueprintWorldNode,
                   left: `${x}%`,
-                  opacity: isLocked ? 0.35 : 1,
                   transform: `translateX(-50%) scale(${isLocked ? 0.9 : 1})`,
-                  cursor: world.isUnlocked ? "pointer" : "not-allowed",
-                  borderColor: isLocked ? "var(--border)" : accent.ring,
-                  animation: `fadeSlideIn 0.34s ease ${index * 0.05}s both`,
-                  "--hover-accent": accent.soft,
-                  "--hover-accent-border": accent.ring,
                 }}
-              >
-                <ProgressRing
-                  progressPct={world.progressPct}
-                  accent={accent}
-                  icon={getWorldIcon(world)}
-                  worldId={world.id}
-                  locked={isLocked}
-                />
-
-                <div style={{ display: "flex", flexDirection: "column", gap: 3, minWidth: 0, textAlign: "left" }}>
-                  <div style={{ ...S.blueprintNodeTitle, fontSize: 15 }}>{world.name}</div>
-                  <div style={{ ...S.blueprintNodeMeta, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{world.family}</div>
-                  <div style={S.blueprintNodeMeta}>
-                    {world.completedCount}/{world.totalCount} complete | {world.problemRange} problems
-                  </div>
-                  {isLocked ? (
-                    <div style={{ ...S.blueprintNodeMeta, color: "var(--warn)" }}>
-                      [LOCK] Complete {unlockCountLabel} worlds to unlock
-                    </div>
-                  ) : null}
-                </div>
-              </button>
+              />
             </div>
           );
         })}

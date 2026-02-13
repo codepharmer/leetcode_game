@@ -393,6 +393,7 @@ export function MenuScreen({
   showResetConfirm,
   setShowResetConfirm,
   resetAllData,
+  routeNotice,
 }) {
   const [showRoundSettings, setShowRoundSettings] = useState(false);
 
@@ -431,6 +432,11 @@ export function MenuScreen({
     <div style={S.menuContainer}>
       <MenuTopBar user={user} displayName={displayName} avatarLetter={avatarLetter} onSignOut={onSignOut} />
       <MenuBrand menuSubtitle={menuSubtitle} />
+      {routeNotice ? (
+        <div style={{ ...S.syncBanner, animation: "fadeSlideIn 0.4s ease 0.02s both", maxWidth: 700 }}>
+          <div style={S.syncBannerText}>{routeNotice}</div>
+        </div>
+      ) : null}
 
       <div style={S.content}>
         <SyncAndAuthSection

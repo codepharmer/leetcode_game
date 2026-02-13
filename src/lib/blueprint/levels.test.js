@@ -52,4 +52,19 @@ describe("lib/blueprint/levels", () => {
       expect(level.cards.some((card) => OUTLINE_PLACEHOLDERS.has(card.text))).toBe(false);
     }
   });
+
+  it("ships all generated levels as strategy output (no fallback)", () => {
+    const autoLevels = BLUEPRINT_LEVELS.filter((level) => String(level.id).startsWith("q-"));
+    for (const level of autoLevels) {
+      expect(level.generationSource).toBe("strategy");
+      expect(level.verification?.passed).toBe(true);
+    }
+  });
+
+  it("uses pattern-specific slot structures across archetypes", () => {
+    const autoLevels = BLUEPRINT_LEVELS.filter((level) => String(level.id).startsWith("q-"));
+    expect(autoLevels.some((level) => level.slots.includes("setup") && level.slots.includes("loop"))).toBe(true);
+    expect(autoLevels.some((level) => level.slots.includes("choose") && level.slots.includes("constrain"))).toBe(true);
+    expect(autoLevels.some((level) => level.slots.includes("base") && level.slots.includes("combine"))).toBe(true);
+  });
 });

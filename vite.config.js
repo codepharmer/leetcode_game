@@ -7,6 +7,9 @@ export default defineConfig({
     environment: "jsdom",
     setupFiles: "./src/test/setup.js",
     css: true,
+    pool: "threads",
+    maxWorkers: 1,
+    minWorkers: 1,
     coverage: {
       provider: "v8",
       reporter: ["text", "html", "json-summary"],

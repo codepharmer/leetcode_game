@@ -1,11 +1,9 @@
 import { QUESTIONS } from "../questions";
-import { PATTERN_TO_TEMPLATES, UNIVERSAL_TEMPLATE } from "../templates";
-import {
-  BACKTRACKING_TEMPLATE_ID,
-  DEFAULT_BLUEPRINT_TEMPLATE_ID,
-  RECURSIVE_TOP_DOWN_TEMPLATE_ID,
-  getTemplateSlotIds,
-} from "./templates";
+import { buildCardsFromIr, buildSlotLimits } from "./ir";
+import { buildGeneratedSolutionForQuestion } from "./solutionPipeline";
+import { buildTemplateIrForQuestion } from "./templatePlan";
+import { DEFAULT_BLUEPRINT_TEMPLATE_ID, getTemplateSlotIds } from "./templates";
+import { getQuestionTemplateId } from "./taxonomy";
 
 const BASE_BLUEPRINT_LEVELS = [
   {
@@ -129,255 +127,11 @@ const BASE_BLUEPRINT_LEVELS = [
   },
 ];
 
-const BACKTRACKING_PATTERNS = new Set(["Backtracking", "Trie + Backtracking"]);
-
-const RECURSIVE_TOP_DOWN_PATTERNS = new Set([
-  "DFS",
-  "BFS",
-  "DFS / BFS",
-  "BFS / DFS",
-  "DFS (Inorder)",
-  "DFS + Hash Map",
-  "Dynamic Programming",
-  "DP + Binary Search (Patience Sorting)",
-  "BST Property / Binary Search",
-  "Topological Sort",
-  "Union Find / DFS",
-]);
-
-function pickTemplateId(pattern) {
-  if (BACKTRACKING_PATTERNS.has(pattern)) return BACKTRACKING_TEMPLATE_ID;
-  if (RECURSIVE_TOP_DOWN_PATTERNS.has(pattern)) return RECURSIVE_TOP_DOWN_TEMPLATE_ID;
-  return DEFAULT_BLUEPRINT_TEMPLATE_ID;
-}
-
-const DIFFICULTY_TEMPLATE_INDEX = {
-  Tutorial: 0,
-  Easy: 0,
-  Practice: 1,
-  Medium: 1,
-  Boss: 2,
-  Hard: 2,
-};
-
-const FALLBACK_CODE_BY_TEMPLATE_ID = {
-  [DEFAULT_BLUEPRINT_TEMPLATE_ID]: `state = init()
-best = init_best()
-for item in items:
-    update_state(state, item)
-    if improves_answer(state, best):
-        best = extract_answer(state)
-return best`,
-  [BACKTRACKING_TEMPLATE_ID]: `results = []
-path = []
-
-def backtrack(start):
-    if complete(path):
-        results.append(path[:])
-        return
-    for choice in choices(start):
-        if not valid(choice):
-            continue
-        path.append(choice)
-        backtrack(next_start(choice))
-        path.pop()
-
-backtrack(0)
-return results`,
-  [RECURSIVE_TOP_DOWN_TEMPLATE_ID]: `memo = {}
-
-def solve(node):
-    if base_case(node):
-        return base_value
-    if node in memo:
-        return memo[node]
-    result = init_result()
-    for nxt in children(node):
-        if invalid(nxt):
-            continue
-        result = combine(result, solve(nxt))
-    memo[node] = result
-    return memo[node]`,
-};
-
-function titleCaseSlot(slotId) {
-  return String(slotId || "")
-    .split("-")
-    .filter(Boolean)
-    .map((part) => part[0].toUpperCase() + part.slice(1))
-    .join(" ");
-}
-
-function getTemplateSnippetForQuestion(question, templateId) {
-  const patternEntry = PATTERN_TO_TEMPLATES[question.pattern];
-  const templates = patternEntry?.templates || [];
-  if (!templates.length) {
-    return {
-      code: FALLBACK_CODE_BY_TEMPLATE_ID[templateId] || UNIVERSAL_TEMPLATE.code,
-      name: "fallback template",
-    };
-  }
-
-  const preferredIndex = DIFFICULTY_TEMPLATE_INDEX[question.difficulty] || 0;
-  const selected = templates[Math.min(preferredIndex, templates.length - 1)] || templates[0];
-  return {
-    code: selected.code || FALLBACK_CODE_BY_TEMPLATE_ID[templateId] || UNIVERSAL_TEMPLATE.code,
-    name: selected.name || patternEntry?.category || question.pattern,
-  };
-}
-
-function extractCodeLines(code) {
-  return String(code || "")
-    .split("\n")
-    .map((line) => line.replace(/\r/g, "").replace(/\s+$/g, "").trim())
-    .filter((line) => line.length > 0)
-    .filter((line) => !line.startsWith("#"))
-    .filter((line) => line !== "pass");
-}
-
-function isLoopLine(lower) {
-  return lower.startsWith("for ") || lower.startsWith("while ");
-}
-
-function isConditionLine(lower) {
-  return lower.startsWith("if ") || lower.startsWith("elif ") || lower.startsWith("else");
-}
-
-function isReturnLine(lower) {
-  return lower.startsWith("return");
-}
-
-function classifyStandardLine(line, context) {
-  const lower = line.toLowerCase();
-  if (isReturnLine(lower)) return "return";
-  if (isLoopLine(lower)) {
-    context.seenLoop = true;
-    return "loop";
-  }
-  if (isConditionLine(lower) || lower === "continue" || lower === "break") return "check";
-  if (!context.seenLoop) return "setup";
-  return "update";
-}
-
-function classifyBacktrackingLine(line) {
-  const lower = line.toLowerCase();
-
-  if (isReturnLine(lower)) {
-    if (/\b(ans|results|res|output)\b/.test(lower)) return "return";
-    return "base";
-  }
-  if (
-    lower.startsWith("if done") ||
-    lower.startsWith("if complete") ||
-    lower.startsWith("if base") ||
-    lower.includes("ans.append") ||
-    lower.includes("results.append")
-  ) {
-    return "base";
-  }
-  if (isLoopLine(lower) || lower.includes("choices(") || lower.includes("choices_from(")) return "choose";
-  if (
-    lower === "continue" ||
-    lower.startsWith("if not ") ||
-    lower.includes("not allowed") ||
-    lower.includes("invalid") ||
-    lower.includes("out_of_bounds") ||
-    lower.includes("bad_cell")
-  ) {
-    return "constrain";
-  }
-  return "explore";
-}
-
-function classifyRecursiveTopDownLine(line, context) {
-  const lower = line.toLowerCase();
-
-  if (isReturnLine(lower)) {
-    if (
-      lower.includes("combine") ||
-      lower.includes("len(") ||
-      lower.includes("order") ||
-      lower.includes("best") ||
-      lower.includes("ans") ||
-      lower.includes("dp[") ||
-      lower.includes("memo[") ||
-      lower.includes("tails")
-    ) {
-      return "combine";
-    }
-    return "base";
-  }
-  if (isConditionLine(lower)) {
-    if (
-      lower.includes("invalid") ||
-      lower.includes("out_of_bounds") ||
-      lower.includes("bad_cell") ||
-      lower.includes("not allowed") ||
-      lower.includes("cycle")
-    ) {
-      return "constrain";
-    }
-    return "base";
-  }
-  if (isLoopLine(lower)) return context.seenExplore ? "explore" : "choose";
-  if (lower.includes("dfs(") || lower.includes("bfs(") || lower.includes("solve(") || lower.includes("search(") || lower.includes("ok(")) {
-    context.seenExplore = true;
-    return "explore";
-  }
-  if (
-    lower.includes("memo") ||
-    lower.includes("dp[") ||
-    lower.includes("graph") ||
-    lower.includes("adj") ||
-    lower.includes("queue") ||
-    lower.includes("stack")
-  ) {
-    return "choose";
-  }
-  if (lower.includes("combine") || lower.includes("append") || lower.includes("max(") || lower.includes("min(")) {
-    return "combine";
-  }
-  return context.seenExplore ? "combine" : "choose";
-}
-
-function classifyLineForTemplate(templateId, line, context) {
-  if (templateId === BACKTRACKING_TEMPLATE_ID) return classifyBacktrackingLine(line);
-  if (templateId === RECURSIVE_TOP_DOWN_TEMPLATE_ID) return classifyRecursiveTopDownLine(line, context);
-  return classifyStandardLine(line, context);
-}
-
-function buildCardsForTemplate(levelId, templateId, question) {
-  const snippet = getTemplateSnippetForQuestion(question, templateId);
-  const lines = extractCodeLines(snippet.code);
-  const fallbackLines = lines.length ? lines : extractCodeLines(FALLBACK_CODE_BY_TEMPLATE_ID[templateId] || UNIVERSAL_TEMPLATE.code);
-  const perSlotOrder = {};
-  const context = { seenLoop: false, seenExplore: false };
-
-  const cards = fallbackLines.map((line, index) => {
-    const slotId = classifyLineForTemplate(templateId, line, context);
-    const order = perSlotOrder[slotId] || 0;
-    perSlotOrder[slotId] = order + 1;
-
-    return {
-      id: `${levelId}-c${index + 1}`,
-      text: line,
-      correctSlot: slotId,
-      correctOrder: order,
-      key: `auto-${slotId}-${index + 1}`,
-      hint: titleCaseSlot(slotId),
-    };
-  });
-
-  return { cards, snippetName: snippet.name };
-}
-
-function buildSlotLimits(cards) {
-  const limits = {};
-  for (const card of cards) {
-    if (!card.correctSlot) continue;
-    limits[card.correctSlot] = (limits[card.correctSlot] || 0) + 1;
-  }
-  return limits;
+function buildFallbackGeneration(levelId, question) {
+  const templateId = getQuestionTemplateId(question) || DEFAULT_BLUEPRINT_TEMPLATE_ID;
+  const { irNodes, snippetName } = buildTemplateIrForQuestion(question, templateId);
+  const cards = buildCardsFromIr({ levelId, templateId, irNodes });
+  return { templateId, cards, snippetName };
 }
 
 function buildExpectedSignature(templateId, cards) {
@@ -411,8 +165,12 @@ function buildExamplePreview(cards, pattern, snippetName) {
 
 const AUTO_BLUEPRINT_LEVELS = QUESTIONS.map((question) => {
   const levelId = `q-${question.id}`;
-  const templateId = pickTemplateId(question.pattern);
-  const { cards, snippetName } = buildCardsForTemplate(levelId, templateId, question);
+  const generated = buildGeneratedSolutionForQuestion({
+    question,
+    levelId,
+    fallback: () => buildFallbackGeneration(levelId, question),
+  });
+  const { templateId, cards, snippetName } = generated;
 
   return {
     id: levelId,
@@ -426,6 +184,10 @@ const AUTO_BLUEPRINT_LEVELS = QUESTIONS.map((question) => {
     slotLimits: buildSlotLimits(cards),
     cards,
     testCases: [{ input: {}, expected: buildExpectedSignature(templateId, cards) }],
+    generationSource: generated.source,
+    generationStrategyId: generated.strategyId,
+    generationContractId: generated.contractId,
+    verification: generated.verification,
   };
 });
 

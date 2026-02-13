@@ -1,28 +1,34 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 
 import { GAME_TYPES, MODES } from "./lib/constants";
 import { GAME_TYPE_OPTIONS, getGameTypeConfig } from "./lib/gameContent";
 import { createDefaultProgress, getModeProgress, setModeProgress } from "./lib/progressModel";
 import { calcLifetimePct, calcRoundPct, getMasteredCount, getWeakSpots, groupItemsByPattern } from "./lib/selectors";
+import { buildRouteSearch, getModeFromPathname, getPathForMode, parseRouteSettings, ROUTES } from "./lib/routes";
+import { clearRoundSession, loadRoundSessionForGameType, saveRoundSession } from "./lib/roundSession";
 import { S } from "./styles";
 
 import { useAuthSession } from "./hooks/useAuthSession";
 import { useGameSession } from "./hooks/useGameSession";
 import { useProgressSync } from "./hooks/useProgressSync";
-import { BrowseScreen } from "./screens/BrowseScreen";
 import { BlueprintScreen } from "./screens/BlueprintScreen";
+import { BrowseScreen } from "./screens/BrowseScreen";
 import { MenuScreen } from "./screens/MenuScreen";
 import { PlayScreen } from "./screens/PlayScreen";
 import { ResultsScreen } from "./screens/ResultsScreen";
 import { TemplatesScreen } from "./screens/TemplatesScreen";
 
 export default function App() {
-  const [mode, setMode] = useState(MODES.MENU);
-  const [gameType, setGameType] = useState(GAME_TYPES.QUESTION_TO_PATTERN);
-  const [filterDifficulty, setFilterDifficulty] = useState("All");
-  const [totalQuestions, setTotalQuestions] = useState(20);
+  const location = useLocation();
+  const navigate = useNavigate();
+  const routeSettings = useMemo(() => parseRouteSettings(location.search), [location.search]);
 
-  const [browseFilter, setBrowseFilter] = useState("All");
+  const [gameType, setGameType] = useState(routeSettings.gameType);
+  const [filterDifficulty, setFilterDifficulty] = useState(routeSettings.filterDifficulty);
+  const [totalQuestions, setTotalQuestions] = useState(routeSettings.totalQuestions);
+
+  const [browseFilter, setBrowseFilter] = useState(routeSettings.browseFilter);
   const [expandedBrowse, setExpandedBrowse] = useState({});
   const [expandedResult, setExpandedResult] = useState({});
   const [showResetConfirm, setShowResetConfirm] = useState(false);
@@ -30,8 +36,29 @@ export default function App() {
   const progressSnapshotRef = useRef({ progress: createDefaultProgress() });
   const getProgressSnapshot = useCallback(() => progressSnapshotRef.current, []);
 
-  const { user, setUser, authError, setAuthError, handleGoogleSuccess, handleGoogleError, handleSignOut } =
-    useAuthSession({ getProgressSnapshot });
+  useEffect(() => {
+    setGameType((prev) => (prev === routeSettings.gameType ? prev : routeSettings.gameType));
+    setFilterDifficulty((prev) => (prev === routeSettings.filterDifficulty ? prev : routeSettings.filterDifficulty));
+    setTotalQuestions((prev) => (prev === routeSettings.totalQuestions ? prev : routeSettings.totalQuestions));
+    setBrowseFilter((prev) => (prev === routeSettings.browseFilter ? prev : routeSettings.browseFilter));
+  }, [
+    routeSettings.browseFilter,
+    routeSettings.filterDifficulty,
+    routeSettings.gameType,
+    routeSettings.totalQuestions,
+  ]);
+
+  const mode = useMemo(() => getModeFromPathname(location.pathname), [location.pathname]);
+
+  const {
+    user,
+    setUser,
+    authError,
+    setAuthError,
+    handleGoogleSuccess,
+    handleGoogleError,
+    handleSignOut,
+  } = useAuthSession({ getProgressSnapshot });
 
   const { loaded, progress, setProgress, progressRef, persistProgress } = useProgressSync({
     user,
@@ -127,30 +154,51 @@ export default function App() {
     setExpandedResult({});
   }, []);
 
-  const blueprintStars = useMemo(() => {
-    const source = modeMeta?.levelStars;
-    if (!source || typeof source !== "object") return {};
-    const out = {};
-    for (const key of Object.keys(source)) {
-      const value = Number(source[key]);
-      if (Number.isFinite(value) && value > 0) out[key] = Math.max(0, Math.min(3, Math.round(value)));
-    }
-    return out;
-  }, [modeMeta]);
-
-  const saveBlueprintStars = useCallback(
-    (levelId, stars) => {
-      const safeLevelId = String(levelId);
-      const safeStars = Math.max(0, Math.min(3, Number(stars) || 0));
-      const nextMeta = setModeMeta((prevMeta) => {
-        const prevStars = prevMeta?.levelStars || {};
-        const nextStars = Math.max(Number(prevStars[safeLevelId] || 0), safeStars);
-        return { ...prevMeta, levelStars: { ...prevStars, [safeLevelId]: nextStars } };
-      });
-      persistModeProgress(stats, history, nextMeta);
-    },
-    [history, persistModeProgress, setModeMeta, stats]
+  const currentSearch = useMemo(
+    () =>
+      buildRouteSearch({
+        gameType,
+        filterDifficulty,
+        totalQuestions,
+        browseFilter,
+      }),
+    [browseFilter, filterDifficulty, gameType, totalQuestions]
   );
+
+  useEffect(() => {
+    if (location.search === currentSearch) return;
+    navigate({ pathname: location.pathname, search: currentSearch }, { replace: true });
+  }, [currentSearch, location.pathname, location.search, navigate]);
+
+  const navigateWithSearch = useCallback(
+    (pathname, options) => {
+      navigate({ pathname, search: currentSearch }, options);
+    },
+    [currentSearch, navigate]
+  );
+
+  const setMode = useCallback(
+    (nextMode) => {
+      const nextPath = getPathForMode(nextMode);
+      navigateWithSearch(nextPath);
+    },
+    [navigateWithSearch]
+  );
+
+  const redirectToMenuWithNotice = useCallback(
+    (notice) => {
+      navigate(
+        { pathname: ROUTES.MENU, search: currentSearch },
+        {
+          replace: true,
+          state: { notice },
+        }
+      );
+    },
+    [currentSearch, navigate]
+  );
+
+  const initialRoundSession = useMemo(() => loadRoundSessionForGameType(gameType), [gameType]);
 
   const {
     roundItems,
@@ -184,24 +232,101 @@ export default function App() {
     persistModeProgress,
     resetViewport,
     onRoundComplete: handleRoundComplete,
+    initialRoundState: initialRoundSession.state,
+    initialRoundStateKey: initialRoundSession.key,
   });
+
+  useEffect(() => {
+    if (!Array.isArray(roundItems) || roundItems.length === 0) {
+      clearRoundSession();
+      return;
+    }
+
+    saveRoundSession({
+      gameType,
+      roundItems,
+      currentIdx,
+      choices,
+      selected,
+      score,
+      results,
+      streak,
+      bestStreak,
+      showNext,
+      showDesc,
+      showTemplate,
+    });
+  }, [
+    bestStreak,
+    choices,
+    currentIdx,
+    gameType,
+    results,
+    roundItems,
+    score,
+    selected,
+    showDesc,
+    showNext,
+    showTemplate,
+    streak,
+  ]);
+
+  useEffect(() => {
+    if (!loaded) return;
+
+    if (mode === MODES.PLAY && roundItems.length === 0) {
+      redirectToMenuWithNotice("Round not found. Start a new round.");
+      return;
+    }
+
+    if (mode === MODES.RESULTS && results.length === 0) {
+      redirectToMenuWithNotice("No results to show yet.");
+    }
+  }, [loaded, mode, redirectToMenuWithNotice, results.length, roundItems.length]);
+
+  const blueprintStars = useMemo(() => {
+    const source = modeMeta?.levelStars;
+    if (!source || typeof source !== "object") return {};
+    const out = {};
+    for (const key of Object.keys(source)) {
+      const value = Number(source[key]);
+      if (Number.isFinite(value) && value > 0) out[key] = Math.max(0, Math.min(3, Math.round(value)));
+    }
+    return out;
+  }, [modeMeta]);
+
+  const saveBlueprintStars = useCallback(
+    (levelId, stars) => {
+      const safeLevelId = String(levelId);
+      const safeStars = Math.max(0, Math.min(3, Number(stars) || 0));
+      const nextMeta = setModeMeta((prevMeta) => {
+        const prevStars = prevMeta?.levelStars || {};
+        const nextStars = Math.max(Number(prevStars[safeLevelId] || 0), safeStars);
+        return { ...prevMeta, levelStars: { ...prevStars, [safeLevelId]: nextStars } };
+      });
+      persistModeProgress(stats, history, nextMeta);
+    },
+    [history, persistModeProgress, setModeMeta, stats]
+  );
 
   const startSelectedMode = useCallback(() => {
     if (gameType === GAME_TYPES.BLUEPRINT_BUILDER) {
-      setMode(MODES.BLUEPRINT);
+      navigateWithSearch(ROUTES.BLUEPRINT);
       resetViewport();
       return;
     }
     startGame();
-  }, [gameType, resetViewport, setMode, startGame]);
+  }, [gameType, navigateWithSearch, resetViewport, startGame]);
 
   const resetAllData = useCallback(async () => {
     const freshProgress = createDefaultProgress();
     progressRef.current = freshProgress;
     setProgress(freshProgress);
+    clearRoundSession();
     await persistProgress(freshProgress);
     setShowResetConfirm(false);
-  }, [persistProgress, progressRef, setProgress]);
+    navigateWithSearch(ROUTES.MENU, { replace: true });
+  }, [navigateWithSearch, persistProgress, progressRef, setProgress]);
 
   const pct = calcRoundPct(score, roundItems.length);
   const lifetimePct = calcLifetimePct(stats);
@@ -212,6 +337,8 @@ export default function App() {
     () => groupItemsByPattern(activeGame.items, browseFilter),
     [activeGame.items, browseFilter]
   );
+
+  const routeNotice = typeof location.state?.notice === "string" ? location.state.notice : "";
 
   const menuScreenProps = {
     gameType,
@@ -235,8 +362,8 @@ export default function App() {
     totalQuestions,
     setTotalQuestions,
     startGame: startSelectedMode,
-    goBrowse: () => setMode(MODES.BROWSE),
-    goTemplates: () => setMode(MODES.TEMPLATES),
+    goBrowse: () => navigateWithSearch(ROUTES.BROWSE),
+    goTemplates: () => navigateWithSearch(ROUTES.TEMPLATES),
     supportsBrowse: activeGame.supportsBrowse !== false,
     supportsTemplates: activeGame.supportsTemplates !== false,
     supportsDifficultyFilter: activeGame.supportsDifficultyFilter !== false,
@@ -244,6 +371,7 @@ export default function App() {
     showResetConfirm,
     setShowResetConfirm,
     resetAllData,
+    routeNotice,
   };
 
   if (!loaded) {
@@ -256,74 +384,97 @@ export default function App() {
 
   return (
     <div style={S.root}>
-      {mode === MODES.MENU && (
-        <MenuScreen {...menuScreenProps} />
-      )}
+      <Routes>
+        <Route path={ROUTES.MENU} element={<MenuScreen {...menuScreenProps} />} />
 
-      {mode === MODES.PLAY && (
-        <PlayScreen
-          currentItem={currentItem}
-          currentIdx={currentIdx}
-          total={roundItems.length}
-          score={score}
-          streak={streak}
-          choices={choices}
-          selected={selected}
-          showDesc={showDesc}
-          setShowDesc={setShowDesc}
-          showNext={showNext}
-          onSelect={handleSelect}
-          onNext={nextQuestion}
-          onBack={() => setMode(MODES.MENU)}
-          showTemplate={showTemplate}
-          setShowTemplate={setShowTemplate}
-          history={history}
-          promptLabel={activeGame.promptLabel}
-          revealTemplateAfterAnswer={activeGame.revealTemplateAfterAnswer}
+        <Route
+          path={ROUTES.PLAY}
+          element={(
+            <PlayScreen
+              currentItem={currentItem}
+              currentIdx={currentIdx}
+              total={roundItems.length}
+              score={score}
+              streak={streak}
+              choices={choices}
+              selected={selected}
+              showDesc={showDesc}
+              setShowDesc={setShowDesc}
+              showNext={showNext}
+              onSelect={handleSelect}
+              onNext={nextQuestion}
+              onBack={() => navigateWithSearch(ROUTES.MENU)}
+              showTemplate={showTemplate}
+              setShowTemplate={setShowTemplate}
+              history={history}
+              promptLabel={activeGame.promptLabel}
+              revealTemplateAfterAnswer={activeGame.revealTemplateAfterAnswer}
+            />
+          )}
         />
-      )}
 
-      {mode === MODES.RESULTS && (
-        <ResultsScreen
-          user={user}
-          pct={pct}
-          score={score}
-          total={roundItems.length}
-          bestStreak={bestStreak}
-          stats={stats}
-          lifetimePct={lifetimePct}
-          results={results}
-          expandedResult={expandedResult}
-          setExpandedResult={setExpandedResult}
-          startGame={startGame}
-          goMenu={() => setMode(MODES.MENU)}
-          history={history}
-          gameType={gameType}
+        <Route
+          path={ROUTES.RESULTS}
+          element={(
+            <ResultsScreen
+              user={user}
+              pct={pct}
+              score={score}
+              total={roundItems.length}
+              bestStreak={bestStreak}
+              stats={stats}
+              lifetimePct={lifetimePct}
+              results={results}
+              expandedResult={expandedResult}
+              setExpandedResult={setExpandedResult}
+              startGame={startGame}
+              goMenu={() => navigateWithSearch(ROUTES.MENU)}
+              history={history}
+              gameType={gameType}
+            />
+          )}
         />
-      )}
 
-      {mode === MODES.BROWSE && (
-        <BrowseScreen
-          browseFilter={browseFilter}
-          setBrowseFilter={setBrowseFilter}
-          groupedByPattern={groupedByPattern}
-          expandedBrowse={expandedBrowse}
-          setExpandedBrowse={setExpandedBrowse}
-          goMenu={() => setMode(MODES.MENU)}
-          history={history}
-          browseTitle={activeGame.browseTitle}
+        <Route
+          path={ROUTES.BROWSE}
+          element={(
+            <BrowseScreen
+              browseFilter={browseFilter}
+              setBrowseFilter={setBrowseFilter}
+              groupedByPattern={groupedByPattern}
+              expandedBrowse={expandedBrowse}
+              setExpandedBrowse={setExpandedBrowse}
+              goMenu={() => navigateWithSearch(ROUTES.MENU)}
+              history={history}
+              browseTitle={activeGame.browseTitle}
+            />
+          )}
         />
-      )}
 
-      {mode === MODES.TEMPLATES && <TemplatesScreen goMenu={() => setMode(MODES.MENU)} />}
+        <Route path={ROUTES.TEMPLATES} element={<TemplatesScreen goMenu={() => navigateWithSearch(ROUTES.MENU)} />} />
 
-      {mode === MODES.BLUEPRINT && (
-        <BlueprintScreen
-          goMenu={() => setMode(MODES.MENU)}
-          initialStars={blueprintStars}
-          onSaveStars={saveBlueprintStars}
+        <Route
+          path={`${ROUTES.BLUEPRINT}/*`}
+          element={(
+            <BlueprintScreen
+              goMenu={() => navigateWithSearch(ROUTES.MENU)}
+              initialStars={blueprintStars}
+              onSaveStars={saveBlueprintStars}
+            />
+          )}
         />
-      )}
+
+        <Route
+          path="*"
+          element={
+            <Navigate
+              replace
+              to={{ pathname: ROUTES.MENU, search: currentSearch }}
+              state={{ notice: "Page not found. Redirected to menu." }}
+            />
+          }
+        />
+      </Routes>
     </div>
   );
 }

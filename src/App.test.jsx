@@ -1,5 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { MemoryRouter } from "react-router-dom";
 
 import { GAME_TYPES, MODES } from "./lib/constants";
 import { createDefaultProgress } from "./lib/progressModel";
@@ -80,6 +81,14 @@ vi.mock("./screens/BlueprintScreen", () => ({
 
 import App from "./App";
 
+function renderApp(initialEntries = ["/"]) {
+  return render(
+    <MemoryRouter initialEntries={initialEntries}>
+      <App />
+    </MemoryRouter>
+  );
+}
+
 describe("App", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -134,12 +143,12 @@ describe("App", () => {
       persistProgress: vi.fn(async () => {}),
     });
 
-    render(<App />);
+    renderApp();
     expect(screen.getByText("loading...")).toBeInTheDocument();
   });
 
   it("navigates across menu, play, results, browse, and templates", () => {
-    render(<App />);
+    renderApp();
 
     expect(screen.getByText("menu-screen")).toBeInTheDocument();
 
@@ -163,7 +172,7 @@ describe("App", () => {
   });
 
   it("opens blueprint mode when selected", () => {
-    render(<App />);
+    renderApp();
 
     fireEvent.click(screen.getByText("menu-blueprint"));
     fireEvent.click(screen.getByText("menu-start"));
@@ -173,8 +182,13 @@ describe("App", () => {
     expect(screen.getByText("menu-screen")).toBeInTheDocument();
   });
 
+  it("supports direct deep link routes", () => {
+    renderApp(["/browse"]);
+    expect(screen.getByText("browse-screen")).toBeInTheDocument();
+  });
+
   it("passes game-type context into useGameSession", () => {
-    render(<App />);
+    renderApp();
     const args = useGameSessionMock.mock.calls[0]?.[0];
     expect(args.itemsPool.length).toBeGreaterThan(0);
     expect(args.filterDifficulty).toBe("All");
