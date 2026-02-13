@@ -1,5 +1,6 @@
 import { useState } from "react";
 
+import { GAME_TYPES } from "../lib/constants";
 import { S } from "../styles";
 
 import { AuthCard } from "../components/AuthCard";
@@ -18,29 +19,92 @@ function getProgressColorHex(percentage) {
   return "#10b981";
 }
 
-function CircularProgress({ percentage, size = 48, strokeWidth = 3.5 }) {
+const MODE_VISUALS = {
+  [GAME_TYPES.QUESTION_TO_PATTERN]: {
+    title: "Question -> Pattern",
+    progressBadge: "Question",
+    description: "Map prompts to core solving patterns.",
+    icon: "Q",
+    accent: "var(--accent)",
+    accentSoft: "rgba(16, 185, 129, 0.13)",
+    accentRing: "rgba(16, 185, 129, 0.48)",
+    accentGlow: "rgba(16, 185, 129, 0.22)",
+  },
+  [GAME_TYPES.TEMPLATE_TO_PATTERN]: {
+    title: "Template -> Pattern",
+    progressBadge: "Template",
+    description: "Read snippets and pick the matching pattern.",
+    icon: "T",
+    accent: "var(--info)",
+    accentSoft: "rgba(59, 130, 246, 0.14)",
+    accentRing: "rgba(59, 130, 246, 0.5)",
+    accentGlow: "rgba(59, 130, 246, 0.2)",
+  },
+  [GAME_TYPES.BLUEPRINT_BUILDER]: {
+    title: "Blueprint Builder",
+    progressBadge: "Blueprint",
+    description: "Progress campaign worlds and daily challenges.",
+    icon: "B",
+    accent: "var(--warn)",
+    accentSoft: "rgba(245, 158, 11, 0.16)",
+    accentRing: "rgba(245, 158, 11, 0.52)",
+    accentGlow: "rgba(245, 158, 11, 0.22)",
+  },
+};
+
+function getModeVisual(gameType, fallbackLabel = "Mode") {
+  return (
+    MODE_VISUALS[gameType] || {
+      title: fallbackLabel,
+      progressBadge: fallbackLabel,
+      description: "Select a mode.",
+      icon: "M",
+      accent: "var(--accent)",
+      accentSoft: "rgba(16, 185, 129, 0.13)",
+      accentRing: "rgba(16, 185, 129, 0.48)",
+      accentGlow: "rgba(16, 185, 129, 0.22)",
+    }
+  );
+}
+
+function getModeVars(modeVisual) {
+  return {
+    "--mode-accent": modeVisual.accent,
+    "--mode-accent-soft": modeVisual.accentSoft,
+    "--mode-accent-ring": modeVisual.accentRing,
+    "--mode-accent-glow": modeVisual.accentGlow,
+  };
+}
+
+function CircularProgress({ percentage, size = 48, strokeWidth = 3.5, accentColor = "var(--accent)" }) {
   const p = clamp(percentage, 0, 100);
-  const radius = (size - strokeWidth) / 2;
-  const circumference = 2 * Math.PI * radius;
-  const offset = circumference - (p / 100) * circumference;
-  const color = getProgressColorHex(p);
+  const stop = `${(p / 100) * 360}deg`;
+  const innerSize = Math.max(0, size - strokeWidth * 2);
 
   return (
-    <svg width={size} height={size} style={{ transform: "rotate(-90deg)" }}>
-      <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="var(--surface-2)" strokeWidth={strokeWidth} />
-      <circle
-        cx={size / 2}
-        cy={size / 2}
-        r={radius}
-        fill="none"
-        stroke={color}
-        strokeWidth={strokeWidth}
-        strokeDasharray={circumference}
-        strokeDashoffset={offset}
-        strokeLinecap="round"
-        style={{ transition: "stroke-dashoffset 0.8s ease" }}
+    <div
+      style={{
+        width: size,
+        height: size,
+        borderRadius: 999,
+        transform: "rotate(-90deg)",
+        background: `conic-gradient(${accentColor} ${stop}, var(--surface-2) ${stop} 360deg)`,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        transition: "background 0.6s ease",
+      }}
+    >
+      <div
+        style={{
+          width: innerSize,
+          height: innerSize,
+          borderRadius: 999,
+          background: "var(--surface-1)",
+          border: "1px solid var(--border)",
+        }}
       />
-    </svg>
+    </div>
   );
 }
 
@@ -73,12 +137,25 @@ function ProgressBar({ percentage, label, delay = 0 }) {
   );
 }
 
-function StatRing({ label, value, percentage, delay = 0 }) {
+function StatRing({ label, value, percentage, delay = 0, accentColor }) {
+  const valueText = String(value ?? "");
+  const compactValue = valueText.length > 4;
+
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 14, animation: `fadeSlideIn 0.5s ease ${delay}s both` }}>
       <div style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <CircularProgress percentage={percentage} size={48} />
-        <span style={{ position: "absolute", fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: 13, color: "var(--text-strong)" }}>{value}</span>
+        <CircularProgress percentage={percentage} size={48} accentColor={accentColor} />
+        <span
+          style={{
+            position: "absolute",
+            fontFamily: "'Outfit', sans-serif",
+            fontWeight: 700,
+            fontSize: compactValue ? 10.5 : 13,
+            color: "var(--text-strong)",
+          }}
+        >
+          {valueText}
+        </span>
       </div>
       <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 12, color: "var(--faint)", textTransform: "uppercase", letterSpacing: "0.5px" }}>
         {label}
@@ -155,24 +232,59 @@ function SyncAndAuthSection({ user, authError, onGoogleSuccess, onGoogleError, o
   );
 }
 
-function ProgressSection({ stats, lifetimePct, masteredCount, allCount }) {
+function ModeSelectionSection({ gameTypeOptions, gameType, setGameType }) {
+  return (
+    <div className="menu-mode-grid" style={{ animation: "fadeSlideIn 0.5s ease 0.13s both" }}>
+      {(gameTypeOptions || []).map((option, index) => {
+        const modeVisual = getModeVisual(option.value, option.label || "Mode");
+        const isActive = option.value === gameType;
+        return (
+          <button
+            key={option.value}
+            className={`menu-mode-card pressable-200 ${isActive ? "is-active" : ""}`}
+            aria-pressed={isActive}
+            onClick={() => setGameType(option.value)}
+            style={{ ...getModeVars(modeVisual), animation: `fadeSlideIn 0.4s ease ${0.16 + index * 0.05}s both` }}
+          >
+            <span className="menu-mode-card__topbar" />
+            <span className="menu-mode-card__indicator" aria-hidden="true">
+              <span className="menu-mode-card__dot" />
+            </span>
+            <span className="menu-mode-card__badge" aria-hidden="true">
+              {modeVisual.icon}
+            </span>
+            <span className="menu-mode-card__title">{modeVisual.title}</span>
+            <span className="menu-mode-card__desc">{modeVisual.description}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function ProgressSection({ stats, lifetimePct, masteredCount, allCount, modeVisual, hideAccuracyAndStreak = false }) {
+  const gamesPlayed = Math.max(0, Number(stats?.gamesPlayed || 0));
+  const bestStreak = Math.max(0, Number(stats?.bestStreak || 0));
+  const accuracyPct = clamp(lifetimePct, 0, 100);
+  const accentColor = modeVisual.accent || "var(--accent)";
+
+  const accuracyValue = hideAccuracyAndStreak ? "--" : `${accuracyPct}%`;
+  const streakValue = hideAccuracyAndStreak ? "--" : bestStreak;
+  const masteredValue = `${masteredCount}/${allCount}`;
+
   return (
     <div style={{ ...S.card, animation: "fadeSlideIn 0.5s ease 0.15s both" }}>
-      <div style={S.sectionLabel}>your progress</div>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 18 }}>
+        <div style={{ ...S.sectionLabel, marginBottom: 0 }}>your progress</div>
+        <span className="menu-progress-mode-badge" style={getModeVars(modeVisual)}>
+          {modeVisual.progressBadge}
+        </span>
+      </div>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-        <StatRing label="games" value={stats.gamesPlayed} percentage={(stats.gamesPlayed / 20) * 100} delay={0.15} />
-        <StatRing label="accuracy" value={lifetimePct} percentage={lifetimePct} delay={0.2} />
-        <StatRing label="best streak" value={stats.bestStreak} percentage={(stats.bestStreak / 20) * 100} delay={0.25} />
-        <StatRing
-          label={
-            <span>
-              mastered <span style={{ color: "var(--faint)" }}>/ {allCount}</span>
-            </span>
-          }
-          value={masteredCount}
-          percentage={allCount > 0 ? (masteredCount / allCount) * 100 : 0}
-          delay={0.3}
-        />
+        <StatRing label="games" value={gamesPlayed} percentage={(gamesPlayed / 20) * 100} delay={0.15} accentColor={accentColor} />
+        <StatRing label="accuracy" value={accuracyValue} percentage={hideAccuracyAndStreak ? 0 : accuracyPct} delay={0.2} accentColor={accentColor} />
+        <StatRing label="best streak" value={streakValue} percentage={hideAccuracyAndStreak ? 0 : (bestStreak / 20) * 100} delay={0.25} accentColor={accentColor} />
+        <StatRing label="mastered" value={masteredValue} percentage={allCount > 0 ? (masteredCount / allCount) * 100 : 0} delay={0.3} accentColor={accentColor} />
       </div>
     </div>
   );
@@ -182,9 +294,6 @@ function RoundSettingsSection({
   showRoundSettings,
   setShowRoundSettings,
   selectedModeLabel,
-  gameTypeOptions,
-  gameType,
-  setGameType,
   supportsDifficultyFilter,
   filterDifficulty,
   setFilterDifficulty,
@@ -221,21 +330,6 @@ function RoundSettingsSection({
       {showRoundSettings && (
         <div style={{ padding: "0 24px 22px", borderTop: "1px solid var(--border)", animation: "descReveal 0.2s ease-out" }}>
           <div style={{ display: "flex", flexDirection: "column", gap: 14, marginTop: 14 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-              <span style={S.configLabel}>Mode</span>
-              <div style={S.pillGroup}>
-                {(gameTypeOptions || []).map((opt) => (
-                  <button
-                    key={opt.value}
-                    onClick={() => setGameType(opt.value)}
-                    style={{ ...S.pill, ...(gameType === opt.value ? S.pillActive : {}) }}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
             {supportsDifficultyFilter && (
               <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
                 <span style={S.configLabel}>Difficulty</span>
@@ -278,6 +372,61 @@ function RoundSettingsSection({
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+function CampaignPreviewSection({ campaignPreview, onOpenDaily, onOpenWorld }) {
+  const dailyChallenge = campaignPreview?.dailyChallenge || null;
+  const dailyLevel = dailyChallenge?.challenge?.level || null;
+  const dailyDifficulty = dailyLevel?.difficulty || "";
+  const dailySubtitle = dailyLevel
+    ? `${dailyLevel.title}${dailyDifficulty ? ` | ${dailyDifficulty}` : ""}`
+    : "Today's challenge will appear here.";
+
+  const worlds = Array.isArray(campaignPreview?.worlds) ? campaignPreview.worlds : [];
+
+  return (
+    <div style={{ ...S.card, padding: 0, overflow: "hidden", animation: "fadeSlideIn 0.5s ease 0.2s both" }}>
+      <div style={{ padding: "18px 24px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <span style={{ ...S.sectionLabel, marginBottom: 0 }}>campaign</span>
+      </div>
+
+      <div className="menu-campaign-panel">
+        <button className="menu-campaign-daily hover-row pressable-200" onClick={onOpenDaily}>
+          <span className="menu-campaign-daily__icon" aria-hidden="true">
+            D
+          </span>
+          <span className="menu-campaign-daily__text">
+            <span className="menu-campaign-daily__title">Daily Challenge</span>
+            <span className="menu-campaign-daily__subtitle">{dailySubtitle}</span>
+          </span>
+          <span style={S.chevron}>{">"}</span>
+        </button>
+
+        <div className="menu-campaign-world-list">
+          {worlds.map((world, index) => {
+            const worldId = Number(world?.worldId || world?.id || 0);
+            const worldLabel = world?.label || world?.name || `World ${index + 1}`;
+            const progressLabel = world?.progressLabel || "0/0";
+
+            return (
+              <button
+                key={`${worldId || index}-${worldLabel}`}
+                className="menu-campaign-world-row hover-row pressable-200"
+                onClick={() => onOpenWorld(worldId)}
+              >
+                <span className="menu-campaign-world-row__badge" aria-hidden="true">
+                  {index + 1}
+                </span>
+                <span className="menu-campaign-world-row__name">{worldLabel}</span>
+                <span className="menu-campaign-world-row__progress">{progressLabel}</span>
+                <span style={S.chevron}>{">"}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
     </div>
   );
 }
@@ -394,10 +543,24 @@ export function MenuScreen({
   setShowResetConfirm,
   resetAllData,
   routeNotice,
+  modeProgressByGameType = null,
+  blueprintCampaignPreview = null,
+  onOpenBlueprintDaily = () => {},
+  onOpenBlueprintWorld = () => {},
 }) {
   const [showRoundSettings, setShowRoundSettings] = useState(false);
 
-  const allCount = Number.isFinite(totalAvailableQuestions) ? totalAvailableQuestions : 0;
+  const fallbackAllCount = Number.isFinite(totalAvailableQuestions) ? totalAvailableQuestions : 0;
+  const selectedModeProgress = modeProgressByGameType?.[gameType] || null;
+  const selectedStats = selectedModeProgress?.stats || stats;
+  const selectedLifetimePct = Number.isFinite(selectedModeProgress?.lifetimePct) ? selectedModeProgress.lifetimePct : lifetimePct;
+  const selectedMasteredCount = Number.isFinite(selectedModeProgress?.masteredCount) ? selectedModeProgress.masteredCount : masteredCount;
+  const allCount = Number.isFinite(selectedModeProgress?.allCount) ? selectedModeProgress.allCount : fallbackAllCount;
+
+  const selectedModeOption = (gameTypeOptions || []).find((opt) => opt.value === gameType);
+  const selectedModeVisual = getModeVisual(gameType, selectedModeOption?.label || "mode");
+  const isBlueprintMode = gameType === GAME_TYPES.BLUEPRINT_BUILDER;
+
   const questionCountOptions = Array.from(new Set([10, 20, 40, allCount].filter((n) => n > 0)));
 
   const displayName = user?.name || user?.email || "Guest";
@@ -406,8 +569,8 @@ export function MenuScreen({
   const noun = roundNoun || "questions";
   const diffLabel = filterDifficulty === "All" ? "all difficulties" : `${String(filterDifficulty).toLowerCase()} ${noun}`;
   const qLabel = totalQuestions === allCount ? "all available" : totalQuestions;
-  const selectedModeLabel = (gameTypeOptions || []).find((opt) => opt.value === gameType)?.label || "mode";
-  const startLabel = supportsDifficultyFilter || supportsQuestionCount ? "Start Round" : "Open Blueprint Builder";
+  const selectedModeLabel = selectedModeVisual.title;
+  const startLabel = isBlueprintMode ? "Open Campaign Map" : "Start Round";
 
   const needsWork = weakSpots.slice(0, 5).map((q) => {
     const h = history[q.id];
@@ -447,26 +610,40 @@ export function MenuScreen({
           onSignOut={onSignOut}
         />
 
-        <ProgressSection stats={stats} lifetimePct={lifetimePct} masteredCount={masteredCount} allCount={allCount} />
+        <ModeSelectionSection gameTypeOptions={gameTypeOptions} gameType={gameType} setGameType={setGameType} />
 
-        <RoundSettingsSection
-          showRoundSettings={showRoundSettings}
-          setShowRoundSettings={setShowRoundSettings}
-          selectedModeLabel={selectedModeLabel}
-          gameTypeOptions={gameTypeOptions}
-          gameType={gameType}
-          setGameType={setGameType}
-          supportsDifficultyFilter={supportsDifficultyFilter}
-          filterDifficulty={filterDifficulty}
-          setFilterDifficulty={setFilterDifficulty}
-          supportsQuestionCount={supportsQuestionCount}
-          noun={noun}
+        <ProgressSection
+          stats={selectedStats}
+          lifetimePct={selectedLifetimePct}
+          masteredCount={selectedMasteredCount}
           allCount={allCount}
-          questionCountOptions={questionCountOptions}
-          totalQuestions={totalQuestions}
-          setTotalQuestions={setTotalQuestions}
-          settingsSummary={settingsSummary}
+          modeVisual={selectedModeVisual}
+          hideAccuracyAndStreak={isBlueprintMode}
         />
+
+        {isBlueprintMode ? (
+          <CampaignPreviewSection
+            campaignPreview={blueprintCampaignPreview}
+            onOpenDaily={onOpenBlueprintDaily}
+            onOpenWorld={onOpenBlueprintWorld}
+          />
+        ) : (
+          <RoundSettingsSection
+            showRoundSettings={showRoundSettings}
+            setShowRoundSettings={setShowRoundSettings}
+            selectedModeLabel={selectedModeLabel}
+            supportsDifficultyFilter={supportsDifficultyFilter}
+            filterDifficulty={filterDifficulty}
+            setFilterDifficulty={setFilterDifficulty}
+            supportsQuestionCount={supportsQuestionCount}
+            noun={noun}
+            allCount={allCount}
+            questionCountOptions={questionCountOptions}
+            totalQuestions={totalQuestions}
+            setTotalQuestions={setTotalQuestions}
+            settingsSummary={settingsSummary}
+          />
+        )}
 
         <StartSection startGame={startGame} startLabel={startLabel} />
 
@@ -480,7 +657,7 @@ export function MenuScreen({
         />
 
         <DangerZone
-          stats={stats}
+          stats={selectedStats}
           showResetConfirm={showResetConfirm}
           setShowResetConfirm={setShowResetConfirm}
           resetAllData={resetAllData}

@@ -338,7 +338,7 @@ Blueprint executor, test runner, trace generation, divergence detection.
 ### `src/screens`
 
 - `src/screens/MenuScreen.jsx`
-Main menu, settings, progress summary, auth entry, actions.
+Main menu with top-level mode cards, contextual progress stats, quiz round settings, blueprint campaign preview, auth entry, and launch actions.
 
 - `src/screens/PlayScreen.jsx`
 Question/snippet gameplay screen.

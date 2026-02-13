@@ -2,10 +2,20 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 
 import { GAME_TYPES, MODES } from "./lib/constants";
+import { getBlueprintCampaign } from "./lib/blueprint/campaign";
 import { GAME_TYPE_OPTIONS, getGameTypeConfig } from "./lib/gameContent";
 import { createDefaultProgress, getModeProgress, setModeProgress } from "./lib/progressModel";
 import { calcLifetimePct, calcRoundPct, getMasteredCount, getWeakSpots, groupItemsByPattern } from "./lib/selectors";
-import { buildRouteSearch, getModeFromPathname, getPathForMode, parseRouteSettings, ROUTES } from "./lib/routes";
+import {
+  buildBlueprintChallengePath,
+  buildBlueprintDailyPath,
+  buildBlueprintWorldPath,
+  buildRouteSearch,
+  getModeFromPathname,
+  getPathForMode,
+  parseRouteSettings,
+  ROUTES,
+} from "./lib/routes";
 import { clearRoundSession, loadRoundSessionForGameType, saveRoundSession } from "./lib/roundSession";
 import { S } from "./styles";
 
@@ -18,6 +28,12 @@ import { MenuScreen } from "./screens/MenuScreen";
 import { PlayScreen } from "./screens/PlayScreen";
 import { ResultsScreen } from "./screens/ResultsScreen";
 import { TemplatesScreen } from "./screens/TemplatesScreen";
+
+const BLUEPRINT_MENU_PREVIEW_WORLDS = [
+  { worldId: 1, label: "Fundamentals" },
+  { worldId: 7, label: "Graphs" },
+  { worldId: 8, label: "Dynamic Programming" },
+];
 
 export default function App() {
   const location = useLocation();
@@ -70,9 +86,12 @@ export default function App() {
 
   const activeGame = useMemo(() => getGameTypeConfig(gameType), [gameType]);
   const modeProgress = useMemo(() => getModeProgress(progress, gameType), [gameType, progress]);
+  const blueprintModeProgress = useMemo(
+    () => getModeProgress(progress, GAME_TYPES.BLUEPRINT_BUILDER),
+    [progress]
+  );
   const stats = modeProgress.stats;
   const history = modeProgress.history;
-  const modeMeta = modeProgress.meta || {};
 
   useEffect(() => {
     if (activeGame.supportsQuestionCount === false) return;
@@ -115,19 +134,6 @@ export default function App() {
         return { ...currentModeProgress, history: resolvedHistory };
       });
       return resolvedHistory;
-    },
-    [updateModeProgress]
-  );
-
-  const setModeMeta = useCallback(
-    (updater) => {
-      let resolvedMeta = {};
-      updateModeProgress((currentModeProgress) => {
-        const prevMeta = currentModeProgress.meta || {};
-        resolvedMeta = typeof updater === "function" ? updater(prevMeta) : updater || {};
-        return { ...currentModeProgress, meta: resolvedMeta };
-      });
-      return resolvedMeta;
     },
     [updateModeProgress]
   );
@@ -289,7 +295,7 @@ export default function App() {
   }, [loaded, mode, redirectToMenuWithNotice, results.length, roundItems.length]);
 
   const blueprintStars = useMemo(() => {
-    const source = modeMeta?.levelStars;
+    const source = blueprintModeProgress?.meta?.levelStars;
     if (!source || typeof source !== "object") return {};
     const out = {};
     for (const key of Object.keys(source)) {
@@ -297,20 +303,51 @@ export default function App() {
       if (Number.isFinite(value) && value > 0) out[key] = Math.max(0, Math.min(3, Math.round(value)));
     }
     return out;
-  }, [modeMeta]);
+  }, [blueprintModeProgress]);
+
+  const blueprintCampaign = useMemo(() => getBlueprintCampaign(blueprintStars), [blueprintStars]);
 
   const saveBlueprintStars = useCallback(
     (levelId, stars) => {
       const safeLevelId = String(levelId);
       const safeStars = Math.max(0, Math.min(3, Number(stars) || 0));
-      const nextMeta = setModeMeta((prevMeta) => {
-        const prevStars = prevMeta?.levelStars || {};
-        const nextStars = Math.max(Number(prevStars[safeLevelId] || 0), safeStars);
-        return { ...prevMeta, levelStars: { ...prevStars, [safeLevelId]: nextStars } };
-      });
-      persistModeProgress(stats, history, nextMeta);
+      const currentProgress = progressRef.current;
+      const currentBlueprintProgress = getModeProgress(currentProgress, GAME_TYPES.BLUEPRINT_BUILDER);
+      const prevMeta = currentBlueprintProgress?.meta || {};
+      const prevStars = prevMeta.levelStars || {};
+      const nextStars = Math.max(Number(prevStars[safeLevelId] || 0), safeStars);
+
+      const nextBlueprintProgress = {
+        ...currentBlueprintProgress,
+        meta: { ...prevMeta, levelStars: { ...prevStars, [safeLevelId]: nextStars } },
+      };
+
+      const nextProgress = setModeProgress(currentProgress, GAME_TYPES.BLUEPRINT_BUILDER, nextBlueprintProgress);
+      progressRef.current = nextProgress;
+      setProgress(nextProgress);
+      void persistProgress(nextProgress);
     },
-    [history, persistModeProgress, setModeMeta, stats]
+    [persistProgress, progressRef, setProgress]
+  );
+
+  const openBlueprintDailyPreview = useCallback(() => {
+    const dailyChallengeId = blueprintCampaign?.dailyChallenge?.challenge?.id;
+    if (dailyChallengeId) {
+      navigateWithSearch(buildBlueprintChallengePath(dailyChallengeId));
+    } else {
+      navigateWithSearch(buildBlueprintDailyPath());
+    }
+    resetViewport();
+  }, [blueprintCampaign, navigateWithSearch, resetViewport]);
+
+  const openBlueprintWorldPreview = useCallback(
+    (worldId) => {
+      const safeWorldId = Number(worldId);
+      if (!Number.isFinite(safeWorldId) || safeWorldId <= 0) return;
+      navigateWithSearch(buildBlueprintWorldPath(safeWorldId));
+      resetViewport();
+    },
+    [navigateWithSearch, resetViewport]
   );
 
   const startSelectedMode = useCallback(() => {
@@ -335,12 +372,44 @@ export default function App() {
   const pct = calcRoundPct(score, roundItems.length);
   const lifetimePct = calcLifetimePct(stats);
 
+  const modeProgressByGameType = useMemo(() => {
+    const out = {};
+    for (const option of GAME_TYPE_OPTIONS) {
+      const type = option.value;
+      const modeState = getModeProgress(progress, type);
+      const modeStats = modeState.stats || {};
+      const modeHistory = modeState.history || {};
+      const modeGame = getGameTypeConfig(type);
+
+      out[type] = {
+        stats: modeStats,
+        lifetimePct: calcLifetimePct(modeStats),
+        masteredCount: getMasteredCount(modeGame.items, modeHistory),
+        allCount: modeGame.items.length,
+      };
+    }
+    return out;
+  }, [progress]);
+
   const weakSpots = useMemo(() => getWeakSpots(activeGame.items, history), [activeGame.items, history]);
   const masteredCount = useMemo(() => getMasteredCount(activeGame.items, history), [activeGame.items, history]);
   const groupedByPattern = useMemo(
     () => groupItemsByPattern(activeGame.items, browseFilter),
     [activeGame.items, browseFilter]
   );
+
+  const blueprintCampaignPreview = useMemo(() => {
+    const worldsById = new Map((blueprintCampaign?.worlds || []).map((world) => [world.id, world]));
+    const worlds = BLUEPRINT_MENU_PREVIEW_WORLDS.map((entry) => {
+      const world = worldsById.get(entry.worldId);
+      return {
+        worldId: entry.worldId,
+        label: entry.label,
+        progressLabel: `${world?.completedCount || 0}/${world?.totalCount || 0}`,
+      };
+    });
+    return { dailyChallenge: blueprintCampaign?.dailyChallenge || null, worlds };
+  }, [blueprintCampaign]);
 
   const routeNotice = typeof location.state?.notice === "string" ? location.state.notice : "";
 
@@ -376,6 +445,10 @@ export default function App() {
     setShowResetConfirm,
     resetAllData,
     routeNotice,
+    modeProgressByGameType,
+    blueprintCampaignPreview,
+    onOpenBlueprintDaily: openBlueprintDailyPreview,
+    onOpenBlueprintWorld: openBlueprintWorldPreview,
   };
 
   if (!loaded) {
