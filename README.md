@@ -226,7 +226,7 @@ Route53 alias record for legacy domain.
 React mount + `BrowserRouter` + `GoogleOAuthProvider`.
 
 - `src/App.jsx`
-Main app orchestrator: route wiring, mode selection, progress state, round persistence, auth/sync integration.
+Main app orchestrator: route wiring, mode selection, progress state, round persistence, auth/sync integration, and guarded URL query synchronization.
 
 - `src/global.css`
 Global theme vars, base element styling, animation keyframes, shared interaction classes.
@@ -394,6 +394,9 @@ Shared world map helpers (accents/icons/unlock calculations/next challenge).
 
 - `src/App.test.jsx`
 App route and mode flow.
+
+- `src/App.routeSync.test.jsx`
+Guards against URL/state feedback loops when query params change via browser history navigation.
 
 - `src/components/AccuracyDot.test.jsx`
 Accuracy indicator behavior.

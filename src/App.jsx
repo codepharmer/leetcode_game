@@ -49,14 +49,38 @@ export default function App() {
   const [expandedResult, setExpandedResult] = useState({});
   const [showResetConfirm, setShowResetConfirm] = useState(false);
 
+  const routeStateRef = useRef({
+    gameType,
+    filterDifficulty,
+    totalQuestions,
+    browseFilter,
+  });
+  routeStateRef.current = {
+    gameType,
+    filterDifficulty,
+    totalQuestions,
+    browseFilter,
+  };
+
   const progressSnapshotRef = useRef({ progress: createDefaultProgress() });
+  const syncingFromLocationRef = useRef(false);
   const getProgressSnapshot = useCallback(() => progressSnapshotRef.current, []);
 
   useEffect(() => {
-    setGameType((prev) => (prev === routeSettings.gameType ? prev : routeSettings.gameType));
-    setFilterDifficulty((prev) => (prev === routeSettings.filterDifficulty ? prev : routeSettings.filterDifficulty));
-    setTotalQuestions((prev) => (prev === routeSettings.totalQuestions ? prev : routeSettings.totalQuestions));
-    setBrowseFilter((prev) => (prev === routeSettings.browseFilter ? prev : routeSettings.browseFilter));
+    const routeState = routeStateRef.current;
+    const shouldSyncFromLocation =
+      routeState.gameType !== routeSettings.gameType ||
+      routeState.filterDifficulty !== routeSettings.filterDifficulty ||
+      routeState.totalQuestions !== routeSettings.totalQuestions ||
+      routeState.browseFilter !== routeSettings.browseFilter;
+
+    if (!shouldSyncFromLocation) return;
+
+    syncingFromLocationRef.current = true;
+    setGameType(routeSettings.gameType);
+    setFilterDifficulty(routeSettings.filterDifficulty);
+    setTotalQuestions(routeSettings.totalQuestions);
+    setBrowseFilter(routeSettings.browseFilter);
   }, [
     routeSettings.browseFilter,
     routeSettings.filterDifficulty,
@@ -176,6 +200,11 @@ export default function App() {
   );
 
   useEffect(() => {
+    if (syncingFromLocationRef.current) {
+      syncingFromLocationRef.current = false;
+      return;
+    }
+
     if (normalizedLocationSearch === currentSearch) return;
     navigate({ pathname: location.pathname, search: currentSearch }, { replace: true });
   }, [currentSearch, location.pathname, navigate, normalizedLocationSearch]);
