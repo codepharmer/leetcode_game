@@ -82,7 +82,7 @@ describe("screens/BlueprintScreen", () => {
     fireEvent.dragEnd(draggedCard, { dataTransfer });
 
     expect(screen.getAllByTestId(/blueprint-deck-card-/).length).toBe(deckCardsBefore.length - 1);
-    expect(within(targetSlot).getByText("remove")).toBeInTheDocument();
+    expect(within(targetSlot).getByTestId(/blueprint-placed-card-/)).toBeInTheDocument();
   });
 
   it("supports dragging a placed card to a different slot", () => {
@@ -232,7 +232,7 @@ describe("screens/BlueprintScreen", () => {
     }
 
     expect(screen.getAllByTestId(/blueprint-deck-card-/).length).toBe(deckCardsBefore.length - 1);
-    expect(within(targetSlot).getByText("remove")).toBeInTheDocument();
+    expect(within(targetSlot).getByTestId(/blueprint-placed-card-/)).toBeInTheDocument();
   });
 
   it("supports touch dragging a placed card to a different slot", () => {
@@ -322,6 +322,39 @@ describe("screens/BlueprintScreen", () => {
     fireEvent.click(targetSlot);
 
     expect(runButton).toBeDisabled();
+  });
+
+  it("keeps problem details collapsed until the header toggle is pressed", () => {
+    renderBlueprint();
+    fireEvent.click(screen.getByRole("button", { name: /Two Sum/i }));
+
+    expect(screen.queryByTestId("blueprint-problem-card")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /show problem/i }));
+    expect(screen.getByTestId("blueprint-problem-card")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /hide problem/i }));
+    expect(screen.queryByTestId("blueprint-problem-card")).not.toBeInTheDocument();
+  });
+
+  it("opens the slot editor bottom sheet and hides the tray while it is open", () => {
+    renderBlueprint();
+    fireEvent.click(screen.getByRole("button", { name: /Two Sum/i }));
+
+    const deckCard = screen.getAllByTestId(/blueprint-deck-card-/)[0];
+    const slot = screen.getAllByTestId(/blueprint-slot-/)[0];
+    fireEvent.click(deckCard);
+    fireEvent.click(slot);
+
+    expect(screen.getByTestId("blueprint-card-tray")).toBeInTheDocument();
+
+    fireEvent.click(slot);
+    expect(screen.getByTestId("blueprint-slot-sheet")).toBeInTheDocument();
+    expect(screen.queryByTestId("blueprint-card-tray")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId("blueprint-slot-sheet-scrim"));
+    expect(screen.queryByTestId("blueprint-slot-sheet")).not.toBeInTheDocument();
+    expect(screen.getByTestId("blueprint-card-tray")).toBeInTheDocument();
   });
 
   it("does not loop when initialStars prop identity changes with same values", () => {

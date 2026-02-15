@@ -28,13 +28,14 @@ It is not a full coding judge. It is a pattern-learning and reasoning trainer.
 ## Game Modes
 
 1. `question -> pattern`
-Maps Blind 75-style question prompts to the most likely solving pattern.
+Maps Blind 75-style question prompts to the most likely solving pattern (imported solution-pattern labels where available, canonical fallback otherwise).
 
 2. `template -> pattern`
 Maps code snippets/templates to the pattern they represent, using confusion-aware distractors.
 
 3. `blueprint builder`
 Card-based algorithm assembly mode with worlds, tiers, daily challenge, test execution traces, hints, and star ratings.
+Mobile build view uses a compact fixed-row slot gutter, a bottom-sheet slot editor, and a bottom-docked stacked card tray.
 
 ## Live URLs
 
@@ -92,9 +93,13 @@ Base URL for the storage/session API (Lambda Function URL or equivalent).
 1. Frontend:
 - React app with route-based screens.
 - `App` coordinates mode routing, per-mode progress, round session restore, auth, and sync.
+- Route settings are URL-owned (`gameType`, `difficulty`, `count`, `browse`) and are read/written through `src/hooks/useRouteSettings.js`.
 
 2. Data:
-- Questions/templates are static content in `src/lib`.
+- Canonical question data lives in `src/lib/questions.js` (with imported solution metadata merged from `src/lib/questionSolutions.js`).
+- Canonical template/snippet data lives in `src/lib/templates.js` and `src/lib/templateQuestions.js`.
+- Canonical blueprint families/contracts live in `src/lib/blueprint/taxonomy.js` and `src/lib/blueprint/contracts.js`.
+- `src/lib/content/registry.js` is the composed, single-source read model used by game-mode wiring.
 - Progress is stored per game mode (`question`, `template`, `blueprint`) with schema normalization/versioning.
 
 3. Persistence:
@@ -109,6 +114,15 @@ Base URL for the storage/session API (Lambda Function URL or equivalent).
 - CI/reporting enforces: `problemSpecificStrategyCount = 87`, `placeholderContractCount = 0`, `semanticProbeUsageCount = 0`.
 - In Blueprint challenge headers, auto-generated questions show objective text instead of exposed solution-code preview lines.
 - Auto and tutorial levels now render pattern-family slot flows (for example: two pointers, sliding window, binary search, stack/heap, linked list, intervals/greedy, tree/graph, DP-state, backtracking) instead of one universal slot scaffold.
+
+## Content Ownership
+
+- Canonical question catalog: `src/lib/questions.js`
+- Imported Blind75 solution metadata snapshot: `src/lib/questionSolutions.js` (one-time copied from `blind75_leetcode_solutions.json`, no runtime file read)
+- Canonical template library/snippets: `src/lib/templates.js` and `src/lib/templateQuestions.js`
+- Canonical blueprint slot/template families: `src/lib/blueprint/templates.js`
+- Canonical blueprint contract + strategy selection: `src/lib/blueprint/contracts.js` and `src/lib/blueprint/strategyRegistry.js`
+- Canonical composed read model: `src/lib/content/registry.js`
 
 ## Repository Map (Directories)
 
@@ -126,6 +140,9 @@ Stateful behavior hooks.
 
 - `src/lib`
 Data/content model and pure logic utilities.
+
+- `src/lib/content`
+Composed content registry read model + invariants.
 
 - `src/lib/blueprint`
 Blueprint templates, contracts, strategy verification pipeline, level/campaign engine.
@@ -226,7 +243,7 @@ Route53 alias record for legacy domain.
 React mount + `BrowserRouter` + `GoogleOAuthProvider`.
 
 - `src/App.jsx`
-Main app orchestrator: route wiring, mode selection, progress state, round persistence, auth/sync integration, and guarded URL query synchronization.
+Main app orchestrator: route wiring, mode selection, progress state, round persistence, auth/sync integration, and route-settings consumption from URL.
 
 - `src/global.css`
 Global theme vars, base element styling, animation keyframes, shared interaction classes.
@@ -262,6 +279,9 @@ Round lifecycle for quiz modes: start, select, score, streaks, keyboard shortcut
 - `src/hooks/useProgressSync.js`
 Local/cloud load and merge, auth error fallback, persistence orchestration.
 
+- `src/hooks/useRouteSettings.js`
+Single source of truth for route settings from `location.search`; canonical URL writer + mode/path helpers.
+
 ### `src/lib`
 
 - `src/lib/constants.js`
@@ -271,7 +291,10 @@ App constants (modes, game types, color maps, storage key).
 Route constants, query parsing/normalization, URL builders.
 
 - `src/lib/questions.js`
-Question dataset (id/name/pattern/difficulty/description).
+Question dataset (id/name/pattern/difficulty/description) plus merged solution metadata fields for matched Blind75 entries.
+
+- `src/lib/questionSolutions.js`
+In-repo copied Blind75 solution metadata (answer pattern, specific pattern, intuition, code solution) keyed by local question ID.
 
 - `src/lib/templates.js`
 Universal skeleton and per-pattern template catalog.
@@ -281,6 +304,9 @@ Snippet dataset and confusion map for option generation.
 
 - `src/lib/gameContent.js`
 Mode registry and behavior config used by `App`.
+
+- `src/lib/content/registry.js`
+Single-source composed content read model (`question -> pattern`, `template -> pattern`, blueprint seeds, pattern index, invariants).
 
 - `src/lib/utils.js`
 Shuffle and option generation helpers.
@@ -344,7 +370,7 @@ Blueprint executor, test runner, trace generation, divergence detection.
 ### `src/screens`
 
 - `src/screens/MenuScreen.jsx`
-Main menu with top-level mode cards (compact single-row layout on mobile), contextual progress stats, quiz round settings, blueprint campaign preview, auth entry, and launch actions.
+Main menu with top-level mode cards (dense low-height mode strip on mobile), contextual progress stats, quiz round settings, blueprint campaign preview, auth entry, and launch actions.
 For `blueprint builder`, the menu progress card derives `levels`, `stars`, `worlds`, and `mastered` values from `byGameType.blueprint_builder.meta.levelStars` plus campaign world completion, instead of quiz history counters.
 
 - `src/screens/PlayScreen.jsx`
@@ -377,7 +403,7 @@ World stage/tier detail and challenge launch UI.
 Daily challenge detail/start screen.
 
 - `src/screens/blueprint/BlueprintGame.jsx`
-Card deck/slot placement UX, drag/drop/touch support (including moving already placed cards between slots and placing multiple cards in the same step), run/reset controls.
+Blueprint build/execution UI: compact slot rows, drag/drop/touch support (including moving already placed cards between slots and placing multiple cards in the same step), bottom-sheet slot editing, fixed mobile tray, and run/reset controls.
 
 - `src/screens/blueprint/BlueprintExecution.jsx`
 Execution trace stepping and feedback display.
@@ -397,7 +423,7 @@ Shared world map helpers (accents/icons/unlock calculations/next challenge).
 App route and mode flow.
 
 - `src/App.routeSync.test.jsx`
-Guards against URL/state feedback loops when query params change via browser history navigation.
+Guards against route-settings feedback loops when query params change via browser history navigation.
 
 - `src/components/AccuracyDot.test.jsx`
 Accuracy indicator behavior.
@@ -417,11 +443,17 @@ Quiz round state transitions and shortcuts.
 - `src/hooks/useProgressSync.test.jsx`
 Sync/merge/fallback behavior.
 
+- `src/hooks/useRouteSettings.test.jsx`
+Route-settings canonicalization, idempotent query writes, and mode/path preservation behavior.
+
 - `src/lib/auth.test.js`
 JWT decode and user extraction.
 
 - `src/lib/gameContent.test.js`
 Mode config and choice generation wiring.
+
+- `src/lib/content/registry.test.js`
+Content registry invariant tests (pattern, template, blueprint, orphan checks).
 
 - `src/lib/progressMerge.test.js`
 Progress merge correctness.
@@ -454,7 +486,7 @@ Strategy pipeline pass/fallback behavior.
 Blueprint template definitions.
 
 - `src/screens/BlueprintScreen.test.jsx`
-Blueprint navigation and drag/touch interactions, including moving placed cards between slots.
+Blueprint navigation and drag/touch interactions, including moving placed cards between slots, problem-details toggle behavior, and slot-editor/tray overlay flow.
 
 - `src/screens/BrowseScreen.test.jsx`
 Browse UI grouping/expansion.
@@ -582,7 +614,8 @@ New logic belongs in hooks/lib.
 Update `src/lib/gameContent.js` first when extending game modes.
 
 3. Keep URL query params canonical.
-Add params through `src/lib/routes.js` normalization/builders.
+Add params through `src/lib/routes.js` normalization/builders and write route settings through `src/hooks/useRouteSettings.js`.
+Use `navigateWithSettings` when changing routes that should preserve current settings.
 
 4. Keep stateful behavior in hooks.
 `useGameSession`, `useProgressSync`, `useAuthSession`, `useBlueprintGameSession`.
@@ -610,6 +643,12 @@ Add/update paired tests for changed modules.
 
 12. Treat deploy JSON artifacts as infrastructure memory.
 Update them deliberately and keep naming clear.
+
+13. Keep content registry invariants updated with content edits.
+When changing questions/templates/blueprint contracts, update `src/lib/content/registry.js` and `src/lib/content/registry.test.js` in the same change.
+
+14. Keep imported solution metadata aligned with question-mode behavior.
+When updating Blind75 answer patterns/solutions, update `src/lib/questionSolutions.js`, `src/lib/questions.js`, and the affected tests in the same change.
 
 ## Recommended Feature-Change Sequence
 
