@@ -85,17 +85,18 @@ describe("screens/MenuScreen", () => {
     vi.clearAllMocks();
   });
 
-  it("renders guest state with mode cards and round settings controls", () => {
+  it("renders guest state with segmented mode selector and round settings controls", () => {
     const props = createBaseProps();
     render(<MenuScreen {...props} />);
     expect(screen.getByText("Map questions to patterns")).toBeInTheDocument();
     expect(screen.getByText("Save your results")).toBeInTheDocument();
     expect(screen.getByText(/No weak spots yet/i)).toBeInTheDocument();
-    expect(screen.getAllByRole("button", { name: /Question -> Pattern/i }).length).toBeGreaterThan(0);
-    expect(screen.getAllByRole("button", { name: /Template -> Pattern/i }).length).toBeGreaterThan(0);
-    expect(screen.getAllByRole("button", { name: /Blueprint Builder/i }).length).toBeGreaterThan(0);
+    expect(screen.getByRole("button", { name: /^Match$/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^Template$/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^Build$/i })).toBeInTheDocument();
+    expect(screen.getByText(/Match questions to their solution pattern/i)).toBeInTheDocument();
 
-    fireEvent.click(screen.getAllByRole("button", { name: /Template -> Pattern/i })[0]);
+    fireEvent.click(screen.getByRole("button", { name: /^Template$/i }));
     expect(props.setGameType).toHaveBeenCalledWith(GAME_TYPES.TEMPLATE_TO_PATTERN);
     fireEvent.click(screen.getByRole("button", { name: /round settings/i }));
     fireEvent.click(screen.getByRole("button", { name: /medium/i }));
@@ -142,7 +143,7 @@ describe("screens/MenuScreen", () => {
 
     expect(screen.queryByRole("button", { name: /round settings/i })).not.toBeInTheDocument();
     expect(screen.getAllByText(/^campaign$/i).length).toBeGreaterThan(0);
-    fireEvent.click(screen.getAllByRole("button", { name: /daily challenge/i })[1]);
+    fireEvent.click(screen.getByRole("button", { name: /daily challenge/i }));
     expect(props.onOpenBlueprintDaily).toHaveBeenCalled();
     fireEvent.click(screen.getByRole("button", { name: /graphs/i }));
     expect(props.onOpenBlueprintWorld).toHaveBeenCalledWith(7);

@@ -21,30 +21,27 @@ function getProgressColorHex(percentage) {
 
 const MODE_VISUALS = {
   [GAME_TYPES.QUESTION_TO_PATTERN]: {
-    title: "Question -> Pattern",
+    title: "Match",
     progressBadge: "Question",
-    description: "Map prompts to core solving patterns.",
-    icon: "Q",
+    description: "Match questions to their solution pattern",
     accent: "var(--accent)",
     accentSoft: "rgba(16, 185, 129, 0.13)",
     accentRing: "rgba(16, 185, 129, 0.48)",
     accentGlow: "rgba(16, 185, 129, 0.22)",
   },
   [GAME_TYPES.TEMPLATE_TO_PATTERN]: {
-    title: "Template -> Pattern",
+    title: "Template",
     progressBadge: "Template",
-    description: "Read snippets and pick the matching pattern.",
-    icon: "T",
+    description: "Identify patterns from code templates",
     accent: "var(--info)",
     accentSoft: "rgba(59, 130, 246, 0.14)",
     accentRing: "rgba(59, 130, 246, 0.5)",
     accentGlow: "rgba(59, 130, 246, 0.2)",
   },
   [GAME_TYPES.BLUEPRINT_BUILDER]: {
-    title: "Blueprint Builder",
+    title: "Build",
     progressBadge: "Blueprint",
-    description: "Progress campaign worlds and daily challenges.",
-    icon: "B",
+    description: "Build solution blueprints from scratch",
     accent: "var(--warn)",
     accentSoft: "rgba(245, 158, 11, 0.16)",
     accentRing: "rgba(245, 158, 11, 0.52)",
@@ -58,7 +55,6 @@ function getModeVisual(gameType, fallbackLabel = "Mode") {
       title: fallbackLabel,
       progressBadge: fallbackLabel,
       description: "Select a mode.",
-      icon: "M",
       accent: "var(--accent)",
       accentSoft: "rgba(16, 185, 129, 0.13)",
       accentRing: "rgba(16, 185, 129, 0.48)",
@@ -74,6 +70,39 @@ function getModeVars(modeVisual) {
     "--mode-accent-ring": modeVisual.accentRing,
     "--mode-accent-glow": modeVisual.accentGlow,
   };
+}
+
+function ModeSegmentIcon({ gameType }) {
+  if (gameType === GAME_TYPES.TEMPLATE_TO_PATTERN) {
+    return (
+      <svg className="menu-mode-segment__icon" viewBox="0 0 16 16" aria-hidden="true">
+        <rect x="2.5" y="2.5" width="4" height="4" rx="0.6" />
+        <rect x="9.5" y="2.5" width="4" height="4" rx="0.6" />
+        <rect x="2.5" y="9.5" width="4" height="4" rx="0.6" />
+        <rect x="9.5" y="9.5" width="4" height="4" rx="0.6" />
+      </svg>
+    );
+  }
+
+  if (gameType === GAME_TYPES.BLUEPRINT_BUILDER) {
+    return (
+      <svg className="menu-mode-segment__icon" viewBox="0 0 16 16" aria-hidden="true">
+        <path d="M13.6 4.7a3 3 0 0 1-3.7 2.9L4.6 13a1.6 1.6 0 1 1-2.2-2.2l5.3-5.3a3 3 0 0 1 2.9-3.7L9 3.4 10.6 5 13.6 4.7z" />
+        <path d="M10.6 5 12 3.6" />
+      </svg>
+    );
+  }
+
+  return (
+    <svg className="menu-mode-segment__icon" viewBox="0 0 16 16" aria-hidden="true">
+      <circle cx="3" cy="3.5" r="1" />
+      <circle cx="3" cy="8" r="1" />
+      <circle cx="3" cy="12.5" r="1" />
+      <path d="M6 3.5h7" />
+      <path d="M6 8h7" />
+      <path d="M6 12.5h7" />
+    </svg>
+  );
 }
 
 function CircularProgress({ percentage, size = 48, strokeWidth = 3.5, accentColor = "var(--accent)" }) {
@@ -233,31 +262,30 @@ function SyncAndAuthSection({ user, authError, onGoogleSuccess, onGoogleError, o
 }
 
 function ModeSelectionSection({ gameTypeOptions, gameType, setGameType }) {
+  const selectedModeVisual = getModeVisual(gameType, "Mode");
+
   return (
-    <div className="menu-mode-grid" style={{ animation: "fadeSlideIn 0.5s ease 0.13s both" }}>
-      {(gameTypeOptions || []).map((option, index) => {
-        const modeVisual = getModeVisual(option.value, option.label || "Mode");
-        const isActive = option.value === gameType;
-        return (
-          <button
-            key={option.value}
-            className={`menu-mode-card pressable-200 ${isActive ? "is-active" : ""}`}
-            aria-pressed={isActive}
-            onClick={() => setGameType(option.value)}
-            style={{ ...getModeVars(modeVisual), animation: `fadeSlideIn 0.4s ease ${0.16 + index * 0.05}s both` }}
-          >
-            <span className="menu-mode-card__topbar" />
-            <span className="menu-mode-card__indicator" aria-hidden="true">
-              <span className="menu-mode-card__dot" />
-            </span>
-            <span className="menu-mode-card__badge" aria-hidden="true">
-              {modeVisual.icon}
-            </span>
-            <span className="menu-mode-card__title">{modeVisual.title}</span>
-            <span className="menu-mode-card__desc">{modeVisual.description}</span>
-          </button>
-        );
-      })}
+    <div style={{ animation: "fadeSlideIn 0.5s ease 0.13s both" }}>
+      <div className="menu-mode-segmented" role="tablist" aria-label="Game mode selector">
+        {(gameTypeOptions || []).map((option) => {
+          const modeVisual = getModeVisual(option.value, option.label || "Mode");
+          const isActive = option.value === gameType;
+          return (
+            <button
+              key={option.value}
+              className={`menu-mode-segment pressable-200 ${isActive ? "is-active" : ""}`}
+              aria-pressed={isActive}
+              onClick={() => setGameType(option.value)}
+            >
+              <ModeSegmentIcon gameType={option.value} />
+              <span className="menu-mode-segment__label">{modeVisual.title}</span>
+            </button>
+          );
+        })}
+      </div>
+      <div className="menu-mode-helper" aria-live="polite">
+        {selectedModeVisual.description}
+      </div>
     </div>
   );
 }

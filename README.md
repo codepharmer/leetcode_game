@@ -371,7 +371,7 @@ Blueprint executor, test runner, trace generation, divergence detection.
 ### `src/screens`
 
 - `src/screens/MenuScreen.jsx`
-Main menu with top-level mode cards (dense low-height mode strip on mobile), contextual progress stats, quiz round settings, blueprint campaign preview, auth entry, and launch actions.
+Main menu with a top-level segmented mode selector (`Match`, `Template`, `Build`) and dynamic helper copy, plus contextual progress stats, quiz round settings, blueprint campaign preview, auth entry, and launch actions.
 In blueprint mode, the primary CTA label is provided by app state (`Jump In`, `Continue Challenge`, or `Open Campaign Map`) so players can resume directly.
 For `blueprint builder`, the menu progress card derives `levels`, `stars`, `worlds`, and `mastered` values from `byGameType.blueprint_builder.meta.levelStars` plus campaign world completion, instead of quiz history counters.
 
