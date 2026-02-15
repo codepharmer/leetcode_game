@@ -5,6 +5,16 @@ import { BlueprintExecution } from "./BlueprintExecution";
 import { buildHintMessage, DIFF_COLOR, formatElapsed, getChallengeBadgeColor } from "./shared";
 import { useBlueprintGameSession } from "./useBlueprintGameSession";
 
+function getStepBadgeLabel(meta) {
+  const explicit = String(meta?.icon || "").trim();
+  if (/^\d+$/.test(explicit)) return explicit;
+
+  const name = String(meta?.name || "").trim();
+  const match = name.match(/[A-Za-z0-9]/);
+  if (match?.[0]) return match[0].toUpperCase();
+  return explicit || "#";
+}
+
 export function BlueprintGame({ level, challenge, onBack, onComplete }) {
   const touchDragRef = useRef({
     pointerId: null,
@@ -345,7 +355,7 @@ export function BlueprintGame({ level, challenge, onBack, onComplete }) {
                   }}
                 >
                   <div style={S.blueprintSlotHeader}>
-                    <span style={{ ...S.blueprintSlotIcon, color: displayMeta.color, borderColor: `${displayMeta.color}66` }}>{displayMeta.icon}</span>
+                    <span style={{ ...S.blueprintSlotIcon, color: displayMeta.color, borderColor: `${displayMeta.color}66` }}>{getStepBadgeLabel(displayMeta)}</span>
                   </div>
 
                   <div style={S.blueprintSlotCards}>
@@ -480,7 +490,7 @@ export function BlueprintGame({ level, challenge, onBack, onComplete }) {
                 <div style={S.blueprintSheetHeader}>
                   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                     <span style={{ ...S.blueprintSlotIcon, color: editingMeta?.color || "var(--text)", borderColor: `${editingMeta?.color || "var(--border)"}66` }}>
-                      {editingMeta?.icon || "#"}
+                      {getStepBadgeLabel(editingMeta)}
                     </span>
                     <span style={{ ...S.blueprintSlotName, color: editingMeta?.color || "var(--text)" }}>{editingMeta?.name || "Slot"}</span>
                   </div>

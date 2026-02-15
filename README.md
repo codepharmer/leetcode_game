@@ -404,7 +404,7 @@ World stage/tier detail and challenge launch UI.
 Daily challenge detail/start screen.
 
 - `src/screens/blueprint/BlueprintGame.jsx`
-Blueprint build/execution UI: compact slot rows, drag/drop/touch support (including moving already placed cards between slots and placing multiple cards in the same step), bottom-sheet slot editing, fixed mobile tray, and run/reset controls.
+Blueprint build/execution UI: compact slot rows, drag/drop/touch support (including moving already placed cards between slots and placing multiple cards in the same step), bottom-sheet slot editing, fixed mobile tray, and run/reset controls. Step badge initials are derived from each slot name so template-specific naming stays visually aligned.
 
 - `src/screens/blueprint/BlueprintExecution.jsx`
 Execution trace stepping and feedback display.
