@@ -61,7 +61,7 @@ describe("lib/blueprint/templates", () => {
   });
 
   it("defines specialized pattern templates beyond the universal flow", () => {
-    expect(getTemplateSlotIds(ARRAY_HASHING_TEMPLATE_ID)).toEqual(["seed", "scan", "record", "match", "emit"]);
+    expect(getTemplateSlotIds(ARRAY_HASHING_TEMPLATE_ID)).toEqual(["seed", "loop", "probe", "store", "emit"]);
     expect(getTemplateSlotIds(TWO_POINTERS_TEMPLATE_ID)).toEqual(["anchors", "converge", "shift", "compare", "emit"]);
     expect(getTemplateSlotIds(SLIDING_WINDOW_TEMPLATE_ID)).toEqual(["bootstrap", "expand", "shrink", "window-check", "emit"]);
     expect(getTemplateSlotIds(STACK_HEAP_TEMPLATE_ID)).toEqual(["init-structure", "iterate", "push-pop", "resolve", "emit"]);

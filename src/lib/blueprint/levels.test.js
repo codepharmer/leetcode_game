@@ -63,7 +63,15 @@ describe("lib/blueprint/levels", () => {
 
   it("uses pattern-specific slot structures across archetypes", () => {
     const autoLevels = BLUEPRINT_LEVELS.filter((level) => String(level.id).startsWith("q-"));
-    expect(autoLevels.some((level) => level.slots.includes("seed") && level.slots.includes("scan"))).toBe(true);
+    expect(
+      autoLevels.some(
+        (level) =>
+          level.slots.includes("seed") &&
+          level.slots.includes("loop") &&
+          level.slots.includes("probe") &&
+          level.slots.includes("store")
+      )
+    ).toBe(true);
     expect(autoLevels.some((level) => level.slots.includes("choose") && level.slots.includes("constrain"))).toBe(true);
     expect(autoLevels.some((level) => level.slots.includes("base-case") && level.slots.includes("aggregate"))).toBe(true);
     expect(autoLevels.some((level) => level.slots.includes("base-state") && level.slots.includes("memoize"))).toBe(true);
@@ -83,5 +91,15 @@ describe("lib/blueprint/levels", () => {
     expect(autoLevels.get("q-27")?.slots).toEqual(["anchors", "walk", "relink", "guard", "emit"]);
     expect(autoLevels.get("q-33")?.slots).toEqual(["base-case", "branch", "prune", "traverse", "aggregate"]);
     expect(autoLevels.get("q-62")?.slots).toEqual(["base-state", "subproblem", "state-guard", "transition", "memoize"]);
+  });
+
+  it("keeps array/hash generated solutions aligned to probe then store stages", () => {
+    const twoSum = BLUEPRINT_LEVELS.find((level) => String(level.id) === "q-1");
+    expect(twoSum?.slots).toEqual(["seed", "loop", "probe", "store", "emit"]);
+
+    const byKey = new Map((twoSum?.cards || []).filter((card) => card.correctSlot).map((card) => [card.key, card.correctSlot]));
+    expect(byKey.get("need-target")).toBe("probe");
+    expect(byKey.get("found-match")).toBe("probe");
+    expect(byKey.get("save-index")).toBe("store");
   });
 });

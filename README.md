@@ -113,7 +113,7 @@ Base URL for the storage/session API (Lambda Function URL or equivalent).
 - Questions `q-11..q-87` now run problem-specific strategy/oracle paths (no probe placeholders in production contracts).
 - CI/reporting enforces: `problemSpecificStrategyCount = 87`, `placeholderContractCount = 0`, `semanticProbeUsageCount = 0`.
 - In Blueprint challenge headers, auto-generated questions show objective text instead of exposed solution-code preview lines.
-- Auto and tutorial levels now render pattern-family slot flows (for example: two pointers, sliding window, binary search, stack/heap, linked list, intervals/greedy, tree/graph, DP-state, backtracking) instead of one universal slot scaffold.
+- Auto and tutorial levels now render pattern-family slot flows (for example: array/hash uses `seed -> loop -> probe -> store -> emit`, alongside two pointers, sliding window, binary search, stack/heap, linked list, intervals/greedy, tree/graph, DP-state, backtracking) instead of one universal slot scaffold.
 
 ## Content Ownership
 

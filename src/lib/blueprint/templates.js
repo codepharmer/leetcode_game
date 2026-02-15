@@ -76,9 +76,9 @@ export const TEMPLATE_CANONICAL_SLOT_ROLE_MAP = {
   },
   [ARRAY_HASHING_TEMPLATE_ID]: {
     setup: "seed",
-    loop: "scan",
-    update: "record",
-    check: "match",
+    loop: "loop",
+    update: "store",
+    check: "probe",
     return: "emit",
   },
   [TWO_POINTERS_TEMPLATE_ID]: {
@@ -170,9 +170,9 @@ export const BLUEPRINT_TEMPLATES = {
     "Array / Hashing Flow",
     {
       setup: { id: "seed", name: "SEED", desc: "Initialize map/set/counter state" },
-      loop: { id: "scan", name: "SCAN", desc: "Iterate values or keys once" },
-      update: { id: "record", name: "RECORD", desc: "Write hash/frequency/prefix updates" },
-      check: { id: "match", name: "MATCH", desc: "Check complement/signature/invariant" },
+      loop: { id: "loop", name: "LOOP", desc: "Iterate values or keys once" },
+      update: { id: "probe", name: "PROBE", desc: "Check complement/signature/invariant" },
+      check: { id: "store", name: "STORE", desc: "Write hash/frequency/prefix updates" },
       return: { id: "emit", name: "EMIT", desc: "Return answer structure" },
     }
   ),

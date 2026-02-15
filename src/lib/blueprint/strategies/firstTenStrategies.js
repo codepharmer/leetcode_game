@@ -462,7 +462,7 @@ export function createFirstTenStrategies() {
         ir: [
           irStep("setup", "init-index-map", "const indexByValue = new Map()", "declare"),
           irStep("loop", "for-i", "for (let i = 0; i < nums.length; i++)", "loop"),
-          irStep("update", "need-target", "const need = target - nums[i]", "compute"),
+          irStep("check", "need-target", "const need = target - nums[i]", "compute"),
           irStep("check", "found-match", "if (indexByValue.has(need)) return [indexByValue.get(need), i]", "branch"),
           irStep("update", "save-index", "indexByValue.set(nums[i], i)", "update"),
           irStep("return", "ret-not-found", "return [-1, -1]", "return"),
@@ -537,7 +537,7 @@ export function createFirstTenStrategies() {
         ir: [
           irStep("setup", "init-groups", "const groups = new Map()", "declare"),
           irStep("loop", "for-word", "for (const word of strs)", "loop"),
-          irStep("update", "build-signature", "build 26-count signature for each word", "compute"),
+          irStep("check", "build-signature", "build 26-count signature for each word", "compute"),
           irStep("check", "create-group", "if (!groups.has(signature)) groups.set(signature, [])", "branch"),
           irStep("update", "push-group", "groups.get(signature).push(word)", "update"),
           irStep("return", "ret-groups", "return Array.from(groups.values())", "return"),
@@ -641,7 +641,7 @@ export function createFirstTenStrategies() {
           irStep("check", "is-start", "if (seen.has(value - 1)) continue", "branch"),
           irStep("update", "reset-run", "let length = 1", "update"),
           irStep("loop", "while-run", "while (seen.has(value + length)) length++", "loop"),
-          irStep("check", "update-best", "best = Math.max(best, length)", "branch"),
+          irStep("update", "update-best", "best = Math.max(best, length)", "update"),
           irStep("return", "ret-best", "return best", "return"),
         ],
         solve: solveLongestConsecutive,
