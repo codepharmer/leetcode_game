@@ -573,6 +573,7 @@ export function MenuScreen({
   blueprintCampaignPreview = null,
   onOpenBlueprintDaily = () => {},
   onOpenBlueprintWorld = () => {},
+  startLabel = "",
 }) {
   const [showRoundSettings, setShowRoundSettings] = useState(false);
 
@@ -596,7 +597,7 @@ export function MenuScreen({
   const diffLabel = filterDifficulty === "All" ? "all difficulties" : `${String(filterDifficulty).toLowerCase()} ${noun}`;
   const qLabel = totalQuestions === allCount ? "all available" : totalQuestions;
   const selectedModeLabel = selectedModeVisual.title;
-  const startLabel = isBlueprintMode ? "Open Campaign Map" : "Start Round";
+  const resolvedStartLabel = startLabel || (isBlueprintMode ? "Open Campaign Map" : "Start Round");
 
   const needsWork = weakSpots.slice(0, 5).map((q) => {
     const h = history[q.id];
@@ -672,7 +673,7 @@ export function MenuScreen({
           />
         )}
 
-        <StartSection startGame={startGame} startLabel={startLabel} />
+        <StartSection startGame={startGame} startLabel={resolvedStartLabel} />
 
         <NeedsWorkSection needsWork={needsWork} />
 

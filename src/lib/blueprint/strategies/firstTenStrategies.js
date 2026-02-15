@@ -537,9 +537,14 @@ export function createFirstTenStrategies() {
         ir: [
           irStep("setup", "init-groups", "const groups = new Map()", "declare"),
           irStep("loop", "for-word", "for (const word of strs)", "loop"),
-          irStep("check", "build-signature", "build 26-count signature for each word", "compute"),
-          irStep("check", "create-group", "if (!groups.has(signature)) groups.set(signature, [])", "branch"),
-          irStep("update", "push-group", "groups.get(signature).push(word)", "update"),
+          irStep(
+            "check",
+            "build-signature",
+            "const counts = Array(26).fill(0); for (const ch of word) counts[ch.charCodeAt(0) - 97] += 1; const signatureKey = counts.join('#')",
+            "compute"
+          ),
+          irStep("check", "create-group", "if (!groups.has(signatureKey)) groups.set(signatureKey, [])", "branch"),
+          irStep("update", "push-group", "groups.get(signatureKey).push(word)", "update"),
           irStep("return", "ret-groups", "return Array.from(groups.values())", "return"),
         ],
         solve: solveGroupAnagrams,

@@ -46,9 +46,11 @@ export function useBlueprintGameSession({ level, challenge }) {
   const [hintUses, setHintUses] = useState(0);
   const [usedHint, setUsedHint] = useState(false);
   const [startedAt, setStartedAt] = useState(Date.now());
+  const [nowMs, setNowMs] = useState(Date.now());
   const [runSummary, setRunSummary] = useState(null);
 
   const resetRound = () => {
+    const nextNow = Date.now();
     setSlots(createEmptySlots(slotIds));
     setDeck(guided ? orderedSolutionCards : shuffle(solutionCards));
     setSelected(null);
@@ -63,13 +65,21 @@ export function useBlueprintGameSession({ level, challenge }) {
     setShowHint(null);
     setHintUses(0);
     setUsedHint(false);
-    setStartedAt(Date.now());
+    setStartedAt(nextNow);
+    setNowMs(nextNow);
     setRunSummary(null);
   };
 
   useEffect(() => {
     resetRound();
   }, [guided, level.id, orderedSolutionCards, slotIds, solutionCards]);
+
+  useEffect(() => {
+    if (phase !== "build") return undefined;
+    setNowMs(Date.now());
+    const intervalId = setInterval(() => setNowMs(Date.now()), 1000);
+    return () => clearInterval(intervalId);
+  }, [phase, startedAt]);
 
   const selectedOrGuided = selected || (guided ? deck[0] || null : null);
 
@@ -214,6 +224,10 @@ export function useBlueprintGameSession({ level, challenge }) {
   const totalPlaced = Object.values(slots).reduce((sum, items) => sum + items.length, 0);
   const requiredCards = solutionCards.length;
   const canRun = requiredCards > 0 && totalPlaced === requiredCards;
+  const elapsedMs = phase === "build"
+    ? Math.max(0, nowMs - startedAt)
+    : Math.max(0, Number(runSummary?.elapsedMs || 0));
+  const timeRemainingMs = Math.max(0, timeLimitSec * 1000 - elapsedMs);
 
   return {
     slotDefs,
@@ -244,6 +258,8 @@ export function useBlueprintGameSession({ level, challenge }) {
     totalPlaced,
     requiredCards,
     canRun,
+    elapsedMs,
+    timeRemainingMs,
     setExecStep,
     setDraggingCardId,
     setDragOverSlotId,

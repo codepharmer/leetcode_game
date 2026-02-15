@@ -178,6 +178,8 @@ describe("App", () => {
     renderApp();
 
     fireEvent.click(screen.getByText("menu-blueprint"));
+    const blueprintMenuProps = menuScreenMock.mock.calls.at(-1)?.[0];
+    expect(blueprintMenuProps.startLabel).toBe("Jump In");
     fireEvent.click(screen.getByText("menu-start"));
     expect(screen.getByText("blueprint-screen")).toBeInTheDocument();
 
@@ -231,5 +233,27 @@ describe("App", () => {
     expect(blueprintProgress.lifetimePct).toBe(Math.round((4 / blueprintProgress.stats.totalAnswered) * 100));
     expect(blueprintProgress.masteredCount).toBe(1);
     expect(blueprintProgress.worldCount).toBeGreaterThan(0);
+  });
+
+  it("uses a continue CTA label for blueprint mode when prior progress exists", () => {
+    const progress = createDefaultProgress();
+    progress.byGameType[GAME_TYPES.BLUEPRINT_BUILDER].meta = {
+      levelStars: {
+        "q-1": 1,
+      },
+    };
+    useProgressSyncMock.mockReturnValue({
+      loaded: true,
+      progress,
+      setProgress: vi.fn(),
+      progressRef: { current: progress },
+      persistProgress: vi.fn(async () => {}),
+    });
+
+    renderApp();
+    fireEvent.click(screen.getByText("menu-blueprint"));
+
+    const blueprintMenuProps = menuScreenMock.mock.calls.at(-1)?.[0];
+    expect(blueprintMenuProps.startLabel).toBe("Continue Challenge");
   });
 });

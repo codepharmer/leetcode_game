@@ -8,6 +8,15 @@ function titleCaseSlot(slotId) {
     .join(" ");
 }
 
+function isCommentOnlyCardText(text) {
+  const trimmed = String(text || "").trim();
+  if (!trimmed) return true;
+  if (/^(\/\/|#)/.test(trimmed)) return true;
+  if (/^\/\*[\s\S]*\*\/$/.test(trimmed)) return true;
+  if (/^\*+/.test(trimmed)) return true;
+  return false;
+}
+
 export function buildCardsFromIr({ levelId, templateId, irNodes }) {
   const slotIds = getTemplateSlotIds(templateId);
   const slotIdSet = new Set(slotIds);
@@ -19,7 +28,7 @@ export function buildCardsFromIr({ levelId, templateId, irNodes }) {
     const rawSlotId = String(node?.slot || "");
     const slotId = slotIdSet.has(rawSlotId) ? rawSlotId : (slotRoleMap[rawSlotId] || rawSlotId);
     const text = String(node?.text || "").trim();
-    if (!slotIdSet.has(slotId) || !text) continue;
+    if (!slotIdSet.has(slotId) || isCommentOnlyCardText(text)) continue;
 
     const order = nextOrderBySlot[slotId] || 0;
     nextOrderBySlot[slotId] = order + 1;

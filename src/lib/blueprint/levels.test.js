@@ -53,6 +53,14 @@ describe("lib/blueprint/levels", () => {
     }
   });
 
+  it("does not generate standalone comment-only cards", () => {
+    const autoLevels = BLUEPRINT_LEVELS.filter((level) => String(level.id).startsWith("q-"));
+    for (const level of autoLevels) {
+      expect(level.cards.some((card) => /^(\/\/|#)/.test(String(card.text || "").trim()))).toBe(false);
+      expect(level.cards.some((card) => /^\/\*[\s\S]*\*\/$/.test(String(card.text || "").trim()))).toBe(false);
+    }
+  });
+
   it("ships all generated levels as strategy output (no fallback)", () => {
     const autoLevels = BLUEPRINT_LEVELS.filter((level) => String(level.id).startsWith("q-"));
     for (const level of autoLevels) {

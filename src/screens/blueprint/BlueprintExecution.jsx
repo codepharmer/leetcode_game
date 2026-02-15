@@ -125,6 +125,12 @@ export function BlueprintExecution({
         <div style={S.execLabel}>test cases</div>
         {testResults?.map((result, index) => (
           <div key={index} style={{ ...S.testRow, borderLeftColor: result.passed ? "var(--accent)" : "var(--danger)" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", gap: 8, marginBottom: 5 }}>
+              <span style={{ ...S.blueprintNodeMeta, fontSize: 10.5 }}>case {index + 1}</span>
+              <span style={{ ...S.blueprintNodeMeta, fontSize: 10.5, color: result.passed ? "var(--accent)" : "var(--danger)" }}>
+                {result.passed ? "pass" : "fail"}
+              </span>
+            </div>
             <div style={S.blueprintTestBody}>
               <div style={S.blueprintTestLine}>input: {JSON.stringify(result.input)}</div>
               <div style={S.blueprintTestLine}>expected: {JSON.stringify(result.expected)}</div>

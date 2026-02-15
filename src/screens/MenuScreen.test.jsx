@@ -132,6 +132,7 @@ describe("screens/MenuScreen", () => {
       <MenuScreen
         {...props}
         gameType={GAME_TYPES.BLUEPRINT_BUILDER}
+        startLabel="Continue Challenge"
         supportsBrowse={false}
         supportsTemplates={false}
         supportsDifficultyFilter={false}
@@ -148,7 +149,7 @@ describe("screens/MenuScreen", () => {
 
     expect(screen.queryByRole("button", { name: /browse patterns/i })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /view templates/i })).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Open Campaign Map/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Continue Challenge/i })).toBeInTheDocument();
     expect(screen.getByText(/^stars$/i)).toBeInTheDocument();
     expect(screen.getByText(/^worlds$/i)).toBeInTheDocument();
     expect(screen.queryByText("--")).not.toBeInTheDocument();

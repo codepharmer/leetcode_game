@@ -244,7 +244,7 @@ Route53 alias record for legacy domain.
 React mount + `BrowserRouter` + `GoogleOAuthProvider`.
 
 - `src/App.jsx`
-Main app orchestrator: route wiring, mode selection, progress state, round persistence, auth/sync integration, and route-settings consumption from URL.
+Main app orchestrator: route wiring, mode selection, progress state, round persistence, auth/sync integration, route-settings consumption from URL, and blueprint quick-start routing (`Jump In` / `Continue Challenge`).
 
 - `src/global.css`
 Global theme vars, base element styling, animation keyframes, shared interaction classes.
@@ -354,7 +354,7 @@ Coverage and quality metrics (`strategy coverage`, `semantic pass`, `problemSpec
 Deterministic/random verification gate for strategy solve plans.
 
 - `src/lib/blueprint/ir.js`
-Converts verified IR nodes into card payloads and slot limits.
+Converts verified IR nodes into card payloads and slot limits, and filters standalone comment-only cards.
 
 - `src/lib/blueprint/solutionPipeline.js`
 Strategy selection + verification + IR conversion + strict no-fallback default behavior.
@@ -372,6 +372,7 @@ Blueprint executor, test runner, trace generation, divergence detection.
 
 - `src/screens/MenuScreen.jsx`
 Main menu with top-level mode cards (dense low-height mode strip on mobile), contextual progress stats, quiz round settings, blueprint campaign preview, auth entry, and launch actions.
+In blueprint mode, the primary CTA label is provided by app state (`Jump In`, `Continue Challenge`, or `Open Campaign Map`) so players can resume directly.
 For `blueprint builder`, the menu progress card derives `levels`, `stars`, `worlds`, and `mastered` values from `byGameType.blueprint_builder.meta.levelStars` plus campaign world completion, instead of quiz history counters.
 
 - `src/screens/PlayScreen.jsx`
@@ -398,16 +399,16 @@ Blueprint tab shell (`Map`, `Daily`, placeholder `Stats`).
 World progression map, continue CTA, daily banner.
 
 - `src/screens/blueprint/BlueprintWorldDetailView.jsx`
-World stage/tier detail and challenge launch UI.
+World stage/tier detail and challenge launch UI. Already-unlocked earlier tiers remain replayable after progressing to later tiers.
 
 - `src/screens/blueprint/BlueprintDailyView.jsx`
 Daily challenge detail/start screen.
 
 - `src/screens/blueprint/BlueprintGame.jsx`
-Blueprint build/execution UI: compact slot rows, drag/drop/touch support (including moving already placed cards between slots and placing multiple cards in the same step), bottom-sheet slot editing, fixed mobile tray, and run/reset controls. Step badge initials are derived from each slot name so template-specific naming stays visually aligned.
+Blueprint build/execution UI: compact slot rows, drag/drop/touch support (including moving already placed cards between slots and placing multiple cards in the same step), bottom-sheet slot editing, fixed mobile tray, live countdown timer, and run/reset controls. Step badge initials are derived from each slot name so template-specific naming stays visually aligned.
 
 - `src/screens/blueprint/BlueprintExecution.jsx`
-Execution trace stepping and feedback display.
+Execution trace stepping and feedback display with denser mobile-friendly test/result formatting.
 
 - `src/screens/blueprint/useBlueprintGameSession.js`
 Blueprint gameplay state machine (deck/slots/attempts/hints/stars/timing).

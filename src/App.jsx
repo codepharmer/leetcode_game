@@ -34,6 +34,29 @@ const BLUEPRINT_MENU_PREVIEW_WORLDS = [
   { worldId: 8, label: "Dynamic Programming" },
 ];
 
+function findNextBlueprintChallenge(campaign, levelStars) {
+  const worlds = Array.isArray(campaign?.worlds) ? campaign.worlds : [];
+  for (const world of worlds) {
+    if (!world?.isUnlocked || world?.isComplete) continue;
+    const levelIds = Array.isArray(world?.levelIds) ? world.levelIds : [];
+    for (const levelId of levelIds) {
+      const stars = Number(levelStars?.[String(levelId)] || 0);
+      if (stars >= 1) continue;
+      const challenge = world?.challengeByLevelId?.[String(levelId)];
+      if (challenge?.id && challenge?.level) {
+        return { challenge, world, source: "campaign" };
+      }
+    }
+  }
+
+  if (campaign?.dailyChallenge?.challenge?.id && campaign?.dailyChallenge?.challenge?.level) {
+    const dailyWorld = worlds.find((world) => world.id === campaign.dailyChallenge.worldId) || null;
+    return { challenge: campaign.dailyChallenge.challenge, world: dailyWorld, source: "daily" };
+  }
+
+  return null;
+}
+
 export default function App() {
   const location = useLocation();
   const {
@@ -268,6 +291,10 @@ export default function App() {
   }, [blueprintModeProgress]);
 
   const blueprintCampaign = useMemo(() => getBlueprintCampaign(blueprintStars), [blueprintStars]);
+  const blueprintQuickStart = useMemo(
+    () => findNextBlueprintChallenge(blueprintCampaign, blueprintStars),
+    [blueprintCampaign, blueprintStars]
+  );
 
   const saveBlueprintStars = useCallback(
     (levelId, stars) => {
@@ -314,12 +341,16 @@ export default function App() {
 
   const startSelectedMode = useCallback(() => {
     if (gameType === GAME_TYPES.BLUEPRINT_BUILDER) {
-      navigateWithSettings(ROUTES.BLUEPRINT);
+      if (blueprintQuickStart?.challenge?.id) {
+        navigateWithSettings(buildBlueprintChallengePath(blueprintQuickStart.challenge.id));
+      } else {
+        navigateWithSettings(ROUTES.BLUEPRINT);
+      }
       resetViewport();
       return;
     }
     startGame();
-  }, [gameType, navigateWithSettings, resetViewport, startGame]);
+  }, [blueprintQuickStart, gameType, navigateWithSettings, resetViewport, startGame]);
 
   const resetAllData = useCallback(async () => {
     const freshProgress = createDefaultProgress();
@@ -411,6 +442,10 @@ export default function App() {
   }, [blueprintCampaign]);
 
   const routeNotice = typeof location.state?.notice === "string" ? location.state.notice : "";
+  const hasBlueprintProgress = Object.keys(blueprintStars).length > 0;
+  const blueprintStartLabel = blueprintQuickStart
+    ? (hasBlueprintProgress ? "Continue Challenge" : "Jump In")
+    : "Open Campaign Map";
 
   const menuScreenProps = {
     gameType,
@@ -448,6 +483,7 @@ export default function App() {
     blueprintCampaignPreview,
     onOpenBlueprintDaily: openBlueprintDailyPreview,
     onOpenBlueprintWorld: openBlueprintWorldPreview,
+    startLabel: gameType === GAME_TYPES.BLUEPRINT_BUILDER ? blueprintStartLabel : "Start Round",
   };
 
   if (!loaded) {

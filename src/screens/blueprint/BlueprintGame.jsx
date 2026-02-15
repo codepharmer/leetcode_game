@@ -60,6 +60,8 @@ export function BlueprintGame({ level, challenge, onBack, onComplete }) {
     totalPlaced,
     requiredCards,
     canRun,
+    elapsedMs,
+    timeRemainingMs,
     setExecStep,
     setDraggingCardId,
     setDragOverSlotId,
@@ -254,6 +256,12 @@ export function BlueprintGame({ level, challenge, onBack, onComplete }) {
   const hintsRemaining = hintsMode === "limited" ? String(Math.max(0, maxHints - hintUses)) : hintsMode === "none" ? "off" : "inf";
   const isDragActive = phase === "build" && !!draggingCardId;
   const showDeckTray = phase === "build" && !editingSlotId;
+  const timerColor = phase === "build"
+    ? (timeRemainingMs <= 0 ? "var(--danger)" : timeRemainingMs <= 30000 ? "var(--warn)" : "var(--dim)")
+    : "var(--dim)";
+  const timerLabel = phase === "build"
+    ? `left ${formatElapsed(timeRemainingMs)}`
+    : `time ${formatElapsed(runSummary?.elapsedMs ?? elapsedMs)}`;
 
   return (
     <div style={{ ...S.blueprintContainer, paddingBottom: phase === "build" ? 320 : 24 }}>
@@ -277,7 +285,7 @@ export function BlueprintGame({ level, challenge, onBack, onComplete }) {
       <div style={S.blueprintStatsStrip}>
         <span style={S.blueprintStatsItem}>cards {totalPlaced}/{requiredCards}</span>
         <span style={S.blueprintStatsItem}>hints {hintsRemaining}</span>
-        <span style={S.blueprintStatsItem}>timer {formatElapsed(timeLimitSec * 1000)}</span>
+        <span style={{ ...S.blueprintStatsItem, color: timerColor }}>{timerLabel}</span>
         <span style={S.blueprintStatsItem}>attempts {attempts}</span>
       </div>
 

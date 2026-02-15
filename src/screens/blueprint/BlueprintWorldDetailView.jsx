@@ -124,7 +124,7 @@ export function BlueprintWorldDetailView({ world, completed, onBack, onStartChal
             const isLocked = tier.index > world.activeTierIndex;
             const isExpanded = !!expandedByTier[tier.index];
             const solvedCount = tier.levelIds.filter((levelId) => getLevelStars(completed, levelId) >= 1).length;
-            const canPlayTier = tier.index === world.activeTierIndex;
+            const canPlayTier = tier.index <= world.activeTierIndex;
 
             return (
               <div key={tier.index} style={S.blueprintTierCard}>

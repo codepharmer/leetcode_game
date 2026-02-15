@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 
@@ -47,6 +47,41 @@ describe("screens/BlueprintScreen", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /worlds/i }));
     expect(screen.getByText(/Hash Maps & Sets/i)).toBeInTheDocument();
+  });
+
+  it("allows replaying already-solved earlier tier challenges", () => {
+    renderBlueprint({
+      path: "/blueprint/world/1",
+      initialStars: {
+        "q-1": 1,
+        "q-2": 1,
+      },
+    });
+
+    const twoSumButton = screen.getByRole("button", { name: /Two Sum/i });
+    expect(twoSumButton).not.toBeDisabled();
+
+    fireEvent.click(twoSumButton);
+    expect(screen.getByText("Run Blueprint")).toBeInTheDocument();
+  });
+
+  it("shows a live countdown while building", () => {
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(new Date("2026-02-15T12:00:00.000Z"));
+      renderBlueprint();
+
+      fireEvent.click(screen.getByRole("button", { name: /Two Sum/i }));
+      expect(screen.getByText(/left 5:00/i)).toBeInTheDocument();
+
+      act(() => {
+        vi.advanceTimersByTime(2000);
+      });
+
+      expect(screen.getByText(/left 4:58/i)).toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("shows soft-gated worlds", () => {
