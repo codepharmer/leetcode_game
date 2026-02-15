@@ -79,7 +79,9 @@ export function ResultsScreen({
                   ) : (
                     <div style={{ fontSize: 13, lineHeight: 1.6, color: "var(--dim)", marginBottom: 10 }}>{item.desc}</div>
                   )}
-                  {gameType !== GAME_TYPES.TEMPLATE_TO_PATTERN && <TemplateViewer pattern={item.pattern} compact />}
+                  {gameType !== GAME_TYPES.TEMPLATE_TO_PATTERN && (
+                    <TemplateViewer pattern={item.templatePattern || item.pattern} compact />
+                  )}
                 </div>
               )}
             </div>

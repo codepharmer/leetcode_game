@@ -130,7 +130,11 @@ export function PlayScreen({
           </div>
 
           {revealTemplateAfterAnswer && (
-            <TemplateViewer pattern={currentItem.pattern} open={showTemplate} onOpenChange={setShowTemplate} />
+            <TemplateViewer
+              pattern={currentItem.templatePattern || currentItem.pattern}
+              open={showTemplate}
+              onOpenChange={setShowTemplate}
+            />
           )}
         </div>
       )}

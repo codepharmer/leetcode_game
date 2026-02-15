@@ -25,6 +25,18 @@ describe("lib/gameContent", () => {
     expect(sample.promptKind).toBe("question");
   });
 
+  it("uses imported solution patterns as question-mode answer keys when available", () => {
+    const config = getGameTypeConfig(GAME_TYPES.QUESTION_TO_PATTERN);
+    const matched = config.items.find((item) => item.id === 1);
+    const unmatched = config.items.find((item) => item.id === 12);
+
+    expect(matched?.pattern).toBe("Hash map lookup");
+    expect(matched?.templatePattern).toBe("Hash Map");
+
+    expect(unmatched?.pattern).toBe("Two Pointers");
+    expect(unmatched?.templatePattern).toBe("Two Pointers");
+  });
+
   it("builds confusion-based choices for template game type", () => {
     const config = getGameTypeConfig(GAME_TYPES.TEMPLATE_TO_PATTERN);
     const sample = config.items.find((item) => item.pattern === "Sliding Window");

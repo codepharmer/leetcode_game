@@ -1,4 +1,6 @@
-﻿export const QUESTIONS = [
+import { getQuestionSolutionOverride } from "./questionSolutions";
+
+const BASE_QUESTIONS = [
   { id: 1, name: "Two Sum", pattern: "Hash Map", difficulty: "Easy",
     desc: "Given an array of integers nums and an integer target, return indices of the two numbers such that they add up to target. You may assume each input has exactly one solution and you may not use the same element twice." },
   { id: 2, name: "Valid Anagram", pattern: "Hash Map", difficulty: "Easy",
@@ -175,6 +177,20 @@
     desc: "Given an m x n integer matrix, if an element is 0, set its entire row and column to 0. You must do it in place." },
 ];
 
+export const QUESTIONS = BASE_QUESTIONS.map((question) => {
+  const override = getQuestionSolutionOverride(question.id);
+  if (!override) return question;
+
+  return {
+    ...question,
+    sourceLeetcodeId: override.leetcodeId,
+    solutionPattern: override.answerPattern,
+    solutionPatternSpecific: override.specificPattern,
+    solutionType: override.solutionType,
+    sourceDifficulty: override.sourceDifficulty,
+    solutionCode: [...override.codeSolution],
+    intuition: override.intuition,
+  };
+});
 
 export const ALL_PATTERNS = [...new Set(QUESTIONS.map((q) => q.pattern))].sort();
-

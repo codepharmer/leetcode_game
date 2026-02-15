@@ -1,19 +1,21 @@
 import { GAME_TYPES } from "./constants";
 import { BLUEPRINT_LEVELS } from "./blueprint/levels";
-import { ALL_PATTERNS, QUESTIONS } from "./questions";
-import { PATTERN_CONFUSION_MAP, TEMPLATE_QUESTIONS } from "./templateQuestions";
+import { getPatternIndex, getQuestionToPatternItems, getTemplateToPatternItems } from "./content/registry";
 import { genChoices, genChoicesWithConfusions } from "./utils";
 
-const QUESTION_ITEMS = QUESTIONS.map((question) => ({
-  ...question,
-  title: question.name,
-  promptKind: "question",
-}));
+const QUESTION_ITEMS = getQuestionToPatternItems().map((item) => {
+  const canonicalPattern = item.pattern;
+  const answerPattern = String(item.solutionPattern || "").trim() || canonicalPattern;
 
-const TEMPLATE_ITEMS = TEMPLATE_QUESTIONS.map((snippet) => ({
-  ...snippet,
-  promptKind: "code",
-}));
+  return Object.freeze({
+    ...item,
+    pattern: answerPattern,
+    templatePattern: canonicalPattern,
+  });
+});
+const QUESTION_PATTERNS = Object.freeze([...new Set(QUESTION_ITEMS.map((item) => item.pattern))].sort());
+const TEMPLATE_ITEMS = getTemplateToPatternItems();
+const { patterns: ALL_PATTERNS, confusionMap: PATTERN_CONFUSION_MAP } = getPatternIndex();
 
 const GAME_TYPE_CONFIG = {
   [GAME_TYPES.QUESTION_TO_PATTERN]: {
@@ -24,8 +26,8 @@ const GAME_TYPE_CONFIG = {
     promptLabel: "What pattern solves this?",
     browseTitle: "All Patterns",
     items: QUESTION_ITEMS,
-    allPatterns: ALL_PATTERNS,
-    buildChoices: (correctPattern) => genChoices(correctPattern, ALL_PATTERNS),
+    allPatterns: QUESTION_PATTERNS,
+    buildChoices: (correctPattern) => genChoices(correctPattern, QUESTION_PATTERNS),
     revealTemplateAfterAnswer: true,
   },
   [GAME_TYPES.TEMPLATE_TO_PATTERN]: {
