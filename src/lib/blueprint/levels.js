@@ -1,9 +1,8 @@
-import { QUESTIONS } from "../questions";
+import { getBlueprintSeedByQuestionId, getQuestionToPatternItems } from "../content/registry";
 import { buildCardsFromIr, buildSlotLimits } from "./ir";
 import { buildGeneratedSolutionForQuestion } from "./solutionPipeline";
 import { buildTemplateIrForQuestion } from "./templatePlan";
 import { DEFAULT_BLUEPRINT_TEMPLATE_ID, TWO_POINTERS_TEMPLATE_ID, getTemplateSlotIds } from "./templates";
-import { getQuestionTemplateId } from "./taxonomy";
 
 const BASE_BLUEPRINT_LEVELS = [
   {
@@ -127,8 +126,8 @@ const BASE_BLUEPRINT_LEVELS = [
   },
 ];
 
-function buildFallbackGeneration(levelId, question) {
-  const templateId = getQuestionTemplateId(question) || DEFAULT_BLUEPRINT_TEMPLATE_ID;
+function buildFallbackGeneration(levelId, question, blueprintSeed) {
+  const templateId = blueprintSeed?.blueprintProfile?.templateId || DEFAULT_BLUEPRINT_TEMPLATE_ID;
   const { irNodes, snippetName } = buildTemplateIrForQuestion(question, templateId);
   const cards = buildCardsFromIr({ levelId, templateId, irNodes });
   return { templateId, cards, snippetName };
@@ -163,12 +162,14 @@ function buildExamplePreview(question) {
   return `Objective: assemble the ${pattern} blueprint for "${title}".`;
 }
 
-const AUTO_BLUEPRINT_LEVELS = QUESTIONS.map((question) => {
+const AUTO_BLUEPRINT_LEVELS = getQuestionToPatternItems().map((questionItem) => {
+  const blueprintSeed = getBlueprintSeedByQuestionId(questionItem.id);
+  const question = blueprintSeed?.question || questionItem;
   const levelId = `q-${question.id}`;
   const generated = buildGeneratedSolutionForQuestion({
     question,
     levelId,
-    fallback: () => buildFallbackGeneration(levelId, question),
+    fallback: () => buildFallbackGeneration(levelId, question, blueprintSeed),
   });
   const { templateId, cards, snippetName } = generated;
 

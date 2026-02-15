@@ -24,12 +24,30 @@ describe("App route sync", () => {
     await screen.findByText(/Build algorithm blueprints/i);
 
     act(() => {
-      window.history.pushState({}, "", "/?gameType=question_to_pattern");
+      window.history.pushState({}, "", "/?gameType=template_to_pattern&difficulty=Hard&count=10");
+      window.dispatchEvent(new PopStateEvent("popstate"));
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText(/Match code snippets/i)).toBeInTheDocument();
+    });
+
+    act(() => {
+      window.history.pushState({}, "", "/?gameType=question_to_pattern&difficulty=Medium&count=40");
       window.dispatchEvent(new PopStateEvent("popstate"));
     });
 
     await waitFor(() => {
       expect(screen.getByText(/Map Blind 75 questions/i)).toBeInTheDocument();
+    });
+
+    act(() => {
+      window.history.back();
+      window.dispatchEvent(new PopStateEvent("popstate"));
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText(/Match code snippets/i)).toBeInTheDocument();
     });
 
     const depthWarning = errorSpy.mock.calls.find((call) =>

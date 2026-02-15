@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { Navigate, Route, Routes, useNavigate, useParams } from "react-router-dom";
+import { Navigate, Route, Routes, useLocation, useNavigate, useParams } from "react-router-dom";
 
 import {
   buildBlueprintChallengePath,
@@ -69,12 +69,12 @@ function BlueprintWorldRoute({
   );
 }
 
-function BlueprintChallengeRoute({ campaign, onBackFromChallenge, onCompleteChallenge }) {
+function BlueprintChallengeRoute({ campaign, onBackFromChallenge, onCompleteChallenge, search }) {
   const { challengeId } = useParams();
   const challenge = findChallengeById(campaign, decodeBlueprintParam(challengeId));
 
   if (!challenge?.level) {
-    return <Navigate replace to={ROUTES.BLUEPRINT} />;
+    return <Navigate replace to={{ pathname: ROUTES.BLUEPRINT, search }} />;
   }
 
   return (
@@ -88,6 +88,7 @@ function BlueprintChallengeRoute({ campaign, onBackFromChallenge, onCompleteChal
 }
 
 export function BlueprintScreen({ goMenu, initialStars, onSaveStars }) {
+  const location = useLocation();
   const navigate = useNavigate();
   const completed = useMemo(() => normalizeStars(initialStars), [initialStars]);
 
@@ -98,21 +99,24 @@ export function BlueprintScreen({ goMenu, initialStars, onSaveStars }) {
     [completed]
   );
 
-  const openMap = () => navigate(ROUTES.BLUEPRINT);
-  const openDaily = () => navigate(buildBlueprintDailyPath());
-  const openWorld = (worldId) => navigate(buildBlueprintWorldPath(worldId));
+  const navigateWithSearch = (pathname, options) =>
+    navigate({ pathname, search: location.search }, options);
+
+  const openMap = () => navigateWithSearch(ROUTES.BLUEPRINT);
+  const openDaily = () => navigateWithSearch(buildBlueprintDailyPath());
+  const openWorld = (worldId) => navigateWithSearch(buildBlueprintWorldPath(worldId));
 
   const startChallenge = (challenge) => {
     if (!challenge?.id) return;
-    navigate(buildBlueprintChallengePath(challenge.id));
+    navigateWithSearch(buildBlueprintChallengePath(challenge.id));
   };
 
   const onBackFromChallenge = (challenge) => {
     if (challenge?.worldId) {
-      navigate(buildBlueprintWorldPath(challenge.worldId));
+      navigateWithSearch(buildBlueprintWorldPath(challenge.worldId));
       return;
     }
-    navigate(ROUTES.BLUEPRINT);
+    navigateWithSearch(ROUTES.BLUEPRINT);
   };
 
   const onCompleteChallenge = (challenge, id, stars) => {
@@ -121,10 +125,10 @@ export function BlueprintScreen({ goMenu, initialStars, onSaveStars }) {
     onSaveStars?.(safeId, nextStars);
 
     if (challenge?.worldId) {
-      navigate(buildBlueprintWorldPath(challenge.worldId), { replace: true });
+      navigateWithSearch(buildBlueprintWorldPath(challenge.worldId), { replace: true });
       return;
     }
-    navigate(ROUTES.BLUEPRINT, { replace: true });
+    navigateWithSearch(ROUTES.BLUEPRINT, { replace: true });
   };
 
   const defaultWorld = campaign.worlds.find((world) => world.isUnlocked) || campaign.worlds[0] || null;
@@ -190,11 +194,12 @@ export function BlueprintScreen({ goMenu, initialStars, onSaveStars }) {
             campaign={campaign}
             onBackFromChallenge={onBackFromChallenge}
             onCompleteChallenge={onCompleteChallenge}
+            search={location.search}
           />
         }
       />
 
-      <Route path="*" element={<Navigate replace to={ROUTES.BLUEPRINT} />} />
+      <Route path="*" element={<Navigate replace to={{ pathname: ROUTES.BLUEPRINT, search: location.search }} />} />
     </Routes>
   );
 }

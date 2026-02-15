@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
+import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 
 import { GAME_TYPES, MODES } from "./lib/constants";
 import { getBlueprintCampaign } from "./lib/blueprint/campaign";
@@ -12,8 +12,6 @@ import {
   buildBlueprintWorldPath,
   buildRouteSearch,
   getModeFromPathname,
-  getPathForMode,
-  parseRouteSettings,
   ROUTES,
 } from "./lib/routes";
 import { clearRoundSession, loadRoundSessionForGameType, saveRoundSession } from "./lib/roundSession";
@@ -22,6 +20,7 @@ import { S } from "./styles";
 import { useAuthSession } from "./hooks/useAuthSession";
 import { useGameSession } from "./hooks/useGameSession";
 import { useProgressSync } from "./hooks/useProgressSync";
+import { useRouteSettings } from "./hooks/useRouteSettings";
 import { BlueprintScreen } from "./screens/BlueprintScreen";
 import { BrowseScreen } from "./screens/BrowseScreen";
 import { MenuScreen } from "./screens/MenuScreen";
@@ -37,56 +36,23 @@ const BLUEPRINT_MENU_PREVIEW_WORLDS = [
 
 export default function App() {
   const location = useLocation();
-  const navigate = useNavigate();
-  const routeSettings = useMemo(() => parseRouteSettings(location.search), [location.search]);
+  const {
+    settings: routeSettings,
+    setMode,
+    navigateWithSettings,
+    setGameType,
+    setFilterDifficulty,
+    setTotalQuestions,
+    setBrowseFilter,
+  } = useRouteSettings();
+  const { gameType, filterDifficulty, totalQuestions, browseFilter } = routeSettings;
 
-  const [gameType, setGameType] = useState(routeSettings.gameType);
-  const [filterDifficulty, setFilterDifficulty] = useState(routeSettings.filterDifficulty);
-  const [totalQuestions, setTotalQuestions] = useState(routeSettings.totalQuestions);
-
-  const [browseFilter, setBrowseFilter] = useState(routeSettings.browseFilter);
   const [expandedBrowse, setExpandedBrowse] = useState({});
   const [expandedResult, setExpandedResult] = useState({});
   const [showResetConfirm, setShowResetConfirm] = useState(false);
 
-  const routeStateRef = useRef({
-    gameType,
-    filterDifficulty,
-    totalQuestions,
-    browseFilter,
-  });
-  routeStateRef.current = {
-    gameType,
-    filterDifficulty,
-    totalQuestions,
-    browseFilter,
-  };
-
   const progressSnapshotRef = useRef({ progress: createDefaultProgress() });
-  const syncingFromLocationRef = useRef(false);
   const getProgressSnapshot = useCallback(() => progressSnapshotRef.current, []);
-
-  useEffect(() => {
-    const routeState = routeStateRef.current;
-    const shouldSyncFromLocation =
-      routeState.gameType !== routeSettings.gameType ||
-      routeState.filterDifficulty !== routeSettings.filterDifficulty ||
-      routeState.totalQuestions !== routeSettings.totalQuestions ||
-      routeState.browseFilter !== routeSettings.browseFilter;
-
-    if (!shouldSyncFromLocation) return;
-
-    syncingFromLocationRef.current = true;
-    setGameType(routeSettings.gameType);
-    setFilterDifficulty(routeSettings.filterDifficulty);
-    setTotalQuestions(routeSettings.totalQuestions);
-    setBrowseFilter(routeSettings.browseFilter);
-  }, [
-    routeSettings.browseFilter,
-    routeSettings.filterDifficulty,
-    routeSettings.gameType,
-    routeSettings.totalQuestions,
-  ]);
 
   const mode = useMemo(() => getModeFromPathname(location.pathname), [location.pathname]);
 
@@ -120,8 +86,8 @@ export default function App() {
   useEffect(() => {
     if (activeGame.supportsQuestionCount === false) return;
     const max = activeGame.items.length;
-    if (max > 0 && totalQuestions > max) setTotalQuestions(max);
-  }, [activeGame.items.length, activeGame.supportsQuestionCount, totalQuestions]);
+    if (max > 0 && totalQuestions > max) setTotalQuestions(max, { replace: true });
+  }, [activeGame.items.length, activeGame.supportsQuestionCount, setTotalQuestions, totalQuestions]);
 
   useEffect(() => {
     setExpandedBrowse({});
@@ -194,47 +160,14 @@ export default function App() {
       }),
     [browseFilter, filterDifficulty, gameType, totalQuestions]
   );
-  const normalizedLocationSearch = useMemo(
-    () => buildRouteSearch(parseRouteSettings(location.search)),
-    [location.search]
-  );
-
-  useEffect(() => {
-    if (syncingFromLocationRef.current) {
-      syncingFromLocationRef.current = false;
-      return;
-    }
-
-    if (normalizedLocationSearch === currentSearch) return;
-    navigate({ pathname: location.pathname, search: currentSearch }, { replace: true });
-  }, [currentSearch, location.pathname, navigate, normalizedLocationSearch]);
-
-  const navigateWithSearch = useCallback(
-    (pathname, options) => {
-      navigate({ pathname, search: currentSearch }, options);
-    },
-    [currentSearch, navigate]
-  );
-
-  const setMode = useCallback(
-    (nextMode) => {
-      const nextPath = getPathForMode(nextMode);
-      navigateWithSearch(nextPath);
-    },
-    [navigateWithSearch]
-  );
-
   const redirectToMenuWithNotice = useCallback(
     (notice) => {
-      navigate(
-        { pathname: ROUTES.MENU, search: currentSearch },
-        {
-          replace: true,
-          state: { notice },
-        }
-      );
+      navigateWithSettings(ROUTES.MENU, {
+        replace: true,
+        state: { notice },
+      });
     },
-    [currentSearch, navigate]
+    [navigateWithSettings]
   );
 
   const initialRoundSession = useMemo(() => loadRoundSessionForGameType(gameType), [gameType]);
@@ -362,31 +295,31 @@ export default function App() {
   const openBlueprintDailyPreview = useCallback(() => {
     const dailyChallengeId = blueprintCampaign?.dailyChallenge?.challenge?.id;
     if (dailyChallengeId) {
-      navigateWithSearch(buildBlueprintChallengePath(dailyChallengeId));
+      navigateWithSettings(buildBlueprintChallengePath(dailyChallengeId));
     } else {
-      navigateWithSearch(buildBlueprintDailyPath());
+      navigateWithSettings(buildBlueprintDailyPath());
     }
     resetViewport();
-  }, [blueprintCampaign, navigateWithSearch, resetViewport]);
+  }, [blueprintCampaign, navigateWithSettings, resetViewport]);
 
   const openBlueprintWorldPreview = useCallback(
     (worldId) => {
       const safeWorldId = Number(worldId);
       if (!Number.isFinite(safeWorldId) || safeWorldId <= 0) return;
-      navigateWithSearch(buildBlueprintWorldPath(safeWorldId));
+      navigateWithSettings(buildBlueprintWorldPath(safeWorldId));
       resetViewport();
     },
-    [navigateWithSearch, resetViewport]
+    [navigateWithSettings, resetViewport]
   );
 
   const startSelectedMode = useCallback(() => {
     if (gameType === GAME_TYPES.BLUEPRINT_BUILDER) {
-      navigateWithSearch(ROUTES.BLUEPRINT);
+      navigateWithSettings(ROUTES.BLUEPRINT);
       resetViewport();
       return;
     }
     startGame();
-  }, [gameType, navigateWithSearch, resetViewport, startGame]);
+  }, [gameType, navigateWithSettings, resetViewport, startGame]);
 
   const resetAllData = useCallback(async () => {
     const freshProgress = createDefaultProgress();
@@ -395,8 +328,8 @@ export default function App() {
     clearRoundSession();
     await persistProgress(freshProgress);
     setShowResetConfirm(false);
-    navigateWithSearch(ROUTES.MENU, { replace: true });
-  }, [navigateWithSearch, persistProgress, progressRef, setProgress]);
+    navigateWithSettings(ROUTES.MENU, { replace: true });
+  }, [navigateWithSettings, persistProgress, progressRef, setProgress]);
 
   const pct = calcRoundPct(score, roundItems.length);
   const lifetimePct = calcLifetimePct(stats);
@@ -501,8 +434,8 @@ export default function App() {
     totalQuestions,
     setTotalQuestions,
     startGame: startSelectedMode,
-    goBrowse: () => navigateWithSearch(ROUTES.BROWSE),
-    goTemplates: () => navigateWithSearch(ROUTES.TEMPLATES),
+    goBrowse: () => navigateWithSettings(ROUTES.BROWSE),
+    goTemplates: () => navigateWithSettings(ROUTES.TEMPLATES),
     supportsBrowse: activeGame.supportsBrowse !== false,
     supportsTemplates: activeGame.supportsTemplates !== false,
     supportsDifficultyFilter: activeGame.supportsDifficultyFilter !== false,
@@ -546,7 +479,7 @@ export default function App() {
               showNext={showNext}
               onSelect={handleSelect}
               onNext={nextQuestion}
-              onBack={() => navigateWithSearch(ROUTES.MENU)}
+              onBack={() => navigateWithSettings(ROUTES.MENU)}
               showTemplate={showTemplate}
               setShowTemplate={setShowTemplate}
               history={history}
@@ -571,7 +504,7 @@ export default function App() {
               expandedResult={expandedResult}
               setExpandedResult={setExpandedResult}
               startGame={startGame}
-              goMenu={() => navigateWithSearch(ROUTES.MENU)}
+              goMenu={() => navigateWithSettings(ROUTES.MENU)}
               history={history}
               gameType={gameType}
             />
@@ -587,20 +520,20 @@ export default function App() {
               groupedByPattern={groupedByPattern}
               expandedBrowse={expandedBrowse}
               setExpandedBrowse={setExpandedBrowse}
-              goMenu={() => navigateWithSearch(ROUTES.MENU)}
+              goMenu={() => navigateWithSettings(ROUTES.MENU)}
               history={history}
               browseTitle={activeGame.browseTitle}
             />
           )}
         />
 
-        <Route path={ROUTES.TEMPLATES} element={<TemplatesScreen goMenu={() => navigateWithSearch(ROUTES.MENU)} />} />
+        <Route path={ROUTES.TEMPLATES} element={<TemplatesScreen goMenu={() => navigateWithSettings(ROUTES.MENU)} />} />
 
         <Route
           path={`${ROUTES.BLUEPRINT}/*`}
           element={(
             <BlueprintScreen
-              goMenu={() => navigateWithSearch(ROUTES.MENU)}
+              goMenu={() => navigateWithSettings(ROUTES.MENU)}
               initialStars={blueprintStars}
               onSaveStars={saveBlueprintStars}
             />

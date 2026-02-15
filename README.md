@@ -387,7 +387,7 @@ Pattern browser with difficulty filters.
 Full template reference viewer.
 
 - `src/screens/BlueprintScreen.jsx`
-Nested blueprint route shell and challenge completion persistence.
+Nested blueprint route shell and challenge completion persistence, with query-setting preservation across blueprint navigation and redirects.
 
 ### `src/screens/blueprint`
 
