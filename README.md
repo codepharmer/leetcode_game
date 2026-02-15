@@ -32,6 +32,7 @@ Maps Blind 75-style question prompts to the most likely solving pattern (importe
 
 2. `template -> pattern`
 Maps code snippets/templates to the pattern they represent, using confusion-aware distractors.
+Mobile play view keeps code prompts full-width with horizontal scrolling to avoid left/right clipping on small screens.
 
 3. `blueprint builder`
 Card-based algorithm assembly mode with worlds, tiers, daily challenge, test execution traces, hints, and star ratings.
