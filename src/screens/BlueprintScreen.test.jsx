@@ -1,7 +1,9 @@
-import { act, fireEvent, render, screen, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 
+import { getBlueprintCampaign } from "../lib/blueprint/campaign";
+import { buildBlueprintChallengePath } from "../lib/routes";
 import { BlueprintScreen } from "./BlueprintScreen";
 
 function renderBlueprint({
@@ -26,6 +28,47 @@ function renderBlueprint({
   };
 }
 
+function getRequiredSlotCount(level) {
+  return (level?.cards || []).filter((card) => card?.correctSlot).length;
+}
+
+function findChallengeByRequiredSlotCount(predicate) {
+  const campaign = getBlueprintCampaign({});
+  for (const world of campaign?.worlds || []) {
+    for (const stage of world?.stages || []) {
+      for (const tier of stage?.tiers || []) {
+        for (const challenge of tier?.challenges || []) {
+          const count = getRequiredSlotCount(challenge?.level);
+          if (predicate(count, challenge)) return challenge;
+        }
+      }
+    }
+  }
+  return null;
+}
+
+function createDataTransfer() {
+  return {
+    data: {},
+    setData(type, value) {
+      this.data[type] = value;
+    },
+    getData(type) {
+      return this.data[type] || "";
+    },
+    effectAllowed: "move",
+    dropEffect: "move",
+  };
+}
+
+function dragDeckCardIntoSlot(deckCard, slot) {
+  const dataTransfer = createDataTransfer();
+  fireEvent.dragStart(deckCard, { dataTransfer });
+  fireEvent.dragOver(slot, { dataTransfer });
+  fireEvent.drop(slot, { dataTransfer });
+  fireEvent.dragEnd(deckCard, { dataTransfer });
+}
+
 describe("screens/BlueprintScreen", () => {
   it("renders world menu and supports returning to app menu", () => {
     const goMenu = vi.fn();
@@ -43,6 +86,7 @@ describe("screens/BlueprintScreen", () => {
     renderBlueprint();
 
     fireEvent.click(screen.getByRole("button", { name: /Two Sum/i }));
+    expect(screen.getByTestId("blueprint-solve-mode")).toHaveTextContent(/mode flat/i);
     expect(screen.getByText("Run Blueprint")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: /worlds/i }));
@@ -63,6 +107,16 @@ describe("screens/BlueprintScreen", () => {
 
     fireEvent.click(twoSumButton);
     expect(screen.getByText("Run Blueprint")).toBeInTheDocument();
+  });
+
+  it("keeps all world 0 questions playable by default", () => {
+    renderBlueprint({ path: "/blueprint/world/0" });
+
+    const firstProblem = screen.getByRole("button", { name: /Two Sum/i });
+    const lateProblem = screen.getByRole("button", { name: /Course Schedule/i });
+
+    expect(firstProblem).not.toBeDisabled();
+    expect(lateProblem).not.toBeDisabled();
   });
 
   it("uses a single world-detail nav bar with worlds back, title, and progress/stars meta", () => {
@@ -105,6 +159,76 @@ describe("screens/BlueprintScreen", () => {
 
     expect(screen.getAllByText(/Complete 2 worlds to unlock/i).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/Complete 5 worlds to unlock/i).length).toBeGreaterThan(0);
+  });
+
+  it("uses phased mode for larger challenges and advances active phase after checking", () => {
+    const phasedChallenge = findChallengeByRequiredSlotCount((count) => count > 10);
+    expect(phasedChallenge).toBeTruthy();
+    renderBlueprint({ path: buildBlueprintChallengePath(phasedChallenge.id) });
+
+    expect(screen.getByTestId("blueprint-solve-mode")).toHaveTextContent(/mode phased/i);
+
+    const activeState = screen.getAllByTestId(/blueprint-phase-state-/).find((node) => /active/i.test(String(node.textContent || "")));
+    const lockedState = screen.getAllByTestId(/blueprint-phase-state-/).find((node) => /locked/i.test(String(node.textContent || "")));
+    expect(activeState).toBeTruthy();
+    expect(lockedState).toBeTruthy();
+
+    const activeSlotId = activeState.getAttribute("data-slot-id");
+    const lockedSlotId = lockedState.getAttribute("data-slot-id");
+    const activeSlot = screen.getByTestId(`blueprint-slot-${activeSlotId}`);
+    const lockedSlot = screen.getByTestId(`blueprint-slot-${lockedSlotId}`);
+
+    const initialDeckCount = screen.getAllByTestId(/blueprint-deck-card-/).length;
+    const firstDeckCard = screen.getAllByTestId(/blueprint-deck-card-/)[0];
+    fireEvent.click(firstDeckCard);
+    fireEvent.click(lockedSlot);
+    expect(screen.getAllByTestId(/blueprint-deck-card-/).length).toBe(initialDeckCount);
+
+    const cardsForActiveSlot = (phasedChallenge.level.cards || [])
+      .filter((card) => String(card?.correctSlot || "") === activeSlotId)
+      .sort((a, b) => (a?.correctOrder || 0) - (b?.correctOrder || 0));
+
+    for (const card of cardsForActiveSlot) {
+      dragDeckCardIntoSlot(screen.getByTestId(`blueprint-deck-card-${card.id}`), activeSlot);
+    }
+
+    const checkButton = screen.getByTestId("blueprint-check-phase-btn");
+    expect(checkButton).toHaveTextContent(/^Check /i);
+    fireEvent.click(checkButton);
+
+    expect(screen.getByTestId(`blueprint-phase-state-${activeSlotId}`)).toHaveTextContent(/completed/i);
+    const nextActive = screen.getAllByTestId(/blueprint-phase-state-/).find((node) => /active/i.test(String(node.textContent || "")));
+    expect(nextActive).toBeTruthy();
+    expect(nextActive.getAttribute("data-slot-id")).not.toBe(activeSlotId);
+  });
+
+  it("completes immediately after final phased check and saves stars", async () => {
+    const phasedChallenge = findChallengeByRequiredSlotCount((count) => count > 10);
+    expect(phasedChallenge).toBeTruthy();
+
+    const { onSaveStars } = renderBlueprint({ path: buildBlueprintChallengePath(phasedChallenge.id) });
+
+    const slotOrder = phasedChallenge.level.slots || [];
+    for (const slotId of slotOrder) {
+      const expectedCards = (phasedChallenge.level.cards || [])
+        .filter((card) => String(card?.correctSlot || "") === String(slotId))
+        .sort((a, b) => (a?.correctOrder || 0) - (b?.correctOrder || 0));
+      if (expectedCards.length === 0) continue;
+
+      const activeState = screen.getAllByTestId(/blueprint-phase-state-/).find((node) => /active/i.test(String(node.textContent || "")));
+      expect(activeState).toBeTruthy();
+      expect(activeState.getAttribute("data-slot-id")).toBe(String(slotId));
+
+      const targetSlot = screen.getByTestId(`blueprint-slot-${slotId}`);
+      for (const card of expectedCards) {
+        dragDeckCardIntoSlot(screen.getByTestId(`blueprint-deck-card-${card.id}`), targetSlot);
+      }
+
+      fireEvent.click(screen.getByTestId("blueprint-check-phase-btn"));
+    }
+
+    await waitFor(() => expect(onSaveStars).toHaveBeenCalled());
+    expect(onSaveStars).toHaveBeenCalledWith(String(phasedChallenge.level.id), expect.any(Number));
   });
 
   it("supports dragging a deck card into a slot", () => {

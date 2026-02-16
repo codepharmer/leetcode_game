@@ -261,6 +261,7 @@ function buildChallenge(world, stageIndex, indexWithinStage, levelId) {
 }
 
 function buildWorldProgress(worldDefinition, levelStars) {
+  const isFullyOpenWorld = !!worldDefinition.isPrimitive;
   const baseLevelIds = worldDefinition.levelIds
     .map((id) => String(id))
     .filter((levelId) => LEVEL_BY_ID.has(levelId));
@@ -269,7 +270,7 @@ function buildWorldProgress(worldDefinition, levelStars) {
     ? seededShuffle(baseLevelIds, `world-${worldDefinition.id}-boss-rush`)
     : baseLevelIds;
 
-  const stages = chunkBySize(orderedLevelIds, 6).map((stageLevelIds, stageIndex) => {
+  const stagedSets = chunkBySize(orderedLevelIds, 6).map((stageLevelIds, stageIndex) => {
     const tiers = [0, 1, 2]
       .map((tierIndex) => {
         const start = tierIndex * 2;
@@ -299,6 +300,24 @@ function buildWorldProgress(worldDefinition, levelStars) {
     };
   });
 
+  const stages = isFullyOpenWorld
+    ? [
+        {
+          index: 0,
+          label: "Set 1",
+          levelIds: orderedLevelIds,
+          tiers: stagedSets
+            .flatMap((stage) => stage.tiers)
+            .map((tier, index) => ({
+              ...tier,
+              index,
+              label: `Tier ${index + 1}`,
+            })),
+          complete: orderedLevelIds.length > 0 && orderedLevelIds.every((levelId) => isLevelComplete(levelStars, levelId)),
+        },
+      ]
+    : stagedSets;
+
   const completedCount = orderedLevelIds.filter((levelId) => isLevelComplete(levelStars, levelId)).length;
   const isComplete = orderedLevelIds.length > 0 && completedCount === orderedLevelIds.length;
   const firstIncompleteStageIndex = stages.findIndex((stage) => !stage.complete);
@@ -307,6 +326,7 @@ function buildWorldProgress(worldDefinition, levelStars) {
 
   const activeTierIndex = activeStage
     ? (() => {
+        if (isFullyOpenWorld) return Math.max(0, activeStage.tiers.length - 1);
         const firstIncompleteTier = activeStage.tiers.findIndex((tier) => !tier.complete);
         if (firstIncompleteTier >= 0) return firstIncompleteTier;
         return Math.max(0, activeStage.tiers.length - 1);

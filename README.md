@@ -37,6 +37,7 @@ Template rounds reset the viewport to the top when advancing with `next`, matchi
 
 3. `blueprint builder`
 Card-based algorithm assembly mode with worlds, tiers, daily challenge, adaptive validation (test-run when executable, dependency-aware structural fallback otherwise), execution traces, hints, and star ratings.
+Solve flow now auto-selects by problem size: `flat` mode for `<= 10` required blueprint slots (existing all-at-once run flow), and `phased` mode for `> 10` required slots (one phase active at a time with per-phase checks, phase locking, and immediate completion on final phase success).
 Mobile build view uses a compact fixed-row slot gutter, a bottom-sheet slot editor, and a bottom-docked stacked card tray.
 
 ## Live URLs
@@ -117,6 +118,7 @@ Base URL for the storage/session API (Lambda Function URL or equivalent).
 - In Blueprint challenge headers, auto-generated questions show objective text instead of exposed solution-code preview lines.
 - Auto and tutorial levels now render pattern-family slot flows (for example: array/hash uses `seed -> loop -> probe -> store -> emit`, alongside two pointers, sliding window, binary search, stack/heap, linked list, intervals/greedy, tree/graph, DP-state, backtracking) instead of one universal slot scaffold.
 - Campaign includes a `World 0` primitive onboarding lane built from foundational existing levels before the main world track.
+- All `World 0` problems are open by default (no tier/stage gating inside that world).
 - `World 0` is excluded from daily challenge selection and from core-world unlock counting so existing unlock pacing remains stable.
 
 ## Content Ownership
@@ -366,7 +368,7 @@ Strategy selection + verification + IR conversion + strict no-fallback default b
 Base handcrafted levels + auto-generated levels for all questions.
 
 - `src/lib/blueprint/campaign.js`
-World/tier progression model, unlock rules, deterministic daily challenge selection, and primitive onboarding world handling (`World 0` excluded from daily/core-unlock counts).
+World/tier progression model, unlock rules, deterministic daily challenge selection, and primitive onboarding world handling (`World 0` fully open by default and excluded from daily/core-unlock counts).
 
 - `src/lib/blueprint/engine.js`
 Blueprint executor, adaptive validator (composed test execution + structural fallback), known-valid ordering cache, trace generation, and divergence detection.
@@ -411,13 +413,13 @@ World stage/tier detail and challenge launch UI. Uses a single world-detail top 
 Daily challenge detail/start screen.
 
 - `src/screens/blueprint/BlueprintGame.jsx`
-Blueprint build/execution UI: compact slot rows, drag/drop/touch support (including moving already placed cards between slots and placing multiple cards in the same step), dependency warnings during placement, per-card failure badges/tooltips (`correct`, `misplaced`, `wrong phase`), bottom-sheet slot editing, fixed mobile tray, live countdown timer, and run/reset controls. Step badge initials are derived from each slot name so template-specific naming stays visually aligned.
+Blueprint build/execution UI: compact slot rows, drag/drop/touch support (including moving already placed cards between slots and placing multiple cards in the same step), dependency warnings during placement, per-card failure badges/tooltips (`correct`, `misplaced`, `wrong phase`, phased-check `incorrect`), bottom-sheet slot editing, fixed mobile tray, live countdown timer, and adaptive controls (`Run Blueprint` in flat mode, per-phase `Check [PHASE]` in phased mode). Large problems use phased slot states (`completed`, `active`, `locked`) with interaction restricted to the active phase.
 
 - `src/screens/blueprint/BlueprintExecution.jsx`
 Execution trace stepping and feedback display with denser mobile-friendly test/result formatting.
 
 - `src/screens/blueprint/useBlueprintGameSession.js`
-Blueprint gameplay state machine (deck/slots/attempts/hints/stars/timing), dependency analysis, and failed-card feedback state.
+Blueprint gameplay state machine (deck/slots/attempts/hints/stars/timing), adaptive flat/phased solve-mode selection, per-phase tray/check progression, dependency analysis, and failed-card feedback state.
 
 - `src/screens/blueprint/shared.js`
 Shared utilities for star normalization, hint text, badge colors, duration formatting.
@@ -494,7 +496,7 @@ Strategy pipeline pass/fallback behavior.
 Blueprint template definitions.
 
 - `src/screens/BlueprintScreen.test.jsx`
-Blueprint navigation and drag/touch interactions, including moving placed cards between slots, problem-details toggle behavior, and slot-editor/tray overlay flow.
+Blueprint navigation and drag/touch interactions, including moving placed cards between slots, flat/phased solve-mode behavior, problem-details toggle behavior, and slot-editor/tray overlay flow.
 
 - `src/screens/BrowseScreen.test.jsx`
 Browse UI grouping/expansion.

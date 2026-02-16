@@ -18,6 +18,7 @@ function getStepBadgeLabel(meta) {
 function getFeedbackTone(status) {
   if (status === "correct") return "var(--accent)";
   if (status === "misplaced") return "var(--warn)";
+  if (status === "phase-error") return "var(--danger)";
   if (status === "wrong-phase") return "var(--danger)";
   return "var(--dim)";
 }
@@ -25,6 +26,7 @@ function getFeedbackTone(status) {
 function getFeedbackLabel(status) {
   if (status === "correct") return "correct";
   if (status === "misplaced") return "misplaced";
+  if (status === "phase-error") return "incorrect";
   if (status === "wrong-phase") return "wrong phase";
   return "";
 }
@@ -54,6 +56,11 @@ export function BlueprintGame({ level, challenge, onBack, onComplete }) {
     showPatternLabel,
     timeLimitSec,
     maxHints,
+    solveMode,
+    activePhaseIndex,
+    activePhaseSlotIds,
+    phaseStatesBySlotId,
+    mistakes,
     deck,
     slots,
     selected,
@@ -76,6 +83,8 @@ export function BlueprintGame({ level, challenge, onBack, onComplete }) {
     totalPlaced,
     requiredCards,
     canRun,
+    canCheckActivePhase,
+    checkButtonLabel,
     elapsedMs,
     timeRemainingMs,
     setExecStep,
@@ -85,12 +94,14 @@ export function BlueprintGame({ level, challenge, onBack, onComplete }) {
     clearDragState,
     previewPlacementWarning,
     clearDependencyWarning,
+    isSlotInteractive,
     canPlaceCardInSlot,
     placeCardInSlot,
     handleCardClick,
     handleSlotClick,
     removeFromSlot,
     moveInSlot,
+    handleCheckActivePhase,
     handleRun,
     handleReset,
     handleBackToBuild,
@@ -109,9 +120,13 @@ export function BlueprintGame({ level, challenge, onBack, onComplete }) {
 
   useEffect(() => {
     if (!editingSlotId) return;
+    if (!isSlotInteractive(editingSlotId)) {
+      setEditingSlotId(null);
+      return;
+    }
     if ((slots[editingSlotId] || []).length > 0) return;
     setEditingSlotId(null);
-  }, [editingSlotId, slots]);
+  }, [editingSlotId, isSlotInteractive, slots]);
 
   const getSlotIdAtPoint = (x, y) => {
     if (typeof document === "undefined" || typeof document.elementFromPoint !== "function") return null;
@@ -158,8 +173,9 @@ export function BlueprintGame({ level, challenge, onBack, onComplete }) {
     return placed;
   };
 
-  const handleTouchDragStart = (event, card) => {
+  const handleTouchDragStart = (event, card, slotId = null) => {
     if (event.pointerType !== "touch" || phase !== "build") return;
+    if (slotId && !isSlotInteractive(slotId)) return;
     event.currentTarget.setPointerCapture?.(event.pointerId);
     touchDragRef.current = {
       pointerId: event.pointerId,
@@ -249,6 +265,7 @@ export function BlueprintGame({ level, challenge, onBack, onComplete }) {
 
   const handlePlacedCardClick = (event, cardId, slotId) => {
     event.stopPropagation();
+    if (!isSlotInteractive(slotId)) return;
     if (suppressClickCardIdRef.current === cardId) {
       suppressClickCardIdRef.current = null;
       return;
@@ -256,8 +273,9 @@ export function BlueprintGame({ level, challenge, onBack, onComplete }) {
     setEditingSlotId(slotId);
   };
 
-  const handleDesktopDragStart = (event, cardId) => {
+  const handleDesktopDragStart = (event, cardId, slotId = null) => {
     if (phase !== "build") return;
+    if (slotId && !isSlotInteractive(slotId)) return;
     if (event.dataTransfer) {
       event.dataTransfer.setData("text/plain", cardId);
       event.dataTransfer.effectAllowed = "move";
@@ -268,6 +286,7 @@ export function BlueprintGame({ level, challenge, onBack, onComplete }) {
 
   const handleSlotRowClick = (slotId, hasCards) => {
     if (phase !== "build") return;
+    if (!isSlotInteractive(slotId)) return;
     if (hasCards) {
       setEditingSlotId(slotId);
       return;
@@ -282,12 +301,19 @@ export function BlueprintGame({ level, challenge, onBack, onComplete }) {
   const hintsRemaining = hintsMode === "limited" ? String(Math.max(0, maxHints - hintUses)) : hintsMode === "none" ? "off" : "inf";
   const isDragActive = phase === "build" && !!draggingCardId;
   const showDeckTray = phase === "build" && !editingSlotId;
+  const activePhaseSlotId = activePhaseSlotIds[0] || "";
   const timerColor = phase === "build"
     ? (timeRemainingMs <= 0 ? "var(--danger)" : timeRemainingMs <= 30000 ? "var(--warn)" : "var(--dim)")
     : "var(--dim)";
   const timerLabel = phase === "build"
     ? `left ${formatElapsed(timeRemainingMs)}`
     : `time ${formatElapsed(runSummary?.elapsedMs ?? elapsedMs)}`;
+  const handlePhaseCheck = () => {
+    const result = handleCheckActivePhase();
+    if (result?.status === "completed") {
+      onComplete(level.id, result.stars || 1);
+    }
+  };
 
   return (
     <div style={{ ...S.blueprintContainer, paddingBottom: phase === "build" ? 320 : 24 }}>
@@ -309,10 +335,15 @@ export function BlueprintGame({ level, challenge, onBack, onComplete }) {
       </div>
 
       <div style={S.blueprintStatsStrip}>
+        <span data-testid="blueprint-solve-mode" style={S.blueprintStatsItem}>mode {solveMode}</span>
         <span style={S.blueprintStatsItem}>cards {totalPlaced}/{requiredCards}</span>
         <span style={S.blueprintStatsItem}>hints {hintsRemaining}</span>
         <span style={{ ...S.blueprintStatsItem, color: timerColor }}>{timerLabel}</span>
-        <span style={S.blueprintStatsItem}>attempts {attempts}</span>
+        {solveMode === "phased" ? (
+          <span style={S.blueprintStatsItem}>mistakes {mistakes}</span>
+        ) : (
+          <span style={S.blueprintStatsItem}>attempts {attempts}</span>
+        )}
       </div>
       {phase === "build" && dependencyWarning ? (
         <div data-testid="blueprint-dependency-warning" style={S.blueprintDependencyWarning}>
@@ -344,23 +375,29 @@ export function BlueprintGame({ level, challenge, onBack, onComplete }) {
           <div style={S.blueprintSlotList}>
             {slotDefs.map((meta, slotIndex) => {
               const slotId = meta.id;
+              const slotSolveState = phaseStatesBySlotId?.[slotId] || "active";
+              const slotInteractive = phase === "build" && isSlotInteractive(slotId);
               const cards = slots[slotId] || [];
               const hasCards = cards.length > 0;
               const activeCardId = selectedOrGuided?.id || draggingCardId;
-              const canDropHere = !!activeCardId && canPlaceCardInSlot(activeCardId, slotId);
+              const canDropHere = slotInteractive && !!activeCardId && canPlaceCardInSlot(activeCardId, slotId);
               const isDragOver = dragOverSlotId === slotId && canDropHere;
-              const showDropAffordance = !hasCards && isDragActive && canDropHere;
+              const showDropAffordance = slotInteractive && !hasCards && isDragActive && canDropHere;
               const displayMeta = hideSlotScaffolding
                 ? { ...meta, icon: String(slotIndex + 1), name: `Slot ${slotIndex + 1}`, desc: "Place a core step" }
                 : meta;
+              const isLocked = solveMode === "phased" && slotSolveState === "locked";
+              const isCompleted = solveMode === "phased" && slotSolveState === "completed";
 
               return (
                 <div
                   key={slotId}
                   data-testid={`blueprint-slot-${slotId}`}
+                  data-blueprint-phase-state={slotSolveState}
                   data-blueprint-slot-id={slotId}
                   onClick={() => handleSlotRowClick(slotId, hasCards)}
                   onDragOver={(event) => {
+                    if (!slotInteractive) return;
                     const cardId = getDraggedCardId(event);
                     if (!canPlaceCardInSlot(cardId, slotId)) return;
                     event.preventDefault();
@@ -373,6 +410,7 @@ export function BlueprintGame({ level, challenge, onBack, onComplete }) {
                     clearDependencyWarning();
                   }}
                   onDrop={(event) => {
+                    if (!slotInteractive) return;
                     const cardId = getDraggedCardId(event);
                     if (!canPlaceCardInSlot(cardId, slotId)) return;
                     event.preventDefault();
@@ -388,17 +426,41 @@ export function BlueprintGame({ level, challenge, onBack, onComplete }) {
                       ? `${displayMeta.color}22`
                       : flashedSlotId === slotId
                         ? `${displayMeta.color}28`
+                        : isLocked
+                          ? "rgba(100, 116, 139, 0.1)"
+                          : isCompleted
+                            ? "rgba(148, 163, 184, 0.08)"
                         : showDropAffordance
                           ? `${displayMeta.color}14`
                           : "var(--surface-1)",
                     outline: isDragOver || showDropAffordance ? `1px dashed ${displayMeta.color}` : "none",
                     outlineOffset: -1,
-                    cursor: hasCards || canDropHere ? "pointer" : "default",
+                    cursor: slotInteractive && (hasCards || canDropHere) ? "pointer" : "default",
+                    opacity: isLocked ? 0.52 : 1,
+                    position: "relative",
                   }}
                 >
                   <div style={S.blueprintSlotHeader}>
                     <span style={{ ...S.blueprintSlotIcon, color: displayMeta.color, borderColor: `${displayMeta.color}66` }}>{getStepBadgeLabel(displayMeta)}</span>
                   </div>
+                  {solveMode === "phased" ? (
+                    <span
+                      data-testid={`blueprint-phase-state-${slotId}`}
+                      data-slot-id={slotId}
+                      style={{
+                        ...S.blueprintTopMeta,
+                        position: "absolute",
+                        right: 8,
+                        top: 5,
+                        textTransform: "uppercase",
+                        letterSpacing: "0.08em",
+                        color: slotSolveState === "active" ? "var(--accent)" : slotSolveState === "completed" ? "var(--text)" : "var(--dim)",
+                        pointerEvents: "none",
+                      }}
+                    >
+                      {slotSolveState}
+                    </span>
+                  ) : null}
 
                   <div style={S.blueprintSlotCards}>
                     {!hasCards ? (
@@ -420,10 +482,10 @@ export function BlueprintGame({ level, challenge, onBack, onComplete }) {
                                 {idx > 0 ? <span style={S.blueprintInlineSeparator}>||</span> : null}
                                 <button
                                   data-testid={`blueprint-placed-card-${card.id}`}
-                                  draggable={phase === "build"}
-                                  onDragStart={(event) => handleDesktopDragStart(event, card.id)}
+                                  draggable={phase === "build" && slotInteractive}
+                                  onDragStart={(event) => handleDesktopDragStart(event, card.id, slotId)}
                                   onDragEnd={clearDragState}
-                                  onPointerDown={(event) => handleTouchDragStart(event, card)}
+                                  onPointerDown={(event) => handleTouchDragStart(event, card, slotId)}
                                   onPointerMove={(event) => handleTouchDragMove(event, card.id)}
                                   onPointerUp={(event) => handleTouchDragEnd(event, card.id)}
                                   onPointerCancel={(event) => handleTouchDragCancel(event, card.id)}
@@ -432,6 +494,7 @@ export function BlueprintGame({ level, challenge, onBack, onComplete }) {
                                   style={{
                                     ...S.blueprintPlacedCard,
                                     touchAction: "none",
+                                    pointerEvents: slotInteractive ? "auto" : "none",
                                   }}
                                 >
                                   <span style={{ ...S.blueprintCardCodeInline, color: feedback ? feedbackTone : "var(--text)" }}>{card.text}</span>
@@ -468,18 +531,36 @@ export function BlueprintGame({ level, challenge, onBack, onComplete }) {
             <button onClick={handleReset} style={S.resetBtn}>
               reset
             </button>
-            <button
-              onClick={handleRun}
-              disabled={!canRun}
-              style={{
-                ...S.startBtn,
-                padding: "10px 20px",
-                opacity: canRun ? 1 : 0.45,
-                cursor: canRun ? "pointer" : "not-allowed",
-              }}
-            >
-              Run Blueprint
-            </button>
+            {solveMode === "flat" ? (
+              <button
+                onClick={handleRun}
+                disabled={!canRun}
+                style={{
+                  ...S.startBtn,
+                  padding: "10px 20px",
+                  opacity: canRun ? 1 : 0.45,
+                  cursor: canRun ? "pointer" : "not-allowed",
+                }}
+              >
+                Run Blueprint
+              </button>
+            ) : canCheckActivePhase ? (
+              <button
+                data-testid="blueprint-check-phase-btn"
+                onClick={handlePhaseCheck}
+                style={{
+                  ...S.startBtn,
+                  padding: "10px 20px",
+                  cursor: "pointer",
+                }}
+              >
+                {checkButtonLabel}
+              </button>
+            ) : (
+              <span style={S.blueprintTopMeta}>
+                Fill {activePhaseSlotId ? (checkButtonLabel || "").replace(/^Check\s+/i, "") : "phase"} to check
+              </span>
+            )}
           </div>
 
           {showDeckTray ? (
@@ -490,7 +571,7 @@ export function BlueprintGame({ level, challenge, onBack, onComplete }) {
               </div>
               <div style={S.blueprintDeckRow}>
                 {deck.map((card, deckIndex) => {
-                  const guidedSelected = guided && !selected && deckIndex === 0;
+                  const guidedSelected = solveMode === "flat" && guided && !selected && deckIndex === 0;
                   const isSelected = selected?.id === card.id || guidedSelected;
                   const canOpenHint = showHint === card.id || hintUses < maxHints;
                   return (
@@ -628,7 +709,7 @@ export function BlueprintGame({ level, challenge, onBack, onComplete }) {
         <pre style={S.blueprintCardCode}>{touchGhost.text}</pre>
       </div>
 
-      {phase === "executing" ? (
+      {phase === "executing" && solveMode === "flat" ? (
         <BlueprintExecution
           trace={execTrace}
           step={execStep}

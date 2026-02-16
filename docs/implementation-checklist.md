@@ -15,11 +15,7 @@
   - Support robust hotkey detection (`KeyD`) in `src/hooks/useGameSession.js`
   - Add fallback UI when description is missing in `src/screens/PlayScreen.jsx`
 
-## High Priority
-
-- [ ] Support multiple accepted answers per question:
-  - Add `acceptedPatterns` in `src/lib/questions.js` / `src/lib/gameContent.js`
-  - Change correctness check in `src/hooks/useGameSession.js` from equality to membership
+## High Priority 
 - [ ] Clarify similar/overlapping pattern names:
   - Add glossary/alias layer in `src/lib/content/registry.js`
   - Update visible labels/confusions in `src/lib/constants.js` and `src/lib/templateQuestions.js`
@@ -47,7 +43,7 @@
 ## Suggested PR Order
 
 - [ ] PR 1: Stability (session persistence + description fix + tests)
-- [ ] PR 2: Answer model (multiple valid patterns + naming clarity)
+- [ ] PR 2: Answer model (  naming clarity)
 - [ ] PR 3: UX additions (timer, LeetCode links, incorrect review, accuracy trends)
 
 ## Documentation

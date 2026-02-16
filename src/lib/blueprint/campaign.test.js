@@ -17,6 +17,17 @@ describe("lib/blueprint/campaign", () => {
     expect(unlocked).toEqual([0, 1, 2, 3]);
   });
 
+  it("keeps all world 0 tiers open by default", () => {
+    const campaign = getBlueprintCampaign({});
+    const world0 = campaign.worlds.find((world) => world.id === 0);
+
+    expect(world0?.stages).toHaveLength(1);
+    expect(world0?.activeStage?.tiers?.length).toBeGreaterThan(1);
+    expect(Object.keys(world0?.challengeByLevelId || {})).toHaveLength(world0?.totalCount || 0);
+    expect(world0?.activeTierIndex).toBe((world0?.activeStage?.tiers?.length || 1) - 1);
+    expect(world0?.lockedSilhouettes).toEqual([]);
+  });
+
   it("unlocks worlds 4-6 after completing any two worlds", () => {
     const initial = getBlueprintCampaign({});
     const world1Ids = initial.worlds.find((world) => world.id === 1)?.levelIds || [];
