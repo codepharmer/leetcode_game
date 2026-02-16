@@ -42,6 +42,30 @@ describe("lib/blueprint/dependencyHints", () => {
     expect(warning).toContain("PROBE");
   });
 
+  it("does not warn for runtime helper identifiers used by blueprint execution", () => {
+    const slotIds = ["anchors", "converge", "shift", "compare", "emit"];
+    const slots = {
+      anchors: [
+        { id: "c1", text: "const text = s.toLowerCase()", key: "normalize" },
+        { id: "c2", text: "let left = 0", key: "init-left" },
+        { id: "c3", text: "let right = text.length - 1", key: "init-right" },
+      ],
+      converge: [{ id: "c4", text: "while (left < right)", key: "while-lt" }],
+      shift: [],
+      compare: [{ id: "c5", text: "while (left < right && !isAlphaNum(text[left])) left++", key: "skip-left" }],
+      emit: [{ id: "c6", text: "return true", key: "ret-true" }],
+    };
+
+    const analysis = analyzeCardDependencies({
+      slotIds,
+      slots,
+      externalIdentifiers: ["s"],
+    });
+    const warning = buildDependencyWarningForCard("c5", analysis, { compare: "COMPARE" });
+
+    expect(warning).toBe("");
+  });
+
   it("marks card placement statuses for failed attempts", () => {
     const level = {
       cards: [

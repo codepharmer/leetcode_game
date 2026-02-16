@@ -371,6 +371,9 @@ World/tier progression model, unlock rules, deterministic daily challenge select
 - `src/lib/blueprint/engine.js`
 Blueprint executor, adaptive validator (composed test execution + structural fallback), known-valid ordering cache, trace generation, and divergence detection.
 
+- `src/lib/blueprint/dependencyHints.js`
+Card dependency analysis and drag-preview warnings, including runtime helper allowances used by composed execution (for example `isAlphaNum`).
+
 ### `src/screens`
 
 - `src/screens/MenuScreen.jsx`

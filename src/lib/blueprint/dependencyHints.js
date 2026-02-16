@@ -60,6 +60,8 @@ export const DEFAULT_ALLOWED_IDENTIFIERS = [
   "isNaN",
   "isFinite",
   "console",
+  "isAlphaNum",
+  "isAlphaNumeric",
 ];
 
 function normalizeIdentifier(value) {
