@@ -34,6 +34,7 @@ Maps Blind 75-style question prompts to the most likely solving pattern (importe
 Maps code snippets/templates to the pattern they represent, using confusion-aware distractors.
 Mobile play view keeps code prompts full-width with horizontal scrolling to avoid left/right clipping on small screens.
 Template rounds reset the viewport to the top when advancing with `next`, matching question-mode navigation flow.
+Tutorial rounds for first-time onboarding use curated snippet IDs and do not increment lifetime quiz stats.
 
 Both quiz modes now feed a persistent post-round review loop:
 - Incorrect attempts are stored in mode metadata and viewable in a dedicated `/review` route.
@@ -43,6 +44,12 @@ Both quiz modes now feed a persistent post-round review loop:
 Card-based algorithm assembly mode with worlds, tiers, daily challenge, adaptive validation (test-run when executable, dependency-aware structural fallback otherwise), execution traces, hints, and star ratings.
 Solve flow now auto-selects by problem size: `flat` mode for `<= 10` required blueprint slots (existing all-at-once run flow), and `phased` mode for `> 10` required slots (one phase active at a time with per-phase checks, phase locking, and immediate completion on final phase success).
 Mobile build view uses a compact fixed-row slot gutter, a bottom-sheet slot editor, and a bottom-docked stacked card tray.
+
+Global + per-mode onboarding overlays are now built in:
+- First app visit: guided `MenuScreen` onboarding (`global` flow).
+- First mode play: guided flow for Match, Template, and Build.
+- One-time contextual tips (quiz shortcuts, blueprint drag/tap, blueprint hint penalty) with non-blocking auto-dismiss behavior.
+- Replay/reset controls are available from the menu tutorial section and mode settings.
 
 ## Live URLs
 
@@ -95,12 +102,17 @@ Google OAuth client id for frontend sign-in.
 - `VITE_API_BASE_URL`
 Base URL for the storage/session API (Lambda Function URL or equivalent).
 
+- `VITE_ANALYTICS_ENDPOINT`
+Optional analytics ingest endpoint used by `trackEvent()` (`src/lib/analytics.js`).  
+If unset, analytics events are emitted only to `console.debug` in local dev (non-test mode).
+
 ## High-Level Architecture
 
 1. Frontend:
 - React app with route-based screens.
 - `App` coordinates mode routing, per-mode progress, round session restore, auth, and sync.
 - Route settings are URL-owned (`gameType`, `difficulty`, `count`, `browse`) and are read/written through `src/hooks/useRouteSettings.js`.
+- Tutorial overlays are rendered through a reusable portal-based component set (`TutorialOverlay`, `TutorialTooltip`, `TutorialSpotlight`) with flow-state control in `src/hooks/useTutorialFlow.js`.
 
 2. Data:
 - Canonical question data lives in `src/lib/questions.js` (with imported solution metadata merged from `src/lib/questionSolutions.js`).
@@ -108,12 +120,14 @@ Base URL for the storage/session API (Lambda Function URL or equivalent).
 - Canonical blueprint families/contracts live in `src/lib/blueprint/taxonomy.js` and `src/lib/blueprint/contracts.js`.
 - `src/lib/content/registry.js` is the composed, single-source read model used by game-mode wiring.
 - Progress is stored per game mode (`question`, `template`, `blueprint`) with schema normalization/versioning.
+- Progress now also includes a top-level `onboarding` branch with per-flow status/step state (`global`, `question_to_pattern`, `template_to_pattern`, `blueprint_builder`) and one-time tip flags.
 - Quiz-mode metadata includes bounded `attemptEvents` (for incorrect review history) and `roundSnapshots` (for trend charts).
 
 3. Persistence:
 - Local: browser `localStorage`.
 - Optional cloud: Lambda Function URL + S3 per-user object storage.
 - Merge logic preserves both local and cloud progress across sign-in transitions.
+- Onboarding merge rules use precedence (`completed > skipped > in_progress > not_started`), max `lastStep`, and OR for one-time tip flags.
 - In-progress round snapshots are dual-written to `localStorage` and `sessionStorage`, with lifecycle flushes on `visibilitychange` and `pagehide` for stronger resume reliability.
 
 4. Blueprint generation:
@@ -255,7 +269,7 @@ Route53 alias record for legacy domain.
 React mount + `BrowserRouter` + `GoogleOAuthProvider`.
 
 - `src/App.jsx`
-Main app orchestrator: route wiring (including quiz review route), mode selection, progress state, round persistence, auth/sync integration, route-settings consumption from URL, quiz meta capture (`attemptEvents`/`roundSnapshots`), and blueprint quick-start routing (`Jump In` / `Continue Challenge`).
+Main app orchestrator: route wiring (including quiz review route), mode selection, progress state, round persistence, auth/sync integration, route-settings consumption from URL, quiz meta capture (`attemptEvents`/`roundSnapshots`), blueprint quick-start routing (`Jump In` / `Continue Challenge`), onboarding/tutorial flow wiring, and one-time contextual tip orchestration.
 
 - `src/global.css`
 Global theme vars, base element styling, animation keyframes, shared interaction classes.
@@ -280,13 +294,19 @@ Code rendering wrapper.
 - `src/components/TemplateViewer.jsx`
 Expandable pattern template display in compact/full modes.
 
+- `src/components/tutorial/TutorialOverlay.jsx`, `src/components/tutorial/TutorialTooltip.jsx`, `src/components/tutorial/TutorialSpotlight.jsx`
+Portal-based onboarding/tip overlay system with spotlight targeting and step actions (`Next`, `Skip`, `Don't show again`).
+
 ### `src/hooks`
 
 - `src/hooks/useAuthSession.js`
 Google auth handling, backend session exchange, token migration, signout.
 
 - `src/hooks/useGameSession.js`
-Round lifecycle for quiz modes: start, select, score, streaks, keyboard shortcuts, finalize.
+Round lifecycle for quiz modes: start, select, score, streaks, keyboard shortcuts, finalize, tutorial round metadata, and tutorial stat isolation.
+
+- `src/hooks/useTutorialFlow.js`
+Flow controller for onboarding steps (`not_started | in_progress | completed | skipped`) with resume/replay support and per-step progression.
 
 - `src/hooks/useProgressSync.js`
 Local/cloud load and merge, auth error fallback, persistence orchestration.
@@ -315,7 +335,7 @@ Universal skeleton and per-pattern template catalog.
 Snippet dataset and confusion map for option generation.
 
 - `src/lib/gameContent.js`
-Mode registry and behavior config used by `App`.
+Mode registry and behavior config used by `App`, including curated tutorial ID lists for quiz onboarding rounds.
 
 - `src/lib/content/registry.js`
 Single-source composed content read model (`question -> pattern`, `template -> pattern`, blueprint seeds, pattern index, invariants).
@@ -327,10 +347,13 @@ Shuffle and option generation helpers.
 Derived metrics (round pct, lifetime pct, weak spots, mastery, grouping) plus incorrect-attempt and accuracy-trend selectors.
 
 - `src/lib/progressModel.js`
-Progress schema/version handling and per-mode getters/setters, including normalized/capped `meta.attemptEvents` and `meta.roundSnapshots`.
+Progress schema/version handling and per-mode getters/setters, including normalized/capped `meta.attemptEvents` and `meta.roundSnapshots`, plus top-level onboarding flow/tip state.
 
 - `src/lib/progressMerge.js`
-Conflict-safe local/cloud merge logic.
+Conflict-safe local/cloud merge logic, including onboarding precedence merges and one-time tip flag OR behavior.
+
+- `src/lib/analytics.js`
+Minimal event emitter for onboarding/tip analytics (`trackEvent`) with optional endpoint posting and dev diagnostics.
 
 - `src/lib/storage.js`
 Storage adapters (local and API) plus read/write helpers.
@@ -389,12 +412,13 @@ Main menu with a top-level segmented mode selector (`Match`, `Template`, `Build`
 For quiz modes, menu also includes a secondary `review mistakes` entry and a lower-page accuracy trend card sourced from mode metadata.
 In blueprint mode, the primary CTA label is provided by app state (`Jump In`, `Continue Challenge`, or `Open Campaign Map`) so players can resume directly.
 For `blueprint builder`, the menu progress card derives `levels`, `stars`, `worlds`, and `mastered` values from `byGameType.blueprint_builder.meta.levelStars` plus campaign world completion, instead of quiz history counters.
+Menu also exposes onboarding replay/reset controls and per-mode `replay tutorial` entries.
 
 - `src/screens/PlayScreen.jsx`
-Question/snippet gameplay screen with robust `KeyD` description hotkey handling and a missing-description fallback message.
+Question/snippet gameplay screen with robust `KeyD` description hotkey handling, a missing-description fallback message, and shared hotkey badges used by tutorial tips.
 
 - `src/screens/ResultsScreen.jsx`
-Round results summary with expandable per-item review.
+Round results summary with expandable per-item review and template-mode onboarding follow-up actions (`Browse Patterns` / `View Templates`).
 
 - `src/screens/ReviewScreen.jsx`
 Dedicated incorrect-attempt review route (`/review`) backed by persisted quiz attempt metadata.
@@ -406,7 +430,7 @@ Pattern browser with difficulty filters.
 Full template reference viewer.
 
 - `src/screens/BlueprintScreen.jsx`
-Nested blueprint route shell and challenge completion persistence, with query-setting preservation across blueprint navigation and redirects.
+Nested blueprint route shell and challenge completion persistence, with query-setting preservation across blueprint navigation and redirects, plus build onboarding overlay orchestration and blueprint contextual-tip triggers.
 
 ### `src/screens/blueprint`
 
@@ -414,7 +438,7 @@ Nested blueprint route shell and challenge completion persistence, with query-se
 Blueprint tab shell (`Map`, `Daily`, placeholder `Stats`).
 
 - `src/screens/blueprint/BlueprintMapView.jsx`
-World progression map, continue CTA, daily banner.
+World progression map, continue CTA, daily banner, and tutorial anchor targets for build onboarding.
 
 - `src/screens/blueprint/BlueprintWorldDetailView.jsx`
 World stage/tier detail and challenge launch UI. Uses a single world-detail top nav (`Worlds` back to map, centered `World N Set X: Family` title, right-side progress and star meta). Already-unlocked earlier tiers remain replayable after progressing to later tiers.
@@ -423,10 +447,10 @@ World stage/tier detail and challenge launch UI. Uses a single world-detail top 
 Daily challenge detail/start screen.
 
 - `src/screens/blueprint/BlueprintGame.jsx`
-Blueprint build/execution UI: compact slot rows, drag/drop/touch support (including moving already placed cards between slots and placing multiple cards in the same step), dependency warnings during placement, per-card failure badges/tooltips (`correct`, `misplaced`, `wrong phase`, phased-check `incorrect`), bottom-sheet slot editing, fixed mobile tray, live countdown timer, and adaptive controls (`Run Blueprint` in flat mode, per-phase `Check [PHASE]` in phased mode). Large problems use phased slot states (`completed`, `active`, `locked`) with interaction restricted to the active phase.
+Blueprint build/execution UI: compact slot rows, drag/drop/touch support (including moving already placed cards between slots and placing multiple cards in the same step), dependency warnings during placement, per-card failure badges/tooltips (`correct`, `misplaced`, `wrong phase`, phased-check `incorrect`), bottom-sheet slot editing, fixed mobile tray, live countdown timer, and adaptive controls (`Run Blueprint` in flat mode, per-phase `Check [PHASE]` in phased mode). Large problems use phased slot states (`completed`, `active`, `locked`) with interaction restricted to the active phase. Emits tutorial run/pass/hint signals for onboarding and one-time tip logic.
 
 - `src/screens/blueprint/BlueprintExecution.jsx`
-Execution trace stepping and feedback display with denser mobile-friendly test/result formatting.
+Execution trace stepping and feedback display with denser mobile-friendly test/result formatting and tutorial anchors for step navigator/star explanation overlays.
 
 - `src/screens/blueprint/useBlueprintGameSession.js`
 Blueprint gameplay state machine (deck/slots/attempts/hints/stars/timing), adaptive flat/phased solve-mode selection, per-phase tray/check progression, dependency analysis, and failed-card feedback state.

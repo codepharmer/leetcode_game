@@ -5,12 +5,13 @@ import {
   historyIsSubset,
   historyTotals,
   mergeHistoryMax,
+  mergeOnboardingStatus,
   mergeProgressData,
   normalizeHistoryEntry,
   normalizeStats,
   statsEqual,
 } from "./progressMerge";
-import { createDefaultProgress } from "./progressModel";
+import { ONBOARDING_FLOWS, ONBOARDING_STATUS, ONBOARDING_TIP_KEYS, createDefaultProgress } from "./progressModel";
 
 describe("lib/progressMerge", () => {
   it("normalizes history entries and stats", () => {
@@ -38,6 +39,12 @@ describe("lib/progressMerge", () => {
   it("compares stats equality", () => {
     expect(statsEqual({ gamesPlayed: 1 }, { gamesPlayed: 1 })).toBe(true);
     expect(statsEqual({ gamesPlayed: 1 }, { gamesPlayed: 2 })).toBe(false);
+    expect(mergeOnboardingStatus(ONBOARDING_STATUS.NOT_STARTED, ONBOARDING_STATUS.IN_PROGRESS)).toBe(
+      ONBOARDING_STATUS.IN_PROGRESS
+    );
+    expect(mergeOnboardingStatus(ONBOARDING_STATUS.SKIPPED, ONBOARDING_STATUS.COMPLETED)).toBe(
+      ONBOARDING_STATUS.COMPLETED
+    );
   });
 
   it("merges progress for both game types and flags remote writes", () => {
@@ -92,5 +99,42 @@ describe("lib/progressMerge", () => {
     expect(meta.roundSnapshots).toHaveLength(2);
     expect(meta.attemptEvents.map((entry) => entry.itemId)).toEqual(["q1", "q2"]);
     expect(meta.roundSnapshots.map((entry) => entry.pct)).toEqual([60, 70]);
+  });
+
+  it("merges onboarding status by precedence, maxes lastStep, and ORs tips", () => {
+    const remote = createDefaultProgress();
+    const local = createDefaultProgress();
+
+    remote.onboarding[ONBOARDING_FLOWS.QUESTION_TO_PATTERN] = {
+      status: ONBOARDING_STATUS.IN_PROGRESS,
+      lastStep: 1,
+    };
+    local.onboarding[ONBOARDING_FLOWS.QUESTION_TO_PATTERN] = {
+      status: ONBOARDING_STATUS.SKIPPED,
+      lastStep: 3,
+    };
+    remote.onboarding[ONBOARDING_FLOWS.BLUEPRINT_BUILDER] = {
+      status: ONBOARDING_STATUS.SKIPPED,
+      lastStep: 0,
+    };
+    local.onboarding[ONBOARDING_FLOWS.BLUEPRINT_BUILDER] = {
+      status: ONBOARDING_STATUS.COMPLETED,
+      lastStep: 2,
+    };
+    local.onboarding.tips[ONBOARDING_TIP_KEYS.QUIZ_SHORTCUTS] = true;
+    remote.onboarding.tips[ONBOARDING_TIP_KEYS.BLUEPRINT_HINT_PENALTY] = true;
+
+    const merged = mergeProgressData(remote, local);
+    expect(merged.mergedProgress.onboarding[ONBOARDING_FLOWS.QUESTION_TO_PATTERN]).toEqual({
+      status: ONBOARDING_STATUS.SKIPPED,
+      lastStep: 3,
+    });
+    expect(merged.mergedProgress.onboarding[ONBOARDING_FLOWS.BLUEPRINT_BUILDER]).toEqual({
+      status: ONBOARDING_STATUS.COMPLETED,
+      lastStep: 2,
+    });
+    expect(merged.mergedProgress.onboarding.tips[ONBOARDING_TIP_KEYS.QUIZ_SHORTCUTS]).toBe(true);
+    expect(merged.mergedProgress.onboarding.tips[ONBOARDING_TIP_KEYS.BLUEPRINT_HINT_PENALTY]).toBe(true);
+    expect(merged.shouldWriteRemote).toBe(true);
   });
 });

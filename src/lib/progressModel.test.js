@@ -4,6 +4,9 @@ import { GAME_TYPES } from "./constants";
 import {
   MAX_ATTEMPT_EVENTS,
   MAX_ROUND_SNAPSHOTS,
+  ONBOARDING_FLOWS,
+  ONBOARDING_STATUS,
+  ONBOARDING_TIP_KEYS,
   createDefaultProgress,
   createEmptyModeProgress,
   getModeProgress,
@@ -18,6 +21,13 @@ describe("lib/progressModel", () => {
     expect(progress.byGameType[GAME_TYPES.QUESTION_TO_PATTERN]).toEqual(createEmptyModeProgress());
     expect(progress.byGameType[GAME_TYPES.TEMPLATE_TO_PATTERN]).toEqual(createEmptyModeProgress());
     expect(progress.byGameType[GAME_TYPES.BLUEPRINT_BUILDER]).toEqual(createEmptyModeProgress());
+    expect(progress.onboarding[ONBOARDING_FLOWS.GLOBAL]).toEqual({
+      status: ONBOARDING_STATUS.NOT_STARTED,
+      lastStep: -1,
+    });
+    expect(progress.onboarding.tips[ONBOARDING_TIP_KEYS.QUIZ_SHORTCUTS]).toBe(false);
+    expect(progress.onboarding.tips[ONBOARDING_TIP_KEYS.BLUEPRINT_DRAG_TAP]).toBe(false);
+    expect(progress.onboarding.tips[ONBOARDING_TIP_KEYS.BLUEPRINT_HINT_PENALTY]).toBe(false);
   });
 
   it("normalizes legacy payload to question mode", () => {
@@ -41,6 +51,34 @@ describe("lib/progressModel", () => {
     });
     expect(normalized.byGameType[GAME_TYPES.QUESTION_TO_PATTERN].stats.gamesPlayed).toBe(0);
     expect(normalized.byGameType[GAME_TYPES.TEMPLATE_TO_PATTERN].stats.gamesPlayed).toBe(0);
+    expect(normalized.onboarding[ONBOARDING_FLOWS.GLOBAL].status).toBe(ONBOARDING_STATUS.NOT_STARTED);
+  });
+
+  it("normalizes onboarding status and tips", () => {
+    const normalized = normalizeProgress({
+      byGameType: {},
+      onboarding: {
+        [ONBOARDING_FLOWS.GLOBAL]: { status: ONBOARDING_STATUS.IN_PROGRESS, lastStep: 2 },
+        [ONBOARDING_FLOWS.QUESTION_TO_PATTERN]: { status: "invalid", lastStep: "abc" },
+        tips: {
+          [ONBOARDING_TIP_KEYS.QUIZ_SHORTCUTS]: true,
+          [ONBOARDING_TIP_KEYS.BLUEPRINT_DRAG_TAP]: "yes",
+          [ONBOARDING_TIP_KEYS.BLUEPRINT_HINT_PENALTY]: true,
+        },
+      },
+    });
+
+    expect(normalized.onboarding[ONBOARDING_FLOWS.GLOBAL]).toEqual({
+      status: ONBOARDING_STATUS.IN_PROGRESS,
+      lastStep: 2,
+    });
+    expect(normalized.onboarding[ONBOARDING_FLOWS.QUESTION_TO_PATTERN]).toEqual({
+      status: ONBOARDING_STATUS.NOT_STARTED,
+      lastStep: -1,
+    });
+    expect(normalized.onboarding.tips[ONBOARDING_TIP_KEYS.QUIZ_SHORTCUTS]).toBe(true);
+    expect(normalized.onboarding.tips[ONBOARDING_TIP_KEYS.BLUEPRINT_DRAG_TAP]).toBe(false);
+    expect(normalized.onboarding.tips[ONBOARDING_TIP_KEYS.BLUEPRINT_HINT_PENALTY]).toBe(true);
   });
 
   it("gets and sets per-mode progress", () => {

@@ -97,7 +97,7 @@ export function BlueprintExecution({
           </>
         ) : null}
 
-        <div style={S.stepControls}>
+        <div data-tutorial-anchor="blueprint-step-navigator" style={S.stepControls}>
           <button onClick={() => setStep(0)} disabled={step === 0} style={{ ...S.stepBtn, opacity: step === 0 ? 0.4 : 1 }}>
             first
           </button>
@@ -153,7 +153,10 @@ export function BlueprintExecution({
       ) : null}
 
       {allPassed ? (
-        <div style={{ ...S.feedbackBox, borderColor: "rgba(16, 185, 129, 0.45)", background: "rgba(16, 185, 129, 0.08)" }}>
+        <div
+          data-tutorial-anchor="blueprint-stars-info"
+          style={{ ...S.feedbackBox, borderColor: "rgba(16, 185, 129, 0.45)", background: "rgba(16, 185, 129, 0.08)" }}
+        >
           <div style={{ fontSize: 16, fontWeight: 800, color: "var(--accent)", textAlign: "center" }}>Blueprint Correct</div>
           <div style={S.blueprintStarRow}>
             {[1, 2, 3].map((n) => (

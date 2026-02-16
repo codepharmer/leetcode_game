@@ -89,6 +89,35 @@ describe("hooks/useGameSession", () => {
     expect(args.onRoundComplete).toHaveBeenCalled();
   });
 
+  it("does not persist lifetime stats for tutorial rounds", async () => {
+    const { args } = createSessionArgs({ totalQuestions: 1 });
+    const { result } = renderHook(() => useGameSession(args));
+
+    act(() => {
+      result.current.startGame({ isTutorial: true, flowKey: "question_to_pattern", itemIds: ["q1"] });
+    });
+
+    expect(result.current.roundMeta).toEqual({ isTutorial: true, flowKey: "question_to_pattern" });
+
+    act(() => {
+      result.current.handleSelect("Hash Map");
+    });
+
+    await act(async () => {
+      result.current.nextQuestion();
+    });
+
+    expect(args.setStats).not.toHaveBeenCalled();
+    expect(args.persistModeProgress).not.toHaveBeenCalled();
+    expect(args.onRoundComplete).toHaveBeenCalledWith(
+      expect.objectContaining({
+        isTutorial: true,
+        flowKey: "question_to_pattern",
+        finalCorrect: 1,
+      })
+    );
+  });
+
   it("does not start play mode when no items are available", () => {
     const { args } = createSessionArgs({ itemsPool: [] });
     const { result } = renderHook(() => useGameSession(args));

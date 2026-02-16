@@ -3,8 +3,22 @@ import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 
 import { GAME_TYPES, MODES } from "./lib/constants";
 import { getBlueprintCampaign } from "./lib/blueprint/campaign";
-import { GAME_TYPE_OPTIONS, getGameTypeConfig } from "./lib/gameContent";
-import { createDefaultProgress, getModeProgress, setModeProgress } from "./lib/progressModel";
+import {
+  GAME_TYPE_OPTIONS,
+  TUTORIAL_QUESTION_IDS,
+  TUTORIAL_TEMPLATE_IDS,
+  getGameTypeConfig,
+} from "./lib/gameContent";
+import {
+  ONBOARDING_FLOWS,
+  ONBOARDING_STATUS,
+  ONBOARDING_TIP_KEYS,
+  createDefaultProgress,
+  getModeProgress,
+  getOnboardingState,
+  setModeProgress,
+  setOnboardingState,
+} from "./lib/progressModel";
 import {
   calcLifetimePct,
   calcRoundPct,
@@ -25,10 +39,13 @@ import {
 import { clearRoundSession, loadRoundSessionForGameType, saveRoundSession } from "./lib/roundSession";
 import { S } from "./styles";
 
+import { TutorialOverlay } from "./components/tutorial/TutorialOverlay";
 import { useAuthSession } from "./hooks/useAuthSession";
 import { useGameSession } from "./hooks/useGameSession";
 import { useProgressSync } from "./hooks/useProgressSync";
 import { useRouteSettings } from "./hooks/useRouteSettings";
+import { useTutorialFlow } from "./hooks/useTutorialFlow";
+import { trackEvent } from "./lib/analytics";
 import { BlueprintScreen } from "./screens/BlueprintScreen";
 import { BrowseScreen } from "./screens/BrowseScreen";
 import { MenuScreen } from "./screens/MenuScreen";
@@ -117,6 +134,19 @@ function buildRoundMetaUpdate(prevMeta, gameType, roundResults) {
   };
 }
 
+const TUTORIAL_ROUND_CONFIG = Object.freeze({
+  [GAME_TYPES.QUESTION_TO_PATTERN]: {
+    flow: ONBOARDING_FLOWS.QUESTION_TO_PATTERN,
+    itemIds: TUTORIAL_QUESTION_IDS,
+  },
+  [GAME_TYPES.TEMPLATE_TO_PATTERN]: {
+    flow: ONBOARDING_FLOWS.TEMPLATE_TO_PATTERN,
+    itemIds: TUTORIAL_TEMPLATE_IDS,
+  },
+});
+
+const TIP_TIMEOUT_MS = 6000;
+
 export default function App() {
   const location = useLocation();
   const {
@@ -133,6 +163,9 @@ export default function App() {
   const [expandedBrowse, setExpandedBrowse] = useState({});
   const [expandedResult, setExpandedResult] = useState({});
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [activeTip, setActiveTip] = useState(null);
+  const [dismissedTemplateExploreKey, setDismissedTemplateExploreKey] = useState("");
+  const activeTipTimeoutRef = useRef(null);
 
   const progressSnapshotRef = useRef({ progress: createDefaultProgress() });
   const getProgressSnapshot = useCallback(() => progressSnapshotRef.current, []);
@@ -165,6 +198,10 @@ export default function App() {
   );
   const stats = modeProgress.stats;
   const history = modeProgress.history;
+  const onboarding = useMemo(() => getOnboardingState(progress), [progress]);
+  const globalOnboardingFlow = onboarding?.[ONBOARDING_FLOWS.GLOBAL];
+  const matchOnboardingFlow = onboarding?.[ONBOARDING_FLOWS.QUESTION_TO_PATTERN];
+  const templateOnboardingFlow = onboarding?.[ONBOARDING_FLOWS.TEMPLATE_TO_PATTERN];
 
   useEffect(() => {
     if (activeGame.supportsQuestionCount === false) return;
@@ -177,18 +214,35 @@ export default function App() {
     setExpandedResult({});
   }, [gameType]);
 
-  const updateModeProgress = useCallback(
+  useEffect(() => {
+    if (mode !== MODES.PLAY) return;
+    setDismissedTemplateExploreKey("");
+  }, [mode]);
+
+  const updateProgress = useCallback(
     (updater) => {
       const currentProgress = progressRef.current;
-      const currentModeProgress = getModeProgress(currentProgress, gameType);
-      const nextModeProgress =
-        typeof updater === "function" ? updater(currentModeProgress) : updater || currentModeProgress;
-      const nextProgress = setModeProgress(currentProgress, gameType, nextModeProgress);
+      const nextProgress = typeof updater === "function" ? updater(currentProgress) : updater || currentProgress;
       progressRef.current = nextProgress;
       setProgress(nextProgress);
-      return { nextModeProgress, nextProgress };
+      return nextProgress;
     },
-    [gameType, progressRef, setProgress]
+    [progressRef, setProgress]
+  );
+
+  const updateModeProgress = useCallback(
+    (updater) => {
+      let nextModeProgressSnapshot = null;
+      const nextProgress = updateProgress((currentProgress) => {
+        const currentModeProgress = getModeProgress(currentProgress, gameType);
+        const nextModeProgress =
+          typeof updater === "function" ? updater(currentModeProgress) : updater || currentModeProgress;
+        nextModeProgressSnapshot = nextModeProgress;
+        return setModeProgress(currentProgress, gameType, nextModeProgress);
+      });
+      return { nextModeProgress: nextModeProgressSnapshot, nextProgress };
+    },
+    [gameType, updateProgress]
   );
 
   const setModeStats = useCallback(
@@ -225,6 +279,54 @@ export default function App() {
       void persistProgress(nextProgress);
     },
     [persistProgress, updateModeProgress]
+  );
+
+  const updateOnboarding = useCallback(
+    (updater, { persist = true } = {}) => {
+      let nextProgressSnapshot = null;
+      updateProgress((currentProgress) => {
+        const currentOnboarding = getOnboardingState(currentProgress);
+        const nextOnboarding = typeof updater === "function" ? updater(currentOnboarding) : updater || currentOnboarding;
+        nextProgressSnapshot = setOnboardingState(currentProgress, nextOnboarding);
+        return nextProgressSnapshot;
+      });
+      if (persist && nextProgressSnapshot) {
+        void persistProgress(nextProgressSnapshot);
+      }
+      return nextProgressSnapshot;
+    },
+    [persistProgress, updateProgress]
+  );
+
+  const updateOnboardingFlow = useCallback(
+    (flowKey, flowUpdater, options) => {
+      return updateOnboarding((currentOnboarding) => {
+        const currentFlow = currentOnboarding?.[flowKey] || {
+          status: ONBOARDING_STATUS.NOT_STARTED,
+          lastStep: -1,
+        };
+        const nextFlow =
+          typeof flowUpdater === "function" ? flowUpdater(currentFlow) : flowUpdater || currentFlow;
+        return {
+          ...currentOnboarding,
+          [flowKey]: nextFlow,
+        };
+      }, options);
+    },
+    [updateOnboarding]
+  );
+
+  const markOnboardingTipShown = useCallback(
+    (tipKey) => {
+      return updateOnboarding((currentOnboarding) => ({
+        ...currentOnboarding,
+        tips: {
+          ...(currentOnboarding?.tips || {}),
+          [tipKey]: true,
+        },
+      }));
+    },
+    [updateOnboarding]
   );
 
   const resetViewport = useCallback(() => {
@@ -278,6 +380,7 @@ export default function App() {
     setShowDesc,
     showTemplate,
     setShowTemplate,
+    roundMeta,
     startGame,
     handleSelect,
     nextQuestion,
@@ -315,6 +418,7 @@ export default function App() {
       showNext,
       showDesc,
       showTemplate,
+      roundMeta,
     };
   }, [
     bestStreak,
@@ -329,6 +433,7 @@ export default function App() {
     showNext,
     showTemplate,
     streak,
+    roundMeta,
   ]);
 
   const latestRoundSnapshotRef = useRef(null);
@@ -369,19 +474,6 @@ export default function App() {
       window.removeEventListener("pagehide", flushRoundSnapshot);
     };
   }, []);
-
-  useEffect(() => {
-    if (!loaded) return;
-
-    if (mode === MODES.PLAY && roundItems.length === 0) {
-      redirectToMenuWithNotice("Round not found. Start a new round.");
-      return;
-    }
-
-    if (mode === MODES.RESULTS && results.length === 0) {
-      redirectToMenuWithNotice("No results to show yet.");
-    }
-  }, [loaded, mode, redirectToMenuWithNotice, results.length, roundItems.length]);
 
   const blueprintStars = useMemo(() => {
     const source = blueprintModeProgress?.meta?.levelStars;
@@ -443,6 +535,47 @@ export default function App() {
     [navigateWithSettings, resetViewport]
   );
 
+  const startQuizModeRound = useCallback(
+    (quizGameType, { forceTutorialReplay = false, forceNormal = false } = {}) => {
+      const tutorialConfig = TUTORIAL_ROUND_CONFIG[quizGameType];
+      const tutorialFlow = tutorialConfig?.flow;
+      const tutorialState = tutorialFlow ? onboarding?.[tutorialFlow] : null;
+      const tutorialEligible =
+        !forceNormal &&
+        tutorialConfig &&
+        (forceTutorialReplay ||
+          tutorialState?.status === ONBOARDING_STATUS.NOT_STARTED ||
+          tutorialState?.status === ONBOARDING_STATUS.IN_PROGRESS);
+
+      if (tutorialEligible) {
+        if (forceTutorialReplay) {
+          trackEvent("tutorial_replayed", { flow: tutorialFlow });
+          updateOnboardingFlow(tutorialFlow, {
+            status: ONBOARDING_STATUS.IN_PROGRESS,
+            lastStep: -1,
+          });
+          trackEvent("onboarding_started", { flow: tutorialFlow });
+        } else if (tutorialState?.status === ONBOARDING_STATUS.NOT_STARTED) {
+          updateOnboardingFlow(tutorialFlow, {
+            status: ONBOARDING_STATUS.IN_PROGRESS,
+            lastStep: -1,
+          });
+          trackEvent("onboarding_started", { flow: tutorialFlow });
+        }
+
+        startGame({
+          isTutorial: true,
+          flowKey: tutorialFlow,
+          itemIds: tutorialConfig.itemIds,
+        });
+        return;
+      }
+
+      startGame();
+    },
+    [onboarding, startGame, updateOnboardingFlow]
+  );
+
   const startSelectedMode = useCallback(() => {
     if (gameType === GAME_TYPES.BLUEPRINT_BUILDER) {
       if (blueprintQuickStart?.challenge?.id) {
@@ -453,8 +586,69 @@ export default function App() {
       resetViewport();
       return;
     }
-    startGame();
-  }, [blueprintQuickStart, gameType, navigateWithSettings, resetViewport, startGame]);
+
+    startQuizModeRound(gameType);
+  }, [blueprintQuickStart, gameType, navigateWithSettings, resetViewport, startQuizModeRound]);
+
+  useEffect(() => {
+    if (!loaded) return;
+
+    if (mode === MODES.PLAY && roundItems.length === 0) {
+      const tutorialConfig = TUTORIAL_ROUND_CONFIG[gameType];
+      const tutorialFlow = tutorialConfig?.flow;
+      const tutorialStatus = tutorialFlow ? onboarding?.[tutorialFlow]?.status : null;
+      const shouldAutostartTutorial =
+        tutorialConfig &&
+        (tutorialStatus === ONBOARDING_STATUS.NOT_STARTED || tutorialStatus === ONBOARDING_STATUS.IN_PROGRESS);
+
+      if (shouldAutostartTutorial) {
+        startQuizModeRound(gameType);
+        return;
+      }
+
+      redirectToMenuWithNotice("Round not found. Start a new round.");
+      return;
+    }
+
+    if (mode === MODES.RESULTS && results.length === 0) {
+      redirectToMenuWithNotice("No results to show yet.");
+    }
+  }, [
+    gameType,
+    loaded,
+    mode,
+    onboarding,
+    redirectToMenuWithNotice,
+    results.length,
+    roundItems.length,
+    startQuizModeRound,
+  ]);
+
+  const replaySelectedTutorial = useCallback(() => {
+    if (gameType === GAME_TYPES.BLUEPRINT_BUILDER) {
+      trackEvent("tutorial_replayed", { flow: ONBOARDING_FLOWS.BLUEPRINT_BUILDER });
+      updateOnboardingFlow(ONBOARDING_FLOWS.BLUEPRINT_BUILDER, {
+        status: ONBOARDING_STATUS.IN_PROGRESS,
+        lastStep: -1,
+      });
+      trackEvent("onboarding_started", { flow: ONBOARDING_FLOWS.BLUEPRINT_BUILDER });
+      navigateWithSettings(ROUTES.BLUEPRINT);
+      resetViewport();
+      return;
+    }
+    startQuizModeRound(gameType, { forceTutorialReplay: true });
+  }, [gameType, navigateWithSettings, resetViewport, startQuizModeRound, updateOnboardingFlow]);
+
+  const replayGlobalTutorial = useCallback(() => {
+    trackEvent("tutorial_replayed", { flow: ONBOARDING_FLOWS.GLOBAL });
+    updateOnboardingFlow(ONBOARDING_FLOWS.GLOBAL, {
+      status: ONBOARDING_STATUS.IN_PROGRESS,
+      lastStep: -1,
+    });
+    trackEvent("onboarding_started", { flow: ONBOARDING_FLOWS.GLOBAL });
+    navigateWithSettings(ROUTES.MENU);
+    resetViewport();
+  }, [navigateWithSettings, resetViewport, updateOnboardingFlow]);
 
   const resetAllData = useCallback(async () => {
     const freshProgress = createDefaultProgress();
@@ -465,6 +659,321 @@ export default function App() {
     setShowResetConfirm(false);
     navigateWithSettings(ROUTES.MENU, { replace: true });
   }, [navigateWithSettings, persistProgress, progressRef, setProgress]);
+
+  const resetOnboardingOnly = useCallback(() => {
+    const freshOnboarding = createDefaultProgress().onboarding;
+    const nextProgress = updateProgress((currentProgress) => setOnboardingState(currentProgress, freshOnboarding));
+    void persistProgress(nextProgress);
+  }, [persistProgress, updateProgress]);
+
+  const [isNarrowViewport, setIsNarrowViewport] = useState(
+    () => (typeof window !== "undefined" ? window.innerWidth <= 760 : false)
+  );
+
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+    const onResize = () => setIsNarrowViewport(window.innerWidth <= 760);
+    onResize();
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+
+  const activeTipRef = useRef(null);
+  useEffect(() => {
+    activeTipRef.current = activeTip;
+  }, [activeTip]);
+
+  const dismissActiveTip = useCallback((method = "tap") => {
+    const tip = activeTipRef.current;
+    if (!tip) return;
+    if (activeTipTimeoutRef.current) {
+      window.clearTimeout(activeTipTimeoutRef.current);
+      activeTipTimeoutRef.current = null;
+    }
+    trackEvent("tip_dismissed", { tipKey: tip.tipKey, method });
+    setActiveTip(null);
+  }, []);
+
+  useEffect(() => (
+    () => {
+      if (activeTipTimeoutRef.current) {
+        window.clearTimeout(activeTipTimeoutRef.current);
+        activeTipTimeoutRef.current = null;
+      }
+    }
+  ), []);
+
+  const requestContextTip = useCallback(
+    ({ tipKey, title, body, targetSelector }) => {
+      if (!tipKey) return false;
+      if (onboarding?.tips?.[tipKey] === true) return false;
+      if (activeTipRef.current) return false;
+
+      markOnboardingTipShown(tipKey);
+      trackEvent("tip_shown", { tipKey });
+      setActiveTip({
+        tipKey,
+        title: String(title || ""),
+        body: String(body || ""),
+        targetSelector: String(targetSelector || ""),
+      });
+
+      if (activeTipTimeoutRef.current) {
+        window.clearTimeout(activeTipTimeoutRef.current);
+      }
+      activeTipTimeoutRef.current = window.setTimeout(() => {
+        dismissActiveTip("timeout");
+      }, TIP_TIMEOUT_MS);
+      return true;
+    },
+    [dismissActiveTip, markOnboardingTipShown, onboarding?.tips]
+  );
+
+  useEffect(() => {
+    const isQuizMode =
+      gameType === GAME_TYPES.QUESTION_TO_PATTERN || gameType === GAME_TYPES.TEMPLATE_TO_PATTERN;
+    const shouldShow =
+      mode === MODES.PLAY &&
+      isQuizMode &&
+      roundMeta?.isTutorial !== true &&
+      currentIdx === 0 &&
+      onboarding?.tips?.[ONBOARDING_TIP_KEYS.QUIZ_SHORTCUTS] !== true;
+
+    if (!shouldShow) return;
+    requestContextTip({
+      tipKey: ONBOARDING_TIP_KEYS.QUIZ_SHORTCUTS,
+      title: "Keyboard Shortcuts",
+      body: "Use 1-4 to answer, Enter to continue, D for description, and T for template.",
+      targetSelector: '[data-tutorial-anchor="play-hotkeys"]',
+    });
+  }, [currentIdx, gameType, mode, onboarding?.tips, requestContextTip, roundMeta?.isTutorial]);
+
+  const globalTutorialSteps = useMemo(
+    () => [
+      {
+        name: "welcome",
+        title: "Welcome To LeetCode Patterns",
+        body: "Learn to recognize and build algorithm patterns through short interactive rounds.",
+        placement: "center",
+        isReady: (ctx) => ctx.isMenuRoute,
+      },
+      {
+        name: "mode_overview",
+        title: "Three Modes",
+        body: "Match maps questions to patterns, Template maps code snippets to patterns, and Build assembles full blueprints.",
+        targetSelector: '[data-tutorial-anchor="menu-mode-selector"]',
+        placement: "bottom",
+        isReady: (ctx) => ctx.isMenuRoute,
+      },
+      {
+        name: "pick_mode",
+        title: "Pick A Mode",
+        body: "Choose a mode, then continue to start that mode's guided first success loop.",
+        targetSelector: '[data-tutorial-anchor="menu-mode-selector"]',
+        placement: "bottom",
+        isReady: (ctx) => ctx.isMenuRoute,
+      },
+    ],
+    []
+  );
+
+  const globalTutorial = useTutorialFlow({
+    flowKey: ONBOARDING_FLOWS.GLOBAL,
+    flowState: globalOnboardingFlow,
+    steps: globalTutorialSteps,
+    context: { isMenuRoute: mode === MODES.MENU },
+    autoStart: mode === MODES.MENU,
+    updateFlowState: updateOnboardingFlow,
+    onStarted: ({ flow }) => {
+      trackEvent("onboarding_started", { flow });
+    },
+    onStepCompleted: ({ flow, stepIndex, stepName }) => {
+      trackEvent("onboarding_step_completed", { flow, stepIndex, stepName });
+    },
+    onCompleted: ({ flow, totalSteps, durationMs }) => {
+      trackEvent("onboarding_completed", { flow, totalSteps, durationMs });
+    },
+    onSkipped: ({ flow, atStep }) => {
+      trackEvent("onboarding_skipped", { flow, atStep });
+    },
+  });
+
+  const matchTutorialSteps = useMemo(
+    () => [
+      {
+        name: "read_question",
+        title: "Read The Prompt",
+        body: "Read the problem first, then identify the best algorithm pattern.",
+        targetSelector: '[data-tutorial-anchor="play-question-header"]',
+        placement: "bottom",
+        isReady: (ctx) => ctx.isTutorialRound && ctx.currentIdx === 0 && !ctx.showNext,
+      },
+      {
+        name: "pick_pattern",
+        title: "Choose The Pattern",
+        body: "Pick one answer. You can click a choice or use keys 1-4.",
+        targetSelector: '[data-tutorial-anchor="play-choices"]',
+        placement: "top",
+        isReady: (ctx) => ctx.isTutorialRound && ctx.currentIdx === 0 && !ctx.showNext,
+      },
+      {
+        name: "feedback",
+        title: "Read Feedback",
+        body: "Green means correct. After each answer, you can inspect the related template.",
+        targetSelector: '[data-tutorial-anchor="play-feedback"]',
+        placement: "top",
+        isReady: (ctx) => ctx.isTutorialRound && ctx.currentIdx === 0 && ctx.showNext,
+      },
+      {
+        name: "advance_keys",
+        title: "Move Faster",
+        body: "Use Enter for Next and D to toggle the full question description.",
+        targetSelector: '[data-tutorial-anchor="play-hotkeys"]',
+        placement: "top",
+        isReady: (ctx) => ctx.isTutorialRound && ctx.currentIdx >= 1,
+      },
+      {
+        name: "results",
+        title: "Round Summary",
+        body: "This summary tracks score and streak. Lifetime stats build across rounds.",
+        targetSelector: '[data-tutorial-anchor="results-summary"]',
+        placement: "bottom",
+        isReady: (ctx) => ctx.isTutorialResults,
+      },
+    ],
+    []
+  );
+
+  const matchTutorial = useTutorialFlow({
+    flowKey: ONBOARDING_FLOWS.QUESTION_TO_PATTERN,
+    flowState: matchOnboardingFlow,
+    steps: matchTutorialSteps,
+    context: {
+      isTutorialRound:
+        mode === MODES.PLAY &&
+        roundMeta?.isTutorial === true &&
+        roundMeta?.flowKey === ONBOARDING_FLOWS.QUESTION_TO_PATTERN,
+      isTutorialResults:
+        mode === MODES.RESULTS &&
+        roundMeta?.isTutorial === true &&
+        roundMeta?.flowKey === ONBOARDING_FLOWS.QUESTION_TO_PATTERN,
+      currentIdx,
+      showNext,
+    },
+    updateFlowState: updateOnboardingFlow,
+    onStepCompleted: ({ flow, stepIndex, stepName }) => {
+      trackEvent("onboarding_step_completed", { flow, stepIndex, stepName });
+    },
+    onCompleted: ({ flow, totalSteps, durationMs }) => {
+      trackEvent("onboarding_completed", { flow, totalSteps, durationMs });
+    },
+    onSkipped: ({ flow, atStep }) => {
+      trackEvent("onboarding_skipped", { flow, atStep });
+    },
+  });
+
+  const templateTutorialSteps = useMemo(
+    () => [
+      {
+        name: "read_code",
+        title: "Read Structure First",
+        body: "Look for loops, window variables, and map/set usage in the snippet.",
+        targetSelector: '[data-tutorial-anchor="play-code-block"]',
+        placement: "top",
+        isReady: (ctx) => ctx.isTutorialRound && ctx.currentIdx === 0 && !ctx.showNext,
+      },
+      {
+        name: "pick_confusion",
+        title: "Choose The Strongest Match",
+        body: "Distractors are plausible confusions. Choose the best primary pattern.",
+        targetSelector: '[data-tutorial-anchor="play-choices"]',
+        placement: "top",
+        isReady: (ctx) => ctx.isTutorialRound && ctx.currentIdx === 0 && !ctx.showNext,
+      },
+      {
+        name: "mobile_scroll",
+        title: "Mobile Tip",
+        body: "On small screens, horizontally scroll the code block to inspect long lines.",
+        targetSelector: '[data-tutorial-anchor="play-code-block"]',
+        placement: "bottom",
+        isReady: (ctx) => ctx.isTutorialRound && ctx.currentIdx === 0 && ctx.showNext && ctx.isNarrowViewport,
+      },
+      {
+        name: "results",
+        title: "Where To Study Next",
+        body: "Use Browse for grouped patterns or Templates for full reference snippets.",
+        targetSelector: '[data-tutorial-anchor="results-summary"]',
+        placement: "bottom",
+        isReady: (ctx) => ctx.isTutorialResults,
+      },
+    ],
+    []
+  );
+
+  const templateTutorial = useTutorialFlow({
+    flowKey: ONBOARDING_FLOWS.TEMPLATE_TO_PATTERN,
+    flowState: templateOnboardingFlow,
+    steps: templateTutorialSteps,
+    context: {
+      isTutorialRound:
+        mode === MODES.PLAY &&
+        roundMeta?.isTutorial === true &&
+        roundMeta?.flowKey === ONBOARDING_FLOWS.TEMPLATE_TO_PATTERN,
+      isTutorialResults:
+        mode === MODES.RESULTS &&
+        roundMeta?.isTutorial === true &&
+        roundMeta?.flowKey === ONBOARDING_FLOWS.TEMPLATE_TO_PATTERN,
+      currentIdx,
+      showNext,
+      isNarrowViewport,
+    },
+    updateFlowState: updateOnboardingFlow,
+    onStepCompleted: ({ flow, stepIndex, stepName }) => {
+      trackEvent("onboarding_step_completed", { flow, stepIndex, stepName });
+    },
+    onCompleted: ({ flow, totalSteps, durationMs }) => {
+      trackEvent("onboarding_completed", { flow, totalSteps, durationMs });
+    },
+    onSkipped: ({ flow, atStep }) => {
+      trackEvent("onboarding_skipped", { flow, atStep });
+    },
+  });
+
+  const handleGlobalTutorialNext = useCallback(() => {
+    const isLast = globalTutorial.stepIndex >= globalTutorial.totalSteps - 1;
+    globalTutorial.next();
+    if (isLast) startSelectedMode();
+  }, [globalTutorial, startSelectedMode]);
+
+  const skipMatchTutorial = useCallback(
+    (reason) => {
+      matchTutorial.skip(reason);
+      startQuizModeRound(GAME_TYPES.QUESTION_TO_PATTERN, { forceNormal: true });
+    },
+    [matchTutorial, startQuizModeRound]
+  );
+
+  const skipTemplateTutorial = useCallback(
+    (reason) => {
+      templateTutorial.skip(reason);
+      startQuizModeRound(GAME_TYPES.TEMPLATE_TO_PATTERN, { forceNormal: true });
+    },
+    [startQuizModeRound, templateTutorial]
+  );
+
+  const templateExploreKey = useMemo(
+    () =>
+      roundMeta?.isTutorial === true && roundMeta?.flowKey === ONBOARDING_FLOWS.TEMPLATE_TO_PATTERN
+        ? `${roundMeta.flowKey}:${roundItems.length}:${score}`
+        : "",
+    [roundItems.length, roundMeta?.flowKey, roundMeta?.isTutorial, score]
+  );
+
+  const showTemplateExploreActions =
+    mode === MODES.RESULTS &&
+    roundMeta?.isTutorial === true &&
+    roundMeta?.flowKey === ONBOARDING_FLOWS.TEMPLATE_TO_PATTERN &&
+    templateExploreKey !== dismissedTemplateExploreKey;
 
   const pct = calcRoundPct(score, roundItems.length);
   const lifetimePct = calcLifetimePct(stats);
@@ -598,6 +1107,9 @@ export default function App() {
     onOpenBlueprintWorld: openBlueprintWorldPreview,
     accuracyTrend,
     startLabel: gameType === GAME_TYPES.BLUEPRINT_BUILDER ? blueprintStartLabel : "Start Round",
+    onReplaySelectedTutorial: replaySelectedTutorial,
+    onReplayGlobalTutorial: replayGlobalTutorial,
+    onResetOnboarding: resetOnboardingOnly,
   };
 
   if (!loaded) {
@@ -657,6 +1169,10 @@ export default function App() {
               goMenu={() => navigateWithSettings(ROUTES.MENU)}
               history={history}
               gameType={gameType}
+              showExploreActions={showTemplateExploreActions}
+              onDismissExploreActions={() => setDismissedTemplateExploreKey(templateExploreKey)}
+              onExploreBrowse={() => navigateWithSettings(ROUTES.BROWSE)}
+              onExploreTemplates={() => navigateWithSettings(ROUTES.TEMPLATES)}
             />
           )}
         />
@@ -696,6 +1212,10 @@ export default function App() {
               goMenu={() => navigateWithSettings(ROUTES.MENU)}
               initialStars={blueprintStars}
               onSaveStars={saveBlueprintStars}
+              onboardingFlowState={onboarding?.[ONBOARDING_FLOWS.BLUEPRINT_BUILDER]}
+              onUpdateOnboardingFlow={updateOnboardingFlow}
+              onRequestTip={requestContextTip}
+              tipFlags={onboarding?.tips || {}}
             />
           )}
         />
@@ -711,6 +1231,55 @@ export default function App() {
           }
         />
       </Routes>
+
+      <TutorialOverlay
+        open={globalTutorial.isOpen}
+        title={globalTutorial.currentStep?.title || ""}
+        body={globalTutorial.currentStep?.body || ""}
+        stepIndex={globalTutorial.stepIndex}
+        totalSteps={globalTutorial.totalSteps}
+        targetSelector={globalTutorial.currentStep?.targetSelector || ""}
+        placement={globalTutorial.currentStep?.placement || "bottom"}
+        onNext={handleGlobalTutorialNext}
+        onSkip={() => globalTutorial.skip("skip")}
+        onDontShowAgain={globalTutorial.dontShowAgain}
+      />
+
+      <TutorialOverlay
+        open={matchTutorial.isOpen}
+        title={matchTutorial.currentStep?.title || ""}
+        body={matchTutorial.currentStep?.body || ""}
+        stepIndex={matchTutorial.stepIndex}
+        totalSteps={matchTutorial.totalSteps}
+        targetSelector={matchTutorial.currentStep?.targetSelector || ""}
+        placement={matchTutorial.currentStep?.placement || "bottom"}
+        onNext={matchTutorial.next}
+        onSkip={() => skipMatchTutorial("skip")}
+        onDontShowAgain={() => skipMatchTutorial("dont_show_again")}
+      />
+
+      <TutorialOverlay
+        open={templateTutorial.isOpen}
+        title={templateTutorial.currentStep?.title || ""}
+        body={templateTutorial.currentStep?.body || ""}
+        stepIndex={templateTutorial.stepIndex}
+        totalSteps={templateTutorial.totalSteps}
+        targetSelector={templateTutorial.currentStep?.targetSelector || ""}
+        placement={templateTutorial.currentStep?.placement || "bottom"}
+        onNext={templateTutorial.next}
+        onSkip={() => skipTemplateTutorial("skip")}
+        onDontShowAgain={() => skipTemplateTutorial("dont_show_again")}
+      />
+
+      <TutorialOverlay
+        open={!!activeTip}
+        kind="tip"
+        title={activeTip?.title || ""}
+        body={activeTip?.body || ""}
+        targetSelector={activeTip?.targetSelector || ""}
+        placement="top"
+        onDismiss={dismissActiveTip}
+      />
     </div>
   );
 }

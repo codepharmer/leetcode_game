@@ -105,6 +105,7 @@ export function useGameSession({
   const [showNext, setShowNext] = useState(initialSnapshot.showNext);
   const [showDesc, setShowDesc] = useState(initialSnapshot.showDesc);
   const [showTemplate, setShowTemplate] = useState(initialSnapshot.showTemplate);
+  const [roundMeta, setRoundMeta] = useState(initialSnapshot.roundMeta);
 
   const currentItem = roundItems[currentIdx];
   const historyRef = useRef(history || {});
@@ -133,6 +134,7 @@ export function useGameSession({
     setShowNext(false);
     setShowDesc(false);
     setShowTemplate(false);
+    setRoundMeta({ isTutorial: false, flowKey: "" });
   }, []);
 
   useEffect(() => {
@@ -153,6 +155,7 @@ export function useGameSession({
     setShowNext(snapshot.showNext);
     setShowDesc(snapshot.showDesc);
     setShowTemplate(snapshot.showTemplate);
+    setRoundMeta(snapshot.roundMeta);
   }, [clearRoundState, initialRoundState, initialRoundStateKey]);
 
   useEffect(() => {
@@ -167,11 +170,24 @@ export function useGameSession({
     resetViewport();
   }, [currentItem?.id, currentItem?.promptKind, mode, resetViewport]);
 
-  const startGame = useCallback(() => {
-    let pool = itemsPool || [];
-    if (filterDifficulty !== "All") pool = pool.filter((item) => item.difficulty === filterDifficulty);
+  const startGame = useCallback((options = {}) => {
+    const tutorialIds = Array.isArray(options?.itemIds)
+      ? options.itemIds.map((id) => String(id)).filter(Boolean)
+      : [];
+    const nextRoundMeta = {
+      isTutorial: options?.isTutorial === true,
+      flowKey: typeof options?.flowKey === "string" ? options.flowKey : "",
+    };
 
-    const picked = shuffle(pool).slice(0, totalQuestions);
+    let picked = [];
+    if (tutorialIds.length > 0) {
+      const itemById = new Map((itemsPool || []).map((item) => [String(item?.id || ""), item]));
+      picked = tutorialIds.map((id) => itemById.get(String(id))).filter(Boolean);
+    } else {
+      let pool = itemsPool || [];
+      if (filterDifficulty !== "All") pool = pool.filter((item) => item.difficulty === filterDifficulty);
+      picked = shuffle(pool).slice(0, totalQuestions);
+    }
 
     setRoundItems(picked);
     setCurrentIdx(0);
@@ -183,9 +199,11 @@ export function useGameSession({
     setShowNext(false);
     setShowDesc(false);
     setShowTemplate(false);
+    setRoundMeta(nextRoundMeta);
 
     if (picked.length === 0) {
       setChoices([]);
+      setRoundMeta({ isTutorial: false, flowKey: "" });
       return;
     }
 
@@ -234,21 +252,28 @@ export function useGameSession({
   const nextQuestion = useCallback(() => {
     if (currentIdx + 1 >= roundItems.length) {
       const finalCorrect = results.filter((result) => result.correct).length;
-      const nextStats = {
-        gamesPlayed: stats.gamesPlayed + 1,
-        totalCorrect: stats.totalCorrect + finalCorrect,
-        totalAnswered: stats.totalAnswered + roundItems.length,
-        bestStreak: Math.max(stats.bestStreak, bestStreak),
-      };
+      if (!roundMeta.isTutorial) {
+        const nextStats = {
+          gamesPlayed: stats.gamesPlayed + 1,
+          totalCorrect: stats.totalCorrect + finalCorrect,
+          totalAnswered: stats.totalAnswered + roundItems.length,
+          bestStreak: Math.max(stats.bestStreak, bestStreak),
+        };
 
-      setStats(nextStats);
-      const nextMeta =
-        typeof buildRoundMeta === "function"
-          ? (prevMeta) => buildRoundMeta({ prevMeta, roundItems, results, finalCorrect })
-          : undefined;
-      void persistModeProgress(nextStats, historyRef.current, nextMeta);
+        setStats(nextStats);
+        const nextMeta =
+          typeof buildRoundMeta === "function"
+            ? (prevMeta) => buildRoundMeta({ prevMeta, roundItems, results, finalCorrect })
+            : undefined;
+        void persistModeProgress(nextStats, historyRef.current, nextMeta);
+      }
       setMode(MODES.RESULTS);
-      onRoundComplete?.();
+      onRoundComplete?.({
+        isTutorial: roundMeta.isTutorial,
+        flowKey: roundMeta.flowKey,
+        roundLength: roundItems.length,
+        finalCorrect,
+      });
       resetViewport();
       return;
     }
@@ -270,6 +295,8 @@ export function useGameSession({
     persistModeProgress,
     resetViewport,
     results,
+    roundMeta.flowKey,
+    roundMeta.isTutorial,
     roundItems,
     setMode,
     setStats,
@@ -327,6 +354,7 @@ export function useGameSession({
     setShowDesc,
     showTemplate,
     setShowTemplate,
+    roundMeta,
     startGame,
     handleSelect,
     nextQuestion,

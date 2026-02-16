@@ -55,7 +55,7 @@ export function PlayScreen({
       </div>
 
       <div style={S.questionArea}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <div data-tutorial-anchor="play-question-header" style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <span style={{ ...S.diffBadge, color: DIFF_COLORS[currentItem.difficulty], borderColor: DIFF_COLORS[currentItem.difficulty] + "40" }}>
             {currentItem.difficulty}
           </span>
@@ -78,12 +78,16 @@ export function PlayScreen({
           </>
         )}
 
-        {isCodePrompt && <CodeBlock code={currentItem.code} />}
+        {isCodePrompt && (
+          <div data-tutorial-anchor="play-code-block" style={{ width: "100%" }}>
+            <CodeBlock code={currentItem.code} />
+          </div>
+        )}
 
         <p style={S.questionPrompt}>{promptLabel}</p>
       </div>
 
-      <div style={S.choicesGrid}>
+      <div data-tutorial-anchor="play-choices" style={S.choicesGrid}>
         {choices.map((c, i) => {
           let bg = "var(--surface-1)",
             border = "var(--border)",
@@ -120,9 +124,16 @@ export function PlayScreen({
         })}
       </div>
 
+      <div data-tutorial-anchor="play-hotkeys" style={S.hotkeyRow}>
+        <span style={S.hotkeyChip}>1-4 answer</span>
+        <span style={S.hotkeyChip}>Enter next</span>
+        {!isCodePrompt ? <span style={S.hotkeyChip}>D description</span> : null}
+        <span style={S.hotkeyChip}>T template</span>
+      </div>
+
       {showNext && (
         <div style={{ animation: "fadeUp 0.2s ease-out" }}>
-          <div style={S.nextArea}>
+          <div data-tutorial-anchor="play-feedback" style={S.nextArea}>
             {selected === currentItem.pattern ? (
               <span style={{ color: "var(--accent)", fontSize: 14, fontWeight: 600 }}> correct</span>
             ) : (

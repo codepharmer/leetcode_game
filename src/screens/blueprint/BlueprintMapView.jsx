@@ -51,9 +51,10 @@ function ProgressRing({ progressPct, accent, icon, worldId, locked }) {
   );
 }
 
-function WorldNodeButton({ world, index, accent, isLocked, unlockCountLabel, onOpenWorld, style }) {
+function WorldNodeButton({ world, index, accent, isLocked, unlockCountLabel, onOpenWorld, style, tutorialAnchor = "" }) {
   return (
     <button
+      data-tutorial-anchor={tutorialAnchor || undefined}
       className="hover-row hover-accent pressable-200"
       disabled={!world.isUnlocked}
       onClick={() => world.isUnlocked && onOpenWorld(world.id)}
@@ -110,7 +111,12 @@ export function BlueprintMapView({ campaign, completed, onOpenDaily, onOpenWorld
   return (
     <div style={S.blueprintViewPane}>
       {campaign?.dailyChallenge?.challenge?.level ? (
-        <button className="pressable-200 hover-row" onClick={onOpenDaily} style={S.blueprintDailyBannerRow}>
+        <button
+          data-tutorial-anchor="blueprint-daily-banner"
+          className="pressable-200 hover-row"
+          onClick={onOpenDaily}
+          style={S.blueprintDailyBannerRow}
+        >
           <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0, flex: 1 }}>
             <span style={{ ...S.blueprintNodeBadge, color: "var(--warn)", borderColor: "rgba(245, 158, 11, 0.45)" }}>D</span>
             <span style={{ ...S.diffBadge, color: "var(--warn)", borderColor: "rgba(245, 158, 11, 0.45)" }}>Daily Challenge</span>
@@ -124,6 +130,7 @@ export function BlueprintMapView({ campaign, completed, onOpenDaily, onOpenWorld
 
       {nextChallenge ? (
         <button
+          data-tutorial-anchor="blueprint-continue-cta"
           className="pressable-200"
           onClick={() => onContinue(nextChallenge.challenge)}
           style={{ ...S.blueprintContinueBtn, background: nextAccent.gradient, borderColor: nextAccent.ring }}
@@ -170,6 +177,7 @@ export function BlueprintMapView({ campaign, completed, onOpenDaily, onOpenWorld
                   isLocked={isLocked}
                   unlockCountLabel={unlockCountLabel}
                   onOpenWorld={onOpenWorld}
+                  tutorialAnchor={world.id === 0 ? "blueprint-world-0" : ""}
                   style={S.blueprintWorldNodeMobile}
                 />
               </div>
@@ -197,6 +205,7 @@ export function BlueprintMapView({ campaign, completed, onOpenDaily, onOpenWorld
                 isLocked={isLocked}
                 unlockCountLabel={unlockCountLabel}
                 onOpenWorld={onOpenWorld}
+                tutorialAnchor={world.id === 0 ? "blueprint-world-0" : ""}
                 style={{
                   ...S.blueprintWorldNode,
                   left: `${x}%`,

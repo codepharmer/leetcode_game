@@ -2,7 +2,7 @@ export function trackEvent(name, properties = {}) {
   const eventName = String(name || "").trim();
   if (!eventName) return;
 
-  if (import.meta.env.DEV) {
+  if (import.meta.env.DEV && import.meta.env.MODE !== "test") {
     console.debug("[analytics]", eventName, properties);
   }
 

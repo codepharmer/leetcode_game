@@ -31,7 +31,15 @@ function getFeedbackLabel(status) {
   return "";
 }
 
-export function BlueprintGame({ level, challenge, onBack, onComplete }) {
+export function BlueprintGame({
+  level,
+  challenge,
+  onBack,
+  onComplete,
+  onTutorialRun = () => {},
+  onTutorialPass = () => {},
+  onHintUsed = () => {},
+}) {
   const touchDragRef = useRef({
     pointerId: null,
     cardId: null,
@@ -43,6 +51,7 @@ export function BlueprintGame({ level, challenge, onBack, onComplete }) {
   const touchGhostRef = useRef(null);
   const suppressClickCardIdRef = useRef(null);
   const dropFlashTimeoutRef = useRef(null);
+  const passSignalRef = useRef(false);
   const [touchGhost, setTouchGhost] = useState({ visible: false, text: "" });
   const [showProblem, setShowProblem] = useState(false);
   const [editingSlotId, setEditingSlotId] = useState(null);
@@ -117,6 +126,16 @@ export function BlueprintGame({ level, challenge, onBack, onComplete }) {
   useEffect(() => {
     if (phase !== "build") setEditingSlotId(null);
   }, [phase]);
+
+  useEffect(() => {
+    if (!allPassed) {
+      passSignalRef.current = false;
+      return;
+    }
+    if (passSignalRef.current) return;
+    passSignalRef.current = true;
+    onTutorialPass(stars);
+  }, [allPassed, onTutorialPass, stars]);
 
   useEffect(() => {
     if (!editingSlotId) return;
@@ -314,6 +333,15 @@ export function BlueprintGame({ level, challenge, onBack, onComplete }) {
       onComplete(level.id, result.stars || 1);
     }
   };
+  const handleRunWithSignals = () => {
+    onTutorialRun();
+    handleRun();
+  };
+  const handleToggleHint = (cardId, canOpenHint) => {
+    const willOpenHint = showHint !== cardId && canOpenHint;
+    toggleHint(cardId, canOpenHint);
+    if (willOpenHint) onHintUsed();
+  };
 
   return (
     <div style={{ ...S.blueprintContainer, paddingBottom: phase === "build" ? 320 : 24 }}>
@@ -392,6 +420,7 @@ export function BlueprintGame({ level, challenge, onBack, onComplete }) {
               return (
                 <div
                   key={slotId}
+                  data-tutorial-anchor={slotIndex === 0 ? "blueprint-slot-row" : undefined}
                   data-testid={`blueprint-slot-${slotId}`}
                   data-blueprint-phase-state={slotSolveState}
                   data-blueprint-slot-id={slotId}
@@ -533,7 +562,8 @@ export function BlueprintGame({ level, challenge, onBack, onComplete }) {
             </button>
             {solveMode === "flat" ? (
               <button
-                onClick={handleRun}
+                data-tutorial-anchor="blueprint-run-button"
+                onClick={handleRunWithSignals}
                 disabled={!canRun}
                 style={{
                   ...S.startBtn,
@@ -564,7 +594,7 @@ export function BlueprintGame({ level, challenge, onBack, onComplete }) {
           </div>
 
           {showDeckTray ? (
-            <div data-testid="blueprint-card-tray" style={S.blueprintDeckArea}>
+            <div data-tutorial-anchor="blueprint-card-tray" data-testid="blueprint-card-tray" style={S.blueprintDeckArea}>
               <div style={S.blueprintDeckHeaderRow}>
                 <span style={S.blueprintDeckLabel}>card tray</span>
                 <span style={S.blueprintTopMeta}>{deck.length} remaining</span>
@@ -601,13 +631,13 @@ export function BlueprintGame({ level, challenge, onBack, onComplete }) {
                           style={{ ...S.blueprintHintBtn, opacity: canOpenHint ? 1 : 0.4, cursor: canOpenHint ? "pointer" : "not-allowed" }}
                           onClick={(event) => {
                             event.stopPropagation();
-                            toggleHint(card.id, canOpenHint);
+                            handleToggleHint(card.id, canOpenHint);
                           }}
                           onKeyDown={(event) => {
                             if (event.key !== "Enter" && event.key !== " ") return;
                             event.preventDefault();
                             event.stopPropagation();
-                            toggleHint(card.id, canOpenHint);
+                            handleToggleHint(card.id, canOpenHint);
                           }}
                           title={canOpenHint ? "hint" : "hint limit reached"}
                         >

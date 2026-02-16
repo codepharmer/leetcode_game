@@ -20,10 +20,14 @@ export function ResultsScreen({
   goMenu,
   history,
   gameType,
+  showExploreActions = false,
+  onDismissExploreActions = () => {},
+  onExploreBrowse = () => {},
+  onExploreTemplates = () => {},
 }) {
   return (
     <div style={S.resultsContainer}>
-      <div style={S.resultsHeader}>
+      <div data-tutorial-anchor="results-summary" style={S.resultsHeader}>
         <div style={{ textAlign: "center" }}>
           <div style={S.logo}>
             <span style={S.logoAccent}>$</span>
@@ -48,6 +52,26 @@ export function ResultsScreen({
           </span>
         </div>
       </div>
+
+      {showExploreActions ? (
+        <div style={{ ...S.card, width: "100%", maxWidth: 680, display: "flex", flexDirection: "column", gap: 10 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center" }}>
+            <span style={{ fontSize: 14, color: "var(--text-strong)", fontWeight: 700 }}>Explore more</span>
+            <button onClick={onDismissExploreActions} style={S.resetBtn}>
+              dismiss
+            </button>
+          </div>
+          <div style={{ fontSize: 13, color: "var(--muted)" }}>Study grouped patterns or browse full templates before your next round.</div>
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+            <button onClick={onExploreBrowse} style={S.browseBtn}>
+              Browse Patterns
+            </button>
+            <button onClick={onExploreTemplates} style={S.browseBtn}>
+              View Templates
+            </button>
+          </div>
+        </div>
+      ) : null}
 
       {!user && (
         <div style={{ ...S.syncBanner, maxWidth: 640 }}>

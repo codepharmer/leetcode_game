@@ -265,7 +265,7 @@ function ModeSelectionSection({ gameTypeOptions, gameType, setGameType }) {
   const selectedModeVisual = getModeVisual(gameType, "Mode");
 
   return (
-    <div style={{ animation: "fadeSlideIn 0.5s ease 0.13s both" }}>
+    <div data-tutorial-anchor="menu-mode-selector" style={{ animation: "fadeSlideIn 0.5s ease 0.13s both" }}>
       <div className="menu-mode-segmented" role="tablist" aria-label="Game mode selector">
         {(gameTypeOptions || []).map((option) => {
           const modeVisual = getModeVisual(option.value, option.label || "Mode");
@@ -358,6 +358,7 @@ function RoundSettingsSection({
   totalQuestions,
   setTotalQuestions,
   settingsSummary,
+  onReplayTutorial = () => {},
 }) {
   return (
     <div style={{ ...S.card, padding: 0, overflow: "hidden", animation: "fadeSlideIn 0.5s ease 0.2s both" }}>
@@ -424,13 +425,18 @@ function RoundSettingsSection({
           >
             {settingsSummary}
           </div>
+          <div style={{ marginTop: 12 }}>
+            <button onClick={onReplayTutorial} style={S.browseBtn}>
+              replay tutorial
+            </button>
+          </div>
         </div>
       )}
     </div>
   );
 }
 
-function CampaignPreviewSection({ campaignPreview, onOpenDaily, onOpenWorld }) {
+function CampaignPreviewSection({ campaignPreview, onOpenDaily, onOpenWorld, onReplayTutorial = () => {} }) {
   const dailyChallenge = campaignPreview?.dailyChallenge || null;
   const dailyLevel = dailyChallenge?.challenge?.level || null;
   const dailyDifficulty = dailyLevel?.difficulty || "";
@@ -442,8 +448,11 @@ function CampaignPreviewSection({ campaignPreview, onOpenDaily, onOpenWorld }) {
 
   return (
     <div style={{ ...S.card, padding: 0, overflow: "hidden", animation: "fadeSlideIn 0.5s ease 0.2s both" }}>
-      <div style={{ padding: "18px 24px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+      <div style={{ padding: "18px 24px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
         <span style={{ ...S.sectionLabel, marginBottom: 0 }}>campaign</span>
+        <button onClick={onReplayTutorial} style={S.browseBtn}>
+          replay tutorial
+        </button>
       </div>
 
       <div className="menu-campaign-panel">
@@ -480,6 +489,25 @@ function CampaignPreviewSection({ campaignPreview, onOpenDaily, onOpenWorld }) {
             );
           })}
         </div>
+      </div>
+    </div>
+  );
+}
+
+function TutorialSection({ onReplaySelectedTutorial, onReplayGlobalTutorial, onResetOnboarding }) {
+  return (
+    <div style={{ ...S.card, animation: "fadeSlideIn 0.5s ease 0.22s both" }}>
+      <div style={S.sectionLabel}>tutorials</div>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+        <button onClick={onReplaySelectedTutorial} style={S.browseBtn}>
+          replay tutorial
+        </button>
+        <button onClick={onReplayGlobalTutorial} style={S.browseBtn}>
+          replay global onboarding
+        </button>
+        <button onClick={onResetOnboarding} style={S.browseBtn}>
+          reset onboarding
+        </button>
       </div>
     </div>
   );
@@ -676,6 +704,9 @@ export function MenuScreen({
   onOpenBlueprintWorld = () => {},
   accuracyTrend = [],
   startLabel = "",
+  onReplaySelectedTutorial = () => {},
+  onReplayGlobalTutorial = () => {},
+  onResetOnboarding = () => {},
 }) {
   const [showRoundSettings, setShowRoundSettings] = useState(false);
 
@@ -756,6 +787,7 @@ export function MenuScreen({
             campaignPreview={blueprintCampaignPreview}
             onOpenDaily={onOpenBlueprintDaily}
             onOpenWorld={onOpenBlueprintWorld}
+            onReplayTutorial={onReplaySelectedTutorial}
           />
         ) : (
           <RoundSettingsSection
@@ -772,8 +804,15 @@ export function MenuScreen({
             totalQuestions={totalQuestions}
             setTotalQuestions={setTotalQuestions}
             settingsSummary={settingsSummary}
+            onReplayTutorial={onReplaySelectedTutorial}
           />
         )}
+
+        <TutorialSection
+          onReplaySelectedTutorial={onReplaySelectedTutorial}
+          onReplayGlobalTutorial={onReplayGlobalTutorial}
+          onResetOnboarding={onResetOnboarding}
+        />
 
         <StartSection startGame={startGame} startLabel={resolvedStartLabel} />
 
