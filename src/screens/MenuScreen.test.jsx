@@ -156,10 +156,27 @@ describe("screens/MenuScreen", () => {
     expect(screen.queryByRole("button", { name: /browse patterns/i })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /view templates/i })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /review mistakes/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /replay tutorial/i })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Continue Challenge/i })).toBeInTheDocument();
     expect(screen.getByText(/^stars$/i)).toBeInTheDocument();
     expect(screen.getByText(/^worlds$/i)).toBeInTheDocument();
     expect(screen.queryByText("--")).not.toBeInTheDocument();
+  });
+
+  it("renders tutorials collapsed below the primary CTA until expanded", () => {
+    const props = createBaseProps();
+    render(<MenuScreen {...props} />);
+
+    expect(screen.queryByRole("button", { name: /replay global onboarding/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /reset onboarding/i })).not.toBeInTheDocument();
+
+    const startButton = screen.getByRole("button", { name: /Start Round/i });
+    const tutorialHeading = screen.getByText(/^tutorials$/i);
+    expect(startButton.compareDocumentPosition(tutorialHeading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+
+    fireEvent.click(screen.getByTestId("tutorial-toggle"));
+    expect(screen.getByRole("button", { name: /replay global onboarding/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /reset onboarding/i })).toBeInTheDocument();
   });
 
   it("renders a trend chart when historical snapshots exist", () => {

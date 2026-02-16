@@ -436,7 +436,7 @@ function RoundSettingsSection({
   );
 }
 
-function CampaignPreviewSection({ campaignPreview, onOpenDaily, onOpenWorld, onReplayTutorial = () => {} }) {
+function CampaignPreviewSection({ campaignPreview, onOpenDaily, onOpenWorld }) {
   const dailyChallenge = campaignPreview?.dailyChallenge || null;
   const dailyLevel = dailyChallenge?.challenge?.level || null;
   const dailyDifficulty = dailyLevel?.difficulty || "";
@@ -448,11 +448,8 @@ function CampaignPreviewSection({ campaignPreview, onOpenDaily, onOpenWorld, onR
 
   return (
     <div style={{ ...S.card, padding: 0, overflow: "hidden", animation: "fadeSlideIn 0.5s ease 0.2s both" }}>
-      <div style={{ padding: "18px 24px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+      <div style={{ padding: "18px 24px", borderBottom: "1px solid var(--border)" }}>
         <span style={{ ...S.sectionLabel, marginBottom: 0 }}>campaign</span>
-        <button onClick={onReplayTutorial} style={S.browseBtn}>
-          replay tutorial
-        </button>
       </div>
 
       <div className="menu-campaign-panel">
@@ -494,21 +491,40 @@ function CampaignPreviewSection({ campaignPreview, onOpenDaily, onOpenWorld, onR
   );
 }
 
-function TutorialSection({ onReplaySelectedTutorial, onReplayGlobalTutorial, onResetOnboarding }) {
+function TutorialSection({
+  expanded,
+  onToggleExpanded,
+  onReplaySelectedTutorial,
+  onReplayGlobalTutorial,
+  onResetOnboarding,
+}) {
   return (
-    <div style={{ ...S.card, animation: "fadeSlideIn 0.5s ease 0.22s both" }}>
-      <div style={S.sectionLabel}>tutorials</div>
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
-        <button onClick={onReplaySelectedTutorial} style={S.browseBtn}>
-          replay tutorial
-        </button>
-        <button onClick={onReplayGlobalTutorial} style={S.browseBtn}>
-          replay global onboarding
-        </button>
-        <button onClick={onResetOnboarding} style={S.browseBtn}>
-          reset onboarding
+    <div style={{ ...S.card, animation: "fadeSlideIn 0.5s ease 0.28s both" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+        <div style={{ ...S.sectionLabel, marginBottom: 0 }}>tutorials</div>
+        <button
+          onClick={onToggleExpanded}
+          style={S.browseBtn}
+          aria-expanded={expanded}
+          aria-label="Toggle tutorials controls"
+          data-testid="tutorial-toggle"
+        >
+          {expanded ? "hide" : "show"}
         </button>
       </div>
+      {expanded ? (
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginTop: 10 }}>
+          <button onClick={onReplaySelectedTutorial} style={S.browseBtn}>
+            replay tutorial
+          </button>
+          <button onClick={onReplayGlobalTutorial} style={S.browseBtn}>
+            replay global onboarding
+          </button>
+          <button onClick={onResetOnboarding} style={S.browseBtn}>
+            reset onboarding
+          </button>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -709,6 +725,7 @@ export function MenuScreen({
   onResetOnboarding = () => {},
 }) {
   const [showRoundSettings, setShowRoundSettings] = useState(false);
+  const [showTutorialControls, setShowTutorialControls] = useState(false);
 
   const fallbackAllCount = Number.isFinite(totalAvailableQuestions) ? totalAvailableQuestions : 0;
   const selectedModeProgress = modeProgressByGameType?.[gameType] || null;
@@ -787,7 +804,6 @@ export function MenuScreen({
             campaignPreview={blueprintCampaignPreview}
             onOpenDaily={onOpenBlueprintDaily}
             onOpenWorld={onOpenBlueprintWorld}
-            onReplayTutorial={onReplaySelectedTutorial}
           />
         ) : (
           <RoundSettingsSection
@@ -808,13 +824,15 @@ export function MenuScreen({
           />
         )}
 
+        <StartSection startGame={startGame} startLabel={resolvedStartLabel} />
+
         <TutorialSection
+          expanded={showTutorialControls}
+          onToggleExpanded={() => setShowTutorialControls((prev) => !prev)}
           onReplaySelectedTutorial={onReplaySelectedTutorial}
           onReplayGlobalTutorial={onReplayGlobalTutorial}
           onResetOnboarding={onResetOnboarding}
         />
-
-        <StartSection startGame={startGame} startLabel={resolvedStartLabel} />
 
         <NeedsWorkSection needsWork={needsWork} />
         {!isBlueprintMode && <AccuracyTrendSection trendPoints={accuracyTrend} />}

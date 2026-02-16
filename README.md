@@ -141,6 +141,7 @@ If unset, analytics events are emitted only to `console.debug` in local dev (non
 - Campaign includes a `World 0` primitive onboarding lane built from foundational existing levels before the main world track.
 - All `World 0` problems are open by default (no tier/stage gating inside that world).
 - `World 0` is excluded from daily challenge selection and from core-world unlock counting so existing unlock pacing remains stable.
+- `World 0` blueprint cards now avoid placeholder pseudocode/comment markers and ship concrete runnable code steps for each included challenge.
 
 ## Content Ownership
 
@@ -413,7 +414,7 @@ Main menu with a top-level segmented mode selector (`Match`, `Template`, `Build`
 For quiz modes, menu also includes a secondary `review mistakes` entry and a lower-page accuracy trend card sourced from mode metadata.
 In blueprint mode, the primary CTA label is provided by app state (`Jump In`, `Continue Challenge`, or `Open Campaign Map`) so players can resume directly.
 For `blueprint builder`, the menu progress card derives `levels`, `stars`, `worlds`, and `mastered` values from `byGameType.blueprint_builder.meta.levelStars` plus campaign world completion, instead of quiz history counters.
-Menu also exposes onboarding replay/reset controls in a collapsed `tutorials` card below the primary CTA, plus per-mode `replay tutorial` entries.
+Menu also exposes onboarding replay/reset controls in a collapsed `tutorials` card below the primary CTA (without a duplicate replay button in the campaign header), plus per-mode `replay tutorial` entries.
 
 - `src/screens/PlayScreen.jsx`
 Question/snippet gameplay screen with robust `KeyD` description hotkey handling, a missing-description fallback message, and shared hotkey badges used by tutorial tips.
