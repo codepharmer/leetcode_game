@@ -1,6 +1,7 @@
 import { SLIDING_WINDOW_TEMPLATE_ID, TWO_POINTERS_TEMPLATE_ID } from "../templates";
 import { buildProblemIr } from "./problemIr";
 import { createStrategiesFromProblemSpecs, makeProblemSpec } from "./problemStrategyBuilder";
+import { irStep } from "./shared";
 
 function solveQ11(input) {
   const height = Array.isArray(input?.height) ? input.height : [];
@@ -119,6 +120,21 @@ function solveQ16(input) {
   return bestLen === Infinity ? "" : s.slice(bestStart, bestStart + bestLen);
 }
 
+const WORLD0_WAVE1_IR_OVERRIDES = Object.freeze({
+  14: [
+    irStep("bootstrap", "init-window-state", "const last = new Map(); let left = 0; let best = 0", "declare"),
+    irStep("expand", "for-right", "for (let right = 0; right < s.length; right++)", "loop"),
+    irStep(
+      "shrink",
+      "advance-left-on-duplicate",
+      "const ch = s[right]; if (last.has(ch) && last.get(ch) >= left) left = last.get(ch) + 1",
+      "update"
+    ),
+    irStep("window-check", "record-window", "last.set(ch, right); best = Math.max(best, right - left + 1)", "branch"),
+    irStep("emit", "return-best", "return best", "return"),
+  ],
+});
+
 export const WAVE_1_PROBLEM_SPECS = [
   makeProblemSpec({
     questionId: 11,
@@ -194,10 +210,9 @@ export const WAVE_1_PROBLEM_SPECS = [
   }),
 ].map((spec) => ({
   ...spec,
-  ir: buildProblemIr(spec.templateId, spec.questionName),
+  ir: WORLD0_WAVE1_IR_OVERRIDES[spec.questionId] || buildProblemIr(spec.templateId, spec.questionName, spec.solve),
 }));
 
 export function createWave1Strategies() {
   return createStrategiesFromProblemSpecs(WAVE_1_PROBLEM_SPECS);
 }
-

@@ -496,7 +496,12 @@ export function createFirstTenStrategies() {
           irStep("update", "inc-freq", "freq.set(ch, (freq.get(ch) || 0) + 1)", "update"),
           irStep("loop", "for-t", "for (const ch of t)", "loop"),
           irStep("check", "missing-char", "if (!freq.has(ch)) return false", "branch"),
-          irStep("update", "dec-freq", "decrement count for ch and delete at zero", "update"),
+          irStep(
+            "update",
+            "dec-freq",
+            "const next = (freq.get(ch) || 0) - 1; if (next < 0) return false; if (next === 0) freq.delete(ch); else freq.set(ch, next)",
+            "update"
+          ),
           irStep("return", "ret-empty", "return freq.size === 0", "return"),
         ],
         solve: solveValidAnagram,
@@ -570,7 +575,7 @@ export function createFirstTenStrategies() {
           irStep("loop", "for-freq", "for (const [value, count] of freq)", "loop"),
           irStep("update", "push-bucket", "buckets[count].push(value)", "update"),
           irStep("loop", "walk-buckets", "for (let c = buckets.length - 1; c >= 0 && out.length < k; c--)", "loop"),
-          irStep("update", "collect-topk", "append bucket values until k items", "update"),
+          irStep("update", "collect-topk", "for (const value of buckets[c]) { out.push(value); if (out.length === k) break }", "update"),
           irStep("return", "ret-topk", "return out", "return"),
         ],
         solve: solveTopKFrequent,
@@ -621,7 +626,12 @@ export function createFirstTenStrategies() {
           irStep("setup", "init-decoded", "const decoded = []", "declare"),
           irStep("setup", "init-ptr", "let i = 0", "declare"),
           irStep("loop", "while-parse", "while (i < encoded.length)", "loop"),
-          irStep("update", "read-len", "read digits until '#', parse length", "update"),
+          irStep(
+            "update",
+            "read-len",
+            "let j = i; while (encoded[j] !== '#') j++; const len = Number(encoded.slice(i, j)); const start = j + 1; const end = start + len",
+            "update"
+          ),
           irStep("update", "slice-body", "decoded.push(encoded.slice(start, end)); i = end", "update"),
           irStep("return", "ret-decoded", "return decoded", "return"),
         ],
@@ -696,7 +706,12 @@ export function createFirstTenStrategies() {
           irStep("update", "init-lr", "let left = i + 1; let right = nums.length - 1", "update"),
           irStep("loop", "while-lr", "while (left < right)", "loop"),
           irStep("update", "calc-sum", "const sum = nums[i] + nums[left] + nums[right]", "compute"),
-          irStep("check", "sum-zero", "if (sum === 0) record triplet and skip duplicates", "branch"),
+          irStep(
+            "check",
+            "sum-zero",
+            "if (sum === 0) { out.push([nums[i], nums[left], nums[right]]); left += 1; right -= 1; while (left < right && nums[left] === nums[left - 1]) left++; while (left < right && nums[right] === nums[right + 1]) right-- }",
+            "branch"
+          ),
           irStep("check", "sum-neg", "else if (sum < 0) left++", "branch"),
           irStep("check", "sum-pos", "else right--", "branch"),
           irStep("return", "ret-out", "return out", "return"),

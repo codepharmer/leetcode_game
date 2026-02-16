@@ -1,6 +1,7 @@
 import { BACKTRACKING_TEMPLATE_ID, STACK_HEAP_TEMPLATE_ID, TREE_GRAPH_TEMPLATE_ID } from "../templates";
 import { buildProblemIr } from "./problemIr";
 import { createStrategiesFromProblemSpecs, makeProblemSpec } from "./problemStrategyBuilder";
+import { irStep } from "./shared";
 
 function arrayToTree(values) {
   if (!Array.isArray(values) || values.length === 0) return null;
@@ -525,6 +526,35 @@ function treeConstraints() {
   return { outputMode: "normalized", disallowTokens: [] };
 }
 
+const WORLD0_WAVE3_IR_OVERRIDES = Object.freeze({
+  33: [
+    irStep("base-case", "invert-base-case", "function invert(node) { if (!node) return null", "branch"),
+    irStep("branch", "invert-recurse-children", "const left = invert(node.left); const right = invert(node.right)", "loop"),
+    irStep("prune", "invert-leaf-noop", "if (left === null && right === null) { node.left = null; node.right = null }", "branch"),
+    irStep("traverse", "invert-swap-and-return", "node.left = right; node.right = left; return node }", "update"),
+    irStep("aggregate", "invert-run", "return treeToArray(invert(arrayToTree(input?.root || [])))", "return"),
+  ],
+  34: [
+    irStep("base-case", "depth-base-case", "function depth(node) { if (!node) return 0", "branch"),
+    irStep("branch", "depth-children", "const leftDepth = depth(node.left); const rightDepth = depth(node.right)", "loop"),
+    irStep("prune", "depth-left-dominant", "if (leftDepth > rightDepth) return leftDepth + 1", "branch"),
+    irStep("traverse", "depth-return-right", "return rightDepth + 1 }", "update"),
+    irStep("aggregate", "depth-run", "return depth(arrayToTree(input?.root || []))", "return"),
+  ],
+  38: [
+    irStep("base-case", "levelorder-init-root", "const root = arrayToTree(input?.root || []); if (!root) return []", "branch"),
+    irStep("branch", "levelorder-start-bfs", "const out = []; const queue = [root]; while (queue.length) { const size = queue.length; const level = []", "loop"),
+    irStep(
+      "prune",
+      "levelorder-read-level",
+      "for (let i = 0; i < size; i++) { const node = queue.shift(); level.push(node.val); if (node.left) queue.push(node.left); if (node.right) queue.push(node.right) }",
+      "branch"
+    ),
+    irStep("traverse", "levelorder-close-level", "out.push(level) }", "update"),
+    irStep("aggregate", "levelorder-return", "return out", "return"),
+  ],
+});
+
 export const WAVE_3_PROBLEM_SPECS = [
   makeProblemSpec({
     questionId: 33,
@@ -780,10 +810,9 @@ export const WAVE_3_PROBLEM_SPECS = [
   }),
 ].map((spec) => ({
   ...spec,
-  ir: buildProblemIr(spec.templateId, spec.questionName),
+  ir: WORLD0_WAVE3_IR_OVERRIDES[spec.questionId] || buildProblemIr(spec.templateId, spec.questionName, spec.solve),
 }));
 
 export function createWave3Strategies() {
   return createStrategiesFromProblemSpecs(WAVE_3_PROBLEM_SPECS);
 }
-

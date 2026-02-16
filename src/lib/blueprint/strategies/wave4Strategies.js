@@ -1,6 +1,7 @@
 import { TREE_GRAPH_TEMPLATE_ID } from "../templates";
 import { buildProblemIr } from "./problemIr";
 import { createStrategiesFromProblemSpecs, makeProblemSpec } from "./problemStrategyBuilder";
+import { irStep } from "./shared";
 
 function normalizePairList(values) {
   return [...(values || [])]
@@ -255,6 +256,63 @@ function solveQ61(input) {
   return out.length === indegree.size ? out.join("") : "";
 }
 
+const WORLD0_WAVE4_IR_OVERRIDES = Object.freeze({
+  54: [
+    irStep(
+      "base-case",
+      "islands-init-grid",
+      "const grid = Array.isArray(input?.grid) ? input.grid.map((row) => [...row]) : []; if (!grid.length || !grid[0]?.length) return 0",
+      "branch"
+    ),
+    irStep(
+      "branch",
+      "islands-init-state",
+      "const rows = grid.length; const cols = grid[0].length; const dirs = [[1, 0], [-1, 0], [0, 1], [0, -1]]; let islands = 0; function dfs(r, c) {",
+      "loop"
+    ),
+    irStep(
+      "prune",
+      "islands-prune-water",
+      "if (r < 0 || r >= rows || c < 0 || c >= cols || grid[r][c] !== '1') return",
+      "branch"
+    ),
+    irStep(
+      "traverse",
+      "islands-flood-fill-and-count",
+      "grid[r][c] = '0'; for (const [dr, dc] of dirs) dfs(r + dr, c + dc) }; for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) if (grid[r][c] === '1') { islands += 1; dfs(r, c) }",
+      "update"
+    ),
+    irStep("aggregate", "islands-return", "return islands", "return"),
+  ],
+  57: [
+    irStep(
+      "base-case",
+      "courses-init-input",
+      "const numCourses = Number(input?.numCourses || 0); const prerequisites = Array.isArray(input?.prerequisites) ? input.prerequisites : []",
+      "branch"
+    ),
+    irStep(
+      "branch",
+      "courses-build-graph",
+      "const indegree = new Array(numCourses).fill(0); const graph = Array.from({ length: numCourses }, () => []); for (const [course, prereq] of prerequisites) { graph[prereq].push(course); indegree[course] += 1 }",
+      "loop"
+    ),
+    irStep(
+      "prune",
+      "courses-seed-queue",
+      "const queue = []; for (let i = 0; i < numCourses; i++) if (indegree[i] === 0) queue.push(i)",
+      "branch"
+    ),
+    irStep(
+      "traverse",
+      "courses-kahn-traverse",
+      "let visited = 0; for (let i = 0; i < queue.length; i++) { const node = queue[i]; visited += 1; for (const nxt of graph[node]) { indegree[nxt] -= 1; if (indegree[nxt] === 0) queue.push(nxt) } }",
+      "update"
+    ),
+    irStep("aggregate", "courses-return", "return visited === numCourses", "return"),
+  ],
+});
+
 export const WAVE_4_PROBLEM_SPECS = [
   makeProblemSpec({
     questionId: 54,
@@ -354,10 +412,9 @@ export const WAVE_4_PROBLEM_SPECS = [
   }),
 ].map((spec) => ({
   ...spec,
-  ir: buildProblemIr(spec.templateId, spec.questionName),
+  ir: WORLD0_WAVE4_IR_OVERRIDES[spec.questionId] || buildProblemIr(spec.templateId, spec.questionName, spec.solve),
 }));
 
 export function createWave4Strategies() {
   return createStrategiesFromProblemSpecs(WAVE_4_PROBLEM_SPECS);
 }
-

@@ -1,6 +1,7 @@
 import { BINARY_SEARCH_TEMPLATE_ID, LINKED_LIST_TEMPLATE_ID, STACK_HEAP_TEMPLATE_ID } from "../templates";
 import { buildProblemIr } from "./problemIr";
 import { createStrategiesFromProblemSpecs, makeProblemSpec } from "./problemStrategyBuilder";
+import { irStep } from "./shared";
 
 function solveQ17(input) {
   const s = String(input?.s || "");
@@ -250,6 +251,66 @@ function linkedListConstraints() {
   return { outputMode: "linked-list-equivalent", disallowTokens: [] };
 }
 
+const WORLD0_WAVE2_IR_OVERRIDES = Object.freeze({
+  17: [
+    irStep("init-structure", "init-match-stack", "const match = { ')': '(', ']': '[', '}': '{' }; const stack = []", "declare"),
+    irStep("iterate", "scan-string", "for (const ch of s)", "loop"),
+    irStep("push-pop", "validate-closer", "if (match[ch]) { if (!stack.length || stack[stack.length - 1] !== match[ch]) return false }", "update"),
+    irStep("resolve", "consume-or-push", "if (match[ch]) stack.pop(); else stack.push(ch)", "branch"),
+    irStep("emit", "return-valid", "return stack.length === 0", "return"),
+  ],
+  21: [
+    irStep("bounds", "init-bounds", "let left = 0; let right = nums.length - 1", "declare"),
+    irStep("halve", "loop-binary", "while (left <= right)", "loop"),
+    irStep("move-bounds", "compute-mid", "const mid = (left + right) >> 1", "update"),
+    irStep(
+      "mid-check",
+      "mid-compare",
+      "if (nums[mid] === target) return mid; if (nums[mid] < target) left = mid + 1; else right = mid - 1",
+      "branch"
+    ),
+    irStep("emit", "return-miss", "return -1", "return"),
+  ],
+  27: [
+    irStep("anchors", "init-prev-cur", "let prev = null; let cur = head", "declare"),
+    irStep("walk", "walk-list", "while (cur)", "loop"),
+    irStep("relink", "reverse-pointer", "const next = cur.next; cur.next = prev; prev = cur; cur = next", "update"),
+    irStep("guard", "empty-list-check", "if (!head) return null", "branch"),
+    irStep("emit", "return-reversed", "return prev", "return"),
+  ],
+  28: [
+    irStep("anchors", "init-dummy", "const dummy = new ListNode(0); let tail = dummy", "declare"),
+    irStep("walk", "walk-both-lists", "while (list1 && list2)", "loop"),
+    irStep(
+      "relink",
+      "attach-smaller-node",
+      "if (list1.val <= list2.val) { tail.next = list1; list1 = list1.next } else { tail.next = list2; list2 = list2.next }; tail = tail.next",
+      "update"
+    ),
+    irStep("guard", "append-remainder", "tail.next = list1 || list2", "branch"),
+    irStep("emit", "return-merged", "return dummy.next", "return"),
+  ],
+  29: [
+    irStep("anchors", "init-fast-slow", "let slow = head; let fast = head", "declare"),
+    irStep("walk", "advance-while-possible", "while (fast && fast.next)", "loop"),
+    irStep("relink", "move-pointers", "slow = slow.next; fast = fast.next.next", "update"),
+    irStep("guard", "meeting-check", "if (slow === fast) return true", "branch"),
+    irStep("emit", "return-no-cycle", "return false", "return"),
+  ],
+  31: [
+    irStep("anchors", "init-dummy-pointers", "const dummy = new ListNode(0, head); let slow = dummy; let fast = dummy", "declare"),
+    irStep(
+      "walk",
+      "advance-gap-then-sync",
+      "for (let i = 0; i < n; i++) fast = fast.next; while (fast.next) { fast = fast.next; slow = slow.next }",
+      "loop"
+    ),
+    irStep("relink", "skip-target-node", "slow.next = slow.next.next", "update"),
+    irStep("guard", "single-node-case", "if (!dummy.next) return null", "branch"),
+    irStep("emit", "return-updated-head", "return dummy.next", "return"),
+  ],
+});
+
 export const WAVE_2_PROBLEM_SPECS = [
   makeProblemSpec({
     questionId: 17,
@@ -445,10 +506,9 @@ export const WAVE_2_PROBLEM_SPECS = [
   }),
 ].map((spec) => ({
   ...spec,
-  ir: buildProblemIr(spec.templateId, spec.questionName),
+  ir: WORLD0_WAVE2_IR_OVERRIDES[spec.questionId] || buildProblemIr(spec.templateId, spec.questionName, spec.solve),
 }));
 
 export function createWave2Strategies() {
   return createStrategiesFromProblemSpecs(WAVE_2_PROBLEM_SPECS);
 }
-

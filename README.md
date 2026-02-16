@@ -141,7 +141,7 @@ If unset, analytics events are emitted only to `console.debug` in local dev (non
 - Campaign includes a `World 0` primitive onboarding lane built from foundational existing levels before the main world track.
 - All `World 0` problems are open by default (no tier/stage gating inside that world).
 - `World 0` is excluded from daily challenge selection and from core-world unlock counting so existing unlock pacing remains stable.
-- `World 0` blueprint cards now avoid placeholder pseudocode/comment markers and ship concrete runnable code steps for each included challenge.
+- Blueprint cards now avoid placeholder pseudocode/comment markers across all levels and ship concrete runnable code steps from strategy solve implementations.
 
 ## Content Ownership
 

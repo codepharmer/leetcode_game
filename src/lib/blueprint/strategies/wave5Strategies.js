@@ -399,10 +399,9 @@ export const WAVE_5_PROBLEM_SPECS = [
   }),
 ].map((spec) => ({
   ...spec,
-  ir: buildProblemIr(spec.templateId, spec.questionName),
+  ir: buildProblemIr(spec.templateId, spec.questionName, spec.solve),
 }));
 
 export function createWave5Strategies() {
   return createStrategiesFromProblemSpecs(WAVE_5_PROBLEM_SPECS);
 }
-

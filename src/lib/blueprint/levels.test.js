@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { QUESTIONS } from "../questions";
+import { getBlueprintCampaign } from "./campaign";
 import { BLUEPRINT_LEVELS } from "./levels";
 
 describe("lib/blueprint/levels", () => {
@@ -59,6 +60,68 @@ describe("lib/blueprint/levels", () => {
     for (const level of autoLevels) {
       expect(level.cards.some((card) => /^(\/\/|#)/.test(String(card.text || "").trim()))).toBe(false);
       expect(level.cards.some((card) => /^\/\*[\s\S]*\*\/$/.test(String(card.text || "").trim()))).toBe(false);
+    }
+  });
+
+  it("keeps World 0 solution cards free of placeholder pseudocode and inline comment markers", () => {
+    const world0 = getBlueprintCampaign({}).worlds.find((world) => world.id === 0);
+    expect(world0).toBeTruthy();
+
+    const badPatterns = [
+      /(^|\s)#/,
+      /\bwindow invalid\b/i,
+      /\bwindow valid\b/i,
+      /\bupdate best answer\b/i,
+      /\breturn answer\b/i,
+      /\btransformedHead\b/i,
+      /\baggregatedResult\b/i,
+      /\bstack\/heap\b/i,
+      /\bfor\s+right\s*=\s*0\s*\.\.\s*end\b/i,
+    ];
+
+    for (const levelId of world0?.levelIds || []) {
+      const level = BLUEPRINT_LEVELS.find((item) => String(item.id) === String(levelId));
+      expect(level).toBeTruthy();
+      for (const card of level?.cards || []) {
+        expect(badPatterns.some((pattern) => pattern.test(String(card.text || "")))).toBe(false);
+      }
+    }
+  });
+
+  it("keeps all level solution cards free of pseudocode placeholders and inline comment markers", () => {
+    const badPatterns = [
+      /(^|\s)#/,
+      /\bwindow invalid\b/i,
+      /\bwindow valid\b/i,
+      /\bupdate best answer\b/i,
+      /\breturn answer\b/i,
+      /\btransformedHead\b/i,
+      /\baggregatedResult\b/i,
+      /\bstack\/heap\b/i,
+      /\bfor\s+right\s*=\s*0\s*\.\.\s*end\b/i,
+      /\bappend .* until\b/i,
+      /\bread digits until\b/i,
+      /\bdecrement count\b/i,
+      /\brecord triplet\b/i,
+      /\bskip duplicates\b/i,
+      /\bbased on\b/i,
+      /\binvariant\b/i,
+      /\bstate transitions\b/i,
+      /\bprior subproblems\b/i,
+      /\bbest\(dp\[subproblem\]\s*\+\s*cost\)/i,
+      /\binitialize dp base cases\b/i,
+      /\bfor each state\b/i,
+      /\bfor each item in input\b/i,
+      /\bcheck invariant\b/i,
+      /\bcollect solution\b/i,
+      /\bchoices\(state\)\b/i,
+    ];
+
+    for (const level of BLUEPRINT_LEVELS) {
+      for (const card of level.cards || []) {
+        if (!card.correctSlot) continue;
+        expect(badPatterns.some((pattern) => pattern.test(String(card.text || "")))).toBe(false);
+      }
     }
   });
 
