@@ -243,7 +243,7 @@ describe("screens/BlueprintScreen", () => {
     fireEvent.click(screen.getByRole("button", { name: /Two Sum/i }));
 
     const deckCardsBefore = screen.getAllByTestId(/blueprint-deck-card-/);
-    const draggedCard = deckCardsBefore[0];
+    const draggedCard = screen.getAllByTestId(/blueprint-deck-drag-surface-/)[0];
     const targetSlot = screen.getAllByTestId(/blueprint-slot-/)[0];
 
     const dataTransfer = {
@@ -274,7 +274,7 @@ describe("screens/BlueprintScreen", () => {
     const slots = screen.getAllByTestId(/blueprint-slot-/);
     const sourceSlot = slots[0];
     const targetSlot = slots[1];
-    const deckCard = screen.getAllByTestId(/blueprint-deck-card-/)[0];
+    const deckCard = screen.getAllByTestId(/blueprint-deck-drag-surface-/)[0];
 
     const firstTransfer = {
       data: {},
@@ -370,7 +370,7 @@ describe("screens/BlueprintScreen", () => {
     fireEvent.click(screen.getByRole("button", { name: /Two Sum/i }));
 
     const deckCardsBefore = screen.getAllByTestId(/blueprint-deck-card-/);
-    const draggedCard = deckCardsBefore[0];
+    const draggedCard = screen.getAllByTestId(/blueprint-deck-drag-surface-/)[0];
     const targetSlot = screen.getAllByTestId(/blueprint-slot-/)[0];
 
     const originalElementFromPoint = document.elementFromPoint;
@@ -424,7 +424,7 @@ describe("screens/BlueprintScreen", () => {
     const slots = screen.getAllByTestId(/blueprint-slot-/);
     const sourceSlot = slots[0];
     const targetSlot = slots[1];
-    const deckCard = screen.getAllByTestId(/blueprint-deck-card-/)[0];
+    const deckCard = screen.getAllByTestId(/blueprint-deck-drag-surface-/)[0];
 
     const originalElementFromPoint = document.elementFromPoint;
     const elementFromPointMock = vi.fn(() => sourceSlot);

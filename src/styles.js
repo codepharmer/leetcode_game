@@ -693,12 +693,22 @@ export const S = {
   blueprintDeckCard: {
     ...CARD,
     borderRadius: 10,
-    padding: "10px 34px 10px 12px",
+    padding: 0,
     width: "100%",
     position: "relative",
+    overflow: "hidden",
     cursor: "pointer",
     textAlign: "left",
     transition: "border-color 0.15s ease",
+  },
+  blueprintDeckDragSurface: {
+    padding: "10px 34px 10px 12px",
+    display: "flex",
+    flexDirection: "column",
+    gap: 8,
+    width: "100%",
+    minHeight: "100%",
+    touchAction: "none",
   },
   blueprintDeckScrollLane: {
     position: "absolute",
@@ -739,7 +749,7 @@ export const S = {
   blueprintHintBtn: {
     position: "absolute",
     top: 6,
-    right: 6,
+    right: 22,
     border: `1px solid ${C.border}`,
     background: C.surface2,
     color: C.dim,

@@ -192,14 +192,11 @@ export function BlueprintGame({
     return placed;
   };
 
-  const handleTouchDragStart = (event, card, slotId = null, allowDeckScrollLane = false) => {
+  const handleTouchDragStart = (event, card, slotId = null) => {
     if (event.pointerType !== "touch" || phase !== "build") return;
     if (slotId && !isSlotInteractive(slotId)) return;
-    const fromScrollLane = allowDeckScrollLane
-      && event?.target?.closest?.("[data-blueprint-scroll-lane='true']");
     const fromHintButton = event?.target?.closest?.("[data-blueprint-hint-btn='true']");
     if (fromHintButton) return;
-    if (fromScrollLane) return;
     touchDragRef.current = {
       pointerId: event.pointerId,
       cardId: card.id,
@@ -618,18 +615,26 @@ export function BlueprintGame({
                       draggable={phase === "build"}
                       onDragStart={(event) => handleDesktopDragStart(event, card.id)}
                       onDragEnd={clearDragState}
-                      onPointerDown={(event) => handleTouchDragStart(event, card, null, true)}
-                      onPointerMove={(event) => handleTouchDragMove(event, card.id)}
-                      onPointerUp={(event) => handleTouchDragEnd(event, card.id)}
-                      onPointerCancel={(event) => handleTouchDragCancel(event, card.id)}
-                      onClick={() => handleDeckCardClick(card)}
                       style={{
                         ...S.blueprintDeckCard,
                         borderColor: isSelected ? "var(--accent)" : "var(--border)",
                         background: isSelected ? "rgba(16, 185, 129, 0.1)" : "var(--surface-1)",
-                        touchAction: "pan-y",
                       }}
                     >
+                      <div
+                        data-testid={`blueprint-deck-drag-surface-${card.id}`}
+                        onPointerDown={(event) => handleTouchDragStart(event, card)}
+                        onPointerMove={(event) => handleTouchDragMove(event, card.id)}
+                        onPointerUp={(event) => handleTouchDragEnd(event, card.id)}
+                        onPointerCancel={(event) => handleTouchDragCancel(event, card.id)}
+                        onClick={() => handleDeckCardClick(card)}
+                        style={S.blueprintDeckDragSurface}
+                      >
+                        <pre style={S.blueprintCardCode}>{card.text}</pre>
+                        {hintsMode !== "none" && showHint === card.id ? (
+                          <div style={S.blueprintHintBubble}>{buildHintMessage(card, hintsMode)}</div>
+                        ) : null}
+                      </div>
                       <span
                         data-testid={`blueprint-deck-scroll-lane-${card.id}`}
                         data-blueprint-scroll-lane="true"
@@ -639,7 +644,6 @@ export function BlueprintGame({
                       >
                         |||
                       </span>
-                      <pre style={S.blueprintCardCode}>{card.text}</pre>
                       {hintsMode !== "none" ? (
                         <span
                           role="button"
@@ -660,9 +664,6 @@ export function BlueprintGame({
                         >
                           ?
                         </span>
-                      ) : null}
-                      {hintsMode !== "none" && showHint === card.id ? (
-                        <div style={S.blueprintHintBubble}>{buildHintMessage(card, hintsMode)}</div>
                       ) : null}
                     </button>
                   );
