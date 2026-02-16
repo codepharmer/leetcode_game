@@ -293,12 +293,15 @@ export function BlueprintGame({
   const handleDesktopDragStart = (event, cardId, slotId = null) => {
     if (phase !== "build") return;
     if (slotId && !isSlotInteractive(slotId)) return;
+    const normalizedCardId = String(cardId || "");
     if (event.dataTransfer) {
-      event.dataTransfer.setData("text/plain", cardId);
+      event.dataTransfer.setData("text/plain", normalizedCardId);
+      event.dataTransfer.setData("text", normalizedCardId);
+      event.dataTransfer.setData("application/x-blueprint-card-id", normalizedCardId);
       event.dataTransfer.effectAllowed = "move";
     }
     clearDependencyWarning();
-    setDraggingCardId(cardId);
+    setDraggingCardId(normalizedCardId);
   };
 
   const handleSlotRowClick = (slotId, hasCards) => {
@@ -425,10 +428,11 @@ export function BlueprintGame({
                   onClick={() => handleSlotRowClick(slotId, hasCards)}
                   onDragOver={(event) => {
                     if (!slotInteractive) return;
-                    const cardId = getDraggedCardId(event);
-                    if (!canPlaceCardInSlot(cardId, slotId)) return;
                     event.preventDefault();
-                    if (event.dataTransfer) event.dataTransfer.dropEffect = "move";
+                    const cardId = getDraggedCardId(event);
+                    const canDropCardHere = canPlaceCardInSlot(cardId, slotId);
+                    if (event.dataTransfer) event.dataTransfer.dropEffect = canDropCardHere ? "move" : "none";
+                    if (!canDropCardHere) return;
                     setDragOverSlotId(slotId);
                     previewPlacementWarning(cardId, slotId);
                   }}
@@ -438,9 +442,9 @@ export function BlueprintGame({
                   }}
                   onDrop={(event) => {
                     if (!slotInteractive) return;
+                    event.preventDefault();
                     const cardId = getDraggedCardId(event);
                     if (!canPlaceCardInSlot(cardId, slotId)) return;
-                    event.preventDefault();
                     placeCardInSlotWithFeedback(cardId, slotId, true);
                     clearDragState();
                     clearDependencyWarning();
@@ -609,10 +613,6 @@ export function BlueprintGame({
                       draggable={phase === "build"}
                       onDragStart={(event) => handleDesktopDragStart(event, card.id)}
                       onDragEnd={clearDragState}
-                      onPointerDown={(event) => handleTouchDragStart(event, card)}
-                      onPointerMove={(event) => handleTouchDragMove(event, card.id)}
-                      onPointerUp={(event) => handleTouchDragEnd(event, card.id)}
-                      onPointerCancel={(event) => handleTouchDragCancel(event, card.id)}
                       onClick={() => handleDeckCardClick(card)}
                       style={{
                         ...S.blueprintDeckCard,
@@ -621,6 +621,30 @@ export function BlueprintGame({
                         touchAction: "pan-y",
                       }}
                     >
+                      <span
+                        data-testid={`blueprint-deck-drag-handle-${card.id}`}
+                        aria-hidden="true"
+                        onPointerDown={(event) => {
+                          event.stopPropagation();
+                          handleTouchDragStart(event, card);
+                        }}
+                        onPointerMove={(event) => {
+                          event.stopPropagation();
+                          handleTouchDragMove(event, card.id);
+                        }}
+                        onPointerUp={(event) => {
+                          event.stopPropagation();
+                          handleTouchDragEnd(event, card.id);
+                        }}
+                        onPointerCancel={(event) => {
+                          event.stopPropagation();
+                          handleTouchDragCancel(event, card.id);
+                        }}
+                        onClick={(event) => event.stopPropagation()}
+                        style={S.blueprintDeckDragHandle}
+                      >
+                        ::
+                      </span>
                       <pre style={S.blueprintCardCode}>{card.text}</pre>
                       {hintsMode !== "none" ? (
                         <span

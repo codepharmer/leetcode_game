@@ -274,8 +274,10 @@ export function useBlueprintGameSession({ level, challenge }) {
   };
 
   const getDraggedCardId = (event) => {
-    const fromTransfer = event?.dataTransfer?.getData("text/plain");
-    return fromTransfer || draggingCardId || "";
+    const fromTransfer = event?.dataTransfer?.getData("application/x-blueprint-card-id")
+      || event?.dataTransfer?.getData("text/plain")
+      || event?.dataTransfer?.getData("text");
+    return String(fromTransfer || draggingCardId || "").trim();
   };
 
   const clearDragState = () => {
