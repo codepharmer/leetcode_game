@@ -46,3 +46,51 @@ export function groupItemsByPattern(items, difficultyFilter) {
 
   return grouped;
 }
+
+function toSafeTimestamp(value) {
+  const ts = Math.floor(Number(value));
+  if (!Number.isFinite(ts) || ts <= 0) return 0;
+  return ts;
+}
+
+function toSafeLimit(value) {
+  const limit = Math.floor(Number(value));
+  if (!Number.isFinite(limit) || limit <= 0) return Infinity;
+  return limit;
+}
+
+export function selectIncorrectAttempts(meta, options = {}) {
+  const entries = Array.isArray(meta?.attemptEvents) ? meta.attemptEvents : [];
+  const gameTypeFilter = typeof options.gameType === "string" && options.gameType ? options.gameType : null;
+  const limit = toSafeLimit(options.limit);
+
+  return entries
+    .filter((entry) => {
+      if (!entry || typeof entry !== "object") return false;
+      if (entry.correct === true) return false;
+      if (gameTypeFilter && entry.gameType !== gameTypeFilter) return false;
+      return true;
+    })
+    .sort((a, b) => toSafeTimestamp(b.ts) - toSafeTimestamp(a.ts))
+    .slice(0, limit);
+}
+
+export function selectAccuracyTrend(meta, options = {}) {
+  const entries = Array.isArray(meta?.roundSnapshots) ? meta.roundSnapshots : [];
+  const gameTypeFilter = typeof options.gameType === "string" && options.gameType ? options.gameType : null;
+
+  return entries
+    .filter((entry) => {
+      if (!entry || typeof entry !== "object") return false;
+      if (gameTypeFilter && entry.gameType !== gameTypeFilter) return false;
+      return Number(entry.answered || 0) > 0;
+    })
+    .map((entry) => ({
+      ts: toSafeTimestamp(entry.ts),
+      gameType: String(entry.gameType || ""),
+      answered: Math.max(0, Math.floor(Number(entry.answered || 0))),
+      correct: Math.max(0, Math.floor(Number(entry.correct || 0))),
+      pct: Math.max(0, Math.min(100, Math.round(Number(entry.pct || 0)))),
+    }))
+    .sort((a, b) => a.ts - b.ts);
+}

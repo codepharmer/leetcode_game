@@ -28,6 +28,8 @@ export function PlayScreen({
   if (!currentItem) return null;
 
   const isCodePrompt = currentItem.promptKind === "code";
+  const description = typeof currentItem.desc === "string" ? currentItem.desc.trim() : "";
+  const hasDescription = description.length > 0;
 
   return (
     <div style={S.playContainer}>
@@ -68,7 +70,11 @@ export function PlayScreen({
               <span style={S.descHotkey}>D</span>
             </button>
 
-            {showDesc && <div style={{ ...S.descBox, animation: "descReveal 0.25s ease-out" }}>{currentItem.desc}</div>}
+            {showDesc && (
+              <div style={{ ...S.descBox, animation: "descReveal 0.25s ease-out" }}>
+                {hasDescription ? description : "Description unavailable for this prompt."}
+              </div>
+            )}
           </>
         )}
 

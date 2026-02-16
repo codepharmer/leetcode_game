@@ -522,11 +522,83 @@ function NeedsWorkSection({ needsWork }) {
   );
 }
 
-function SecondaryActions({ supportsBrowse, supportsTemplates, goBrowse, goTemplates }) {
-  if (!supportsBrowse && !supportsTemplates) return null;
+function AccuracyTrendSection({ trendPoints = [] }) {
+  const points = Array.isArray(trendPoints) ? trendPoints.slice(-20) : [];
+  const width = 300;
+  const height = 112;
+  const pad = 12;
+
+  if (points.length === 0) {
+    return (
+      <div style={{ ...S.card, animation: "fadeSlideIn 0.5s ease 0.32s both" }}>
+        <div style={S.sectionLabel}>accuracy trend</div>
+        <div style={{ fontSize: 13, color: "var(--dim)", lineHeight: 1.5 }}>
+          Play a few rounds to unlock your trend chart.
+        </div>
+      </div>
+    );
+  }
+
+  const maxIndex = Math.max(1, points.length - 1);
+  const coords = points.map((point, index) => {
+    const x = pad + (index / maxIndex) * (width - pad * 2);
+    const y = pad + ((100 - Number(point.pct || 0)) / 100) * (height - pad * 2);
+    return {
+      x: Math.max(pad, Math.min(width - pad, x)),
+      y: Math.max(pad, Math.min(height - pad, y)),
+      pct: Math.max(0, Math.min(100, Number(point.pct || 0))),
+    };
+  });
+
+  const path = coords.map((coord, index) => `${index === 0 ? "M" : "L"} ${coord.x} ${coord.y}`).join(" ");
+  const latest = coords[coords.length - 1];
+
+  return (
+    <div style={{ ...S.card, animation: "fadeSlideIn 0.5s ease 0.32s both" }}>
+      <div style={{ ...S.sectionLabel, marginBottom: 10 }}>accuracy trend</div>
+      <div
+        style={{
+          fontFamily: "'DM Mono', monospace",
+          fontSize: 11.5,
+          color: "var(--faint)",
+          marginBottom: 8,
+        }}
+      >
+        last {points.length} rounds latest: {Math.round(latest.pct)}%
+      </div>
+      <svg
+        data-testid="accuracy-trend-chart"
+        viewBox={`0 0 ${width} ${height}`}
+        role="img"
+        aria-label="Accuracy trend chart"
+        style={{ width: "100%", display: "block" }}
+      >
+        <rect x="0" y="0" width={width} height={height} rx="12" fill="var(--surface-2)" stroke="var(--border)" />
+        <path d={path} fill="none" stroke="var(--accent)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+        {coords.map((coord, index) => (
+          <circle
+            key={`${coord.x}-${coord.y}-${index}`}
+            cx={coord.x}
+            cy={coord.y}
+            r={index === coords.length - 1 ? 3.6 : 2.6}
+            fill={index === coords.length - 1 ? "var(--accent)" : "var(--text)"}
+          />
+        ))}
+      </svg>
+    </div>
+  );
+}
+
+function SecondaryActions({ supportsBrowse, supportsTemplates, goBrowse, goTemplates, goReview }) {
+  if (!supportsBrowse && !supportsTemplates && typeof goReview !== "function") return null;
 
   return (
     <div style={{ display: "flex", gap: 10, justifyContent: "center", animation: "fadeSlideIn 0.5s ease 0.5s both" }}>
+      {typeof goReview === "function" && (
+        <button onClick={goReview} style={S.browseBtn}>
+          review mistakes
+        </button>
+      )}
       {supportsBrowse && (
         <button onClick={goBrowse} style={S.browseBtn}>
           browse patterns
@@ -589,6 +661,7 @@ export function MenuScreen({
   startGame,
   goBrowse,
   goTemplates,
+  goReview = null,
   supportsBrowse = true,
   supportsTemplates = true,
   supportsDifficultyFilter = true,
@@ -601,6 +674,7 @@ export function MenuScreen({
   blueprintCampaignPreview = null,
   onOpenBlueprintDaily = () => {},
   onOpenBlueprintWorld = () => {},
+  accuracyTrend = [],
   startLabel = "",
 }) {
   const [showRoundSettings, setShowRoundSettings] = useState(false);
@@ -704,12 +778,14 @@ export function MenuScreen({
         <StartSection startGame={startGame} startLabel={resolvedStartLabel} />
 
         <NeedsWorkSection needsWork={needsWork} />
+        {!isBlueprintMode && <AccuracyTrendSection trendPoints={accuracyTrend} />}
 
         <SecondaryActions
           supportsBrowse={supportsBrowse}
           supportsTemplates={supportsTemplates}
           goBrowse={goBrowse}
           goTemplates={goTemplates}
+          goReview={isBlueprintMode ? null : goReview}
         />
 
         <DangerZone

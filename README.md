@@ -35,6 +35,10 @@ Maps code snippets/templates to the pattern they represent, using confusion-awar
 Mobile play view keeps code prompts full-width with horizontal scrolling to avoid left/right clipping on small screens.
 Template rounds reset the viewport to the top when advancing with `next`, matching question-mode navigation flow.
 
+Both quiz modes now feed a persistent post-round review loop:
+- Incorrect attempts are stored in mode metadata and viewable in a dedicated `/review` route.
+- Menu includes a lower-page accuracy trend chart sourced from per-round snapshots.
+
 3. `blueprint builder`
 Card-based algorithm assembly mode with worlds, tiers, daily challenge, adaptive validation (test-run when executable, dependency-aware structural fallback otherwise), execution traces, hints, and star ratings.
 Solve flow now auto-selects by problem size: `flat` mode for `<= 10` required blueprint slots (existing all-at-once run flow), and `phased` mode for `> 10` required slots (one phase active at a time with per-phase checks, phase locking, and immediate completion on final phase success).
@@ -104,11 +108,13 @@ Base URL for the storage/session API (Lambda Function URL or equivalent).
 - Canonical blueprint families/contracts live in `src/lib/blueprint/taxonomy.js` and `src/lib/blueprint/contracts.js`.
 - `src/lib/content/registry.js` is the composed, single-source read model used by game-mode wiring.
 - Progress is stored per game mode (`question`, `template`, `blueprint`) with schema normalization/versioning.
+- Quiz-mode metadata includes bounded `attemptEvents` (for incorrect review history) and `roundSnapshots` (for trend charts).
 
 3. Persistence:
 - Local: browser `localStorage`.
 - Optional cloud: Lambda Function URL + S3 per-user object storage.
 - Merge logic preserves both local and cloud progress across sign-in transitions.
+- In-progress round snapshots are dual-written to `localStorage` and `sessionStorage`, with lifecycle flushes on `visibilitychange` and `pagehide` for stronger resume reliability.
 
 4. Blueprint generation:
 - All 87 questions use strategy-driven generation with semantic verification.
@@ -249,7 +255,7 @@ Route53 alias record for legacy domain.
 React mount + `BrowserRouter` + `GoogleOAuthProvider`.
 
 - `src/App.jsx`
-Main app orchestrator: route wiring, mode selection, progress state, round persistence, auth/sync integration, route-settings consumption from URL, and blueprint quick-start routing (`Jump In` / `Continue Challenge`).
+Main app orchestrator: route wiring (including quiz review route), mode selection, progress state, round persistence, auth/sync integration, route-settings consumption from URL, quiz meta capture (`attemptEvents`/`roundSnapshots`), and blueprint quick-start routing (`Jump In` / `Continue Challenge`).
 
 - `src/global.css`
 Global theme vars, base element styling, animation keyframes, shared interaction classes.
@@ -258,7 +264,7 @@ Global theme vars, base element styling, animation keyframes, shared interaction
 Central style object used by all screens/components.
 
 - `src/test/setup.js`
-Vitest DOM setup (`jest-dom`), per-test cleanup and localStorage reset.
+Vitest DOM setup (`jest-dom`), per-test cleanup and local/session storage reset.
 
 ### `src/components`
 
@@ -318,10 +324,10 @@ Single-source composed content read model (`question -> pattern`, `template -> p
 Shuffle and option generation helpers.
 
 - `src/lib/selectors.js`
-Derived metrics (round pct, lifetime pct, weak spots, mastery, grouping).
+Derived metrics (round pct, lifetime pct, weak spots, mastery, grouping) plus incorrect-attempt and accuracy-trend selectors.
 
 - `src/lib/progressModel.js`
-Progress schema/version handling and per-mode getters/setters.
+Progress schema/version handling and per-mode getters/setters, including normalized/capped `meta.attemptEvents` and `meta.roundSnapshots`.
 
 - `src/lib/progressMerge.js`
 Conflict-safe local/cloud merge logic.
@@ -333,7 +339,7 @@ Storage adapters (local and API) plus read/write helpers.
 JWT decode helpers and token-to-user mapping.
 
 - `src/lib/roundSession.js`
-`sessionStorage` save/load/clear for in-progress rounds.
+Dual-store (`localStorage` + `sessionStorage`) save/load/clear for in-progress rounds, with snapshot metadata (`savedAt`, `schemaVersion`).
 
 ### `src/lib/blueprint`
 
@@ -380,14 +386,18 @@ Card dependency analysis and drag-preview warnings, including runtime helper all
 
 - `src/screens/MenuScreen.jsx`
 Main menu with a top-level segmented mode selector (`Match`, `Template`, `Build`) and dynamic helper copy, plus contextual progress stats, quiz round settings, blueprint campaign preview, auth entry, and launch actions.
+For quiz modes, menu also includes a secondary `review mistakes` entry and a lower-page accuracy trend card sourced from mode metadata.
 In blueprint mode, the primary CTA label is provided by app state (`Jump In`, `Continue Challenge`, or `Open Campaign Map`) so players can resume directly.
 For `blueprint builder`, the menu progress card derives `levels`, `stars`, `worlds`, and `mastered` values from `byGameType.blueprint_builder.meta.levelStars` plus campaign world completion, instead of quiz history counters.
 
 - `src/screens/PlayScreen.jsx`
-Question/snippet gameplay screen.
+Question/snippet gameplay screen with robust `KeyD` description hotkey handling and a missing-description fallback message.
 
 - `src/screens/ResultsScreen.jsx`
 Round results summary with expandable per-item review.
+
+- `src/screens/ReviewScreen.jsx`
+Dedicated incorrect-attempt review route (`/review`) backed by persisted quiz attempt metadata.
 
 - `src/screens/BrowseScreen.jsx`
 Pattern browser with difficulty filters.
@@ -474,6 +484,9 @@ Progress schema normalization.
 - `src/lib/selectors.test.js`
 Derived metrics/grouping helpers.
 
+- `src/lib/roundSession.test.js`
+Round snapshot dual-storage persistence and restore behavior.
+
 - `src/lib/storage.test.js`
 Local/API storage adapter behavior.
 
@@ -509,6 +522,9 @@ Play screen behavior for question/code prompts.
 
 - `src/screens/ResultsScreen.test.jsx`
 Results expansion and review content.
+
+- `src/screens/ReviewScreen.test.jsx`
+Incorrect-attempt review route behavior and empty state.
 
 - `src/screens/TemplatesScreen.test.jsx`
 Template screen render/back behavior.
@@ -643,7 +659,7 @@ Backend changes should mostly stay inside `src/lib/storage.js`.
 `src/lib/progressMerge.js` is critical for avoiding data loss.
 
 9. Keep round-resume behavior intact.
-`src/lib/roundSession.js` improves UX and should remain compatible.
+`src/lib/roundSession.js` improves UX and should remain compatible (dual-store snapshots + lifecycle flushes).
 
 10. Keep blueprint semantic gate + fallback model.
 Verified strategies first; fallback remains explicit opt-in only for development recovery.

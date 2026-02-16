@@ -11,6 +11,7 @@ export const MODES = {
   MENU: "menu",
   PLAY: "play",
   RESULTS: "results",
+  REVIEW: "review",
   BROWSE: "browse",
   TEMPLATES: "templates",
   BLUEPRINT: "blueprint",

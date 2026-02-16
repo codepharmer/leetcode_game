@@ -120,6 +120,11 @@ describe("hooks/useGameSession", () => {
     expect(result.current.showDesc).toBe(true);
 
     act(() => {
+      window.dispatchEvent(new KeyboardEvent("keydown", { key: "x", code: "KeyD" }));
+    });
+    expect(result.current.showDesc).toBe(false);
+
+    act(() => {
       window.dispatchEvent(new KeyboardEvent("keydown", { key: "1" }));
     });
     expect(result.current.selected).toBe("Hash Map");

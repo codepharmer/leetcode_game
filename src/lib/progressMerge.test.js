@@ -64,4 +64,33 @@ describe("lib/progressMerge", () => {
     expect(merged.mergedProgress.byGameType[GAME_TYPES.BLUEPRINT_BUILDER].meta.levelStars["1"]).toBe(2);
     expect(merged.mergedProgress.byGameType[GAME_TYPES.BLUEPRINT_BUILDER].meta.levelStars["2"]).toBe(3);
   });
+
+  it("merges and deduplicates attempt events and round snapshots", () => {
+    const remote = createDefaultProgress();
+    const local = createDefaultProgress();
+    remote.byGameType[GAME_TYPES.QUESTION_TO_PATTERN].meta = {
+      attemptEvents: [
+        { ts: 100, gameType: GAME_TYPES.QUESTION_TO_PATTERN, itemId: "q1", chosen: "DFS", pattern: "Hash Map", correct: false },
+      ],
+      roundSnapshots: [{ ts: 100, gameType: GAME_TYPES.QUESTION_TO_PATTERN, answered: 10, correct: 6, pct: 60 }],
+    };
+    local.byGameType[GAME_TYPES.QUESTION_TO_PATTERN].meta = {
+      attemptEvents: [
+        { ts: 100, gameType: GAME_TYPES.QUESTION_TO_PATTERN, itemId: "q1", chosen: "DFS", pattern: "Hash Map", correct: false },
+        { ts: 120, gameType: GAME_TYPES.QUESTION_TO_PATTERN, itemId: "q2", chosen: "BFS", pattern: "DFS", correct: false },
+      ],
+      roundSnapshots: [
+        { ts: 100, gameType: GAME_TYPES.QUESTION_TO_PATTERN, answered: 10, correct: 6, pct: 60 },
+        { ts: 120, gameType: GAME_TYPES.QUESTION_TO_PATTERN, answered: 10, correct: 7, pct: 70 },
+      ],
+    };
+
+    const merged = mergeProgressData(remote, local);
+    const meta = merged.mergedProgress.byGameType[GAME_TYPES.QUESTION_TO_PATTERN].meta;
+
+    expect(meta.attemptEvents).toHaveLength(2);
+    expect(meta.roundSnapshots).toHaveLength(2);
+    expect(meta.attemptEvents.map((entry) => entry.itemId)).toEqual(["q1", "q2"]);
+    expect(meta.roundSnapshots.map((entry) => entry.pct)).toEqual([60, 70]);
+  });
 });

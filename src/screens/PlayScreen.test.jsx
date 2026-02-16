@@ -70,4 +70,16 @@ describe("screens/PlayScreen", () => {
     const { container } = render(<PlayScreen {...baseProps} currentItem={null} />);
     expect(container).toBeEmptyDOMElement();
   });
+
+  it("shows a fallback when description is missing", () => {
+    render(
+      <PlayScreen
+        {...baseProps}
+        showDesc
+        currentItem={{ id: "q2", title: "Question 2", pattern: "DFS", difficulty: "Easy", promptKind: "question", desc: "   " }}
+      />
+    );
+
+    expect(screen.getByText("Description unavailable for this prompt.")).toBeInTheDocument();
+  });
 });

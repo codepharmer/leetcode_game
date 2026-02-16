@@ -5,7 +5,15 @@ import { GAME_TYPES, MODES } from "./lib/constants";
 import { getBlueprintCampaign } from "./lib/blueprint/campaign";
 import { GAME_TYPE_OPTIONS, getGameTypeConfig } from "./lib/gameContent";
 import { createDefaultProgress, getModeProgress, setModeProgress } from "./lib/progressModel";
-import { calcLifetimePct, calcRoundPct, getMasteredCount, getWeakSpots, groupItemsByPattern } from "./lib/selectors";
+import {
+  calcLifetimePct,
+  calcRoundPct,
+  getMasteredCount,
+  getWeakSpots,
+  groupItemsByPattern,
+  selectAccuracyTrend,
+  selectIncorrectAttempts,
+} from "./lib/selectors";
 import {
   buildBlueprintChallengePath,
   buildBlueprintDailyPath,
@@ -25,6 +33,7 @@ import { BlueprintScreen } from "./screens/BlueprintScreen";
 import { BrowseScreen } from "./screens/BrowseScreen";
 import { MenuScreen } from "./screens/MenuScreen";
 import { PlayScreen } from "./screens/PlayScreen";
+import { ReviewScreen } from "./screens/ReviewScreen";
 import { ResultsScreen } from "./screens/ResultsScreen";
 import { TemplatesScreen } from "./screens/TemplatesScreen";
 
@@ -55,6 +64,57 @@ function findNextBlueprintChallenge(campaign, levelStars) {
   }
 
   return null;
+}
+
+function toSafeTimestamp(value, fallback) {
+  const ts = Math.floor(Number(value));
+  if (!Number.isFinite(ts) || ts <= 0) return fallback;
+  return ts;
+}
+
+function buildRoundMetaUpdate(prevMeta, gameType, roundResults) {
+  const safeResults = Array.isArray(roundResults) ? roundResults.filter(Boolean) : [];
+  if (safeResults.length === 0) return prevMeta || {};
+
+  const now = Date.now();
+  const priorMeta = prevMeta && typeof prevMeta === "object" ? prevMeta : {};
+  const priorAttemptEvents = Array.isArray(priorMeta.attemptEvents) ? priorMeta.attemptEvents : [];
+  const priorRoundSnapshots = Array.isArray(priorMeta.roundSnapshots) ? priorMeta.roundSnapshots : [];
+
+  const attemptEvents = safeResults.map((result, index) => {
+    const item = result?.item || result?.question || {};
+    const sourceLeetcodeId = Number(item.sourceLeetcodeId);
+    const event = {
+      ts: now + index,
+      gameType,
+      itemId: String(item.id || ""),
+      title: String(item.title || item.name || item.id || ""),
+      chosen: typeof result?.chosen === "string" ? result.chosen : "",
+      pattern: typeof item.pattern === "string" ? item.pattern : "",
+      correct: result?.correct === true,
+    };
+    if (Number.isInteger(sourceLeetcodeId) && sourceLeetcodeId > 0) {
+      event.sourceLeetcodeId = sourceLeetcodeId;
+    }
+    return event;
+  });
+
+  const correct = safeResults.reduce((count, result) => count + (result?.correct === true ? 1 : 0), 0);
+  const answered = safeResults.length;
+  const pct = answered > 0 ? Math.round((correct / answered) * 100) : 0;
+  const roundSnapshot = {
+    ts: toSafeTimestamp(now, now),
+    gameType,
+    answered,
+    correct,
+    pct,
+  };
+
+  return {
+    ...priorMeta,
+    attemptEvents: [...priorAttemptEvents, ...attemptEvents],
+    roundSnapshots: [...priorRoundSnapshots, roundSnapshot],
+  };
 }
 
 export default function App() {
@@ -157,7 +217,10 @@ export default function App() {
         ...currentModeProgress,
         stats: nextStats,
         history: nextHistory || {},
-        meta: (nextMeta ?? currentModeProgress.meta) || {},
+        meta:
+          (typeof nextMeta === "function" ? nextMeta(currentModeProgress.meta || {}) : nextMeta) ??
+          currentModeProgress.meta ??
+          {},
       }));
       void persistProgress(nextProgress);
     },
@@ -172,6 +235,11 @@ export default function App() {
   const handleRoundComplete = useCallback(() => {
     setExpandedResult({});
   }, []);
+
+  const buildRoundMeta = useCallback(
+    ({ prevMeta, results: roundResults }) => buildRoundMetaUpdate(prevMeta, gameType, roundResults),
+    [gameType]
+  );
 
   const currentSearch = useMemo(
     () =>
@@ -225,19 +293,16 @@ export default function App() {
     setHistory: setModeHistory,
     history,
     persistModeProgress,
+    buildRoundMeta,
     resetViewport,
     onRoundComplete: handleRoundComplete,
     initialRoundState: initialRoundSession.state,
     initialRoundStateKey: initialRoundSession.key,
   });
 
-  useEffect(() => {
-    if (!Array.isArray(roundItems) || roundItems.length === 0) {
-      clearRoundSession();
-      return;
-    }
-
-    saveRoundSession({
+  const currentRoundSnapshot = useMemo(() => {
+    if (!Array.isArray(roundItems) || roundItems.length === 0) return null;
+    return {
       gameType,
       roundItems,
       currentIdx,
@@ -250,7 +315,7 @@ export default function App() {
       showNext,
       showDesc,
       showTemplate,
-    });
+    };
   }, [
     bestStreak,
     choices,
@@ -265,6 +330,45 @@ export default function App() {
     showTemplate,
     streak,
   ]);
+
+  const latestRoundSnapshotRef = useRef(null);
+  useEffect(() => {
+    latestRoundSnapshotRef.current = currentRoundSnapshot;
+  }, [currentRoundSnapshot]);
+
+  useEffect(() => {
+    if (!currentRoundSnapshot) {
+      clearRoundSession();
+      return;
+    }
+
+    saveRoundSession(currentRoundSnapshot);
+  }, [currentRoundSnapshot]);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || typeof document === "undefined") return;
+
+    const flushRoundSnapshot = () => {
+      const snapshot = latestRoundSnapshotRef.current;
+      if (!snapshot) {
+        clearRoundSession();
+        return;
+      }
+      saveRoundSession(snapshot);
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "hidden") flushRoundSnapshot();
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("pagehide", flushRoundSnapshot);
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("pagehide", flushRoundSnapshot);
+    };
+  }, []);
 
   useEffect(() => {
     if (!loaded) return;
@@ -421,6 +525,14 @@ export default function App() {
     return out;
   }, [blueprintCampaign, blueprintStars, progress]);
 
+  const incorrectAttempts = useMemo(
+    () => selectIncorrectAttempts(modeProgress.meta, { gameType, limit: 100 }),
+    [gameType, modeProgress.meta]
+  );
+  const accuracyTrend = useMemo(
+    () => selectAccuracyTrend(modeProgress.meta, { gameType }),
+    [gameType, modeProgress.meta]
+  );
   const weakSpots = useMemo(() => getWeakSpots(activeGame.items, history), [activeGame.items, history]);
   const masteredCount = useMemo(() => getMasteredCount(activeGame.items, history), [activeGame.items, history]);
   const groupedByPattern = useMemo(
@@ -471,6 +583,7 @@ export default function App() {
     startGame: startSelectedMode,
     goBrowse: () => navigateWithSettings(ROUTES.BROWSE),
     goTemplates: () => navigateWithSettings(ROUTES.TEMPLATES),
+    goReview: () => navigateWithSettings(ROUTES.REVIEW),
     supportsBrowse: activeGame.supportsBrowse !== false,
     supportsTemplates: activeGame.supportsTemplates !== false,
     supportsDifficultyFilter: activeGame.supportsDifficultyFilter !== false,
@@ -483,6 +596,7 @@ export default function App() {
     blueprintCampaignPreview,
     onOpenBlueprintDaily: openBlueprintDailyPreview,
     onOpenBlueprintWorld: openBlueprintWorldPreview,
+    accuracyTrend,
     startLabel: gameType === GAME_TYPES.BLUEPRINT_BUILDER ? blueprintStartLabel : "Start Round",
   };
 
@@ -543,6 +657,16 @@ export default function App() {
               goMenu={() => navigateWithSettings(ROUTES.MENU)}
               history={history}
               gameType={gameType}
+            />
+          )}
+        />
+
+        <Route
+          path={ROUTES.REVIEW}
+          element={(
+            <ReviewScreen
+              attempts={incorrectAttempts}
+              goMenu={() => navigateWithSettings(ROUTES.MENU)}
             />
           )}
         />

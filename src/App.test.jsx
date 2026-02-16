@@ -45,6 +45,15 @@ vi.mock("./screens/ResultsScreen", () => ({
   ),
 }));
 
+vi.mock("./screens/ReviewScreen", () => ({
+  ReviewScreen: (props) => (
+    <div>
+      <div>review-screen</div>
+      <button onClick={props.goMenu}>review-menu</button>
+    </div>
+  ),
+}));
+
 vi.mock("./screens/BrowseScreen", () => ({
   BrowseScreen: (props) => (
     <div>
@@ -92,6 +101,7 @@ describe("App", () => {
         <button onClick={props.startGame}>menu-start</button>
         <button onClick={props.goBrowse}>menu-browse</button>
         <button onClick={props.goTemplates}>menu-templates</button>
+        <button onClick={props.goReview}>menu-review</button>
         <button onClick={() => props.setGameType(GAME_TYPES.BLUEPRINT_BUILDER)}>menu-blueprint</button>
       </div>
     ));
@@ -150,7 +160,7 @@ describe("App", () => {
     expect(screen.getByText("loading...")).toBeInTheDocument();
   });
 
-  it("navigates across menu, play, results, browse, and templates", () => {
+  it("navigates across menu, play, results, browse, templates, and review", () => {
     renderApp();
 
     expect(screen.getByText("menu-screen")).toBeInTheDocument();
@@ -172,6 +182,12 @@ describe("App", () => {
 
     fireEvent.click(screen.getByText("menu-templates"));
     expect(screen.getByText("templates-screen")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText("templates-menu"));
+    fireEvent.click(screen.getByText("menu-review"));
+    expect(screen.getByText("review-screen")).toBeInTheDocument();
+    fireEvent.click(screen.getByText("review-menu"));
+    expect(screen.getByText("menu-screen")).toBeInTheDocument();
   });
 
   it("opens blueprint mode when selected", () => {
@@ -202,9 +218,45 @@ describe("App", () => {
     expect(args.stats.gamesPlayed).toBe(0);
     expect(args.history).toEqual({});
     expect(args.persistModeProgress).toBeTypeOf("function");
+    expect(args.buildRoundMeta).toBeTypeOf("function");
     expect(args.setMode).toBeTypeOf("function");
     expect(GAME_TYPES.QUESTION_TO_PATTERN).toBeTruthy();
     expect(GAME_TYPES.BLUEPRINT_BUILDER).toBeTruthy();
+  });
+
+  it("builds attempt and round snapshot meta from completed results", () => {
+    renderApp();
+    const args = useGameSessionMock.mock.calls[0]?.[0];
+    const nextMeta = args.buildRoundMeta({
+      prevMeta: { retained: true },
+      results: [
+        {
+          correct: false,
+          chosen: "DFS",
+          item: { id: "q1", title: "Two Sum", pattern: "Hash Map", sourceLeetcodeId: 1 },
+        },
+      ],
+    });
+
+    expect(nextMeta.retained).toBe(true);
+    expect(nextMeta.attemptEvents).toHaveLength(1);
+    expect(nextMeta.roundSnapshots).toHaveLength(1);
+    expect(nextMeta.attemptEvents[0]).toEqual(
+      expect.objectContaining({
+        itemId: "q1",
+        chosen: "DFS",
+        pattern: "Hash Map",
+        sourceLeetcodeId: 1,
+        correct: false,
+      })
+    );
+    expect(nextMeta.roundSnapshots[0]).toEqual(
+      expect.objectContaining({
+        answered: 1,
+        correct: 0,
+        pct: 0,
+      })
+    );
   });
 
   it("derives blueprint menu progress from saved level stars", () => {

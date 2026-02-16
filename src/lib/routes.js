@@ -4,6 +4,7 @@ export const ROUTES = {
   MENU: "/",
   PLAY: "/play",
   RESULTS: "/results",
+  REVIEW: "/review",
   BROWSE: "/browse",
   TEMPLATES: "/templates",
   BLUEPRINT: "/blueprint",
@@ -81,6 +82,8 @@ export function getPathForMode(mode) {
       return ROUTES.PLAY;
     case MODES.RESULTS:
       return ROUTES.RESULTS;
+    case MODES.REVIEW:
+      return ROUTES.REVIEW;
     case MODES.BROWSE:
       return ROUTES.BROWSE;
     case MODES.TEMPLATES:
@@ -97,6 +100,7 @@ export function getModeFromPathname(pathname) {
   if (path === ROUTES.MENU) return MODES.MENU;
   if (path.startsWith(ROUTES.PLAY)) return MODES.PLAY;
   if (path.startsWith(ROUTES.RESULTS)) return MODES.RESULTS;
+  if (path.startsWith(ROUTES.REVIEW)) return MODES.REVIEW;
   if (path.startsWith(ROUTES.BROWSE)) return MODES.BROWSE;
   if (path.startsWith(ROUTES.TEMPLATES)) return MODES.TEMPLATES;
   if (path.startsWith(ROUTES.BLUEPRINT)) return MODES.BLUEPRINT;

@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import { GAME_TYPES } from "./constants";
 import {
+  MAX_ATTEMPT_EVENTS,
+  MAX_ROUND_SNAPSHOTS,
   createDefaultProgress,
   createEmptyModeProgress,
   getModeProgress,
@@ -51,5 +53,44 @@ describe("lib/progressModel", () => {
     expect(getModeProgress(updated, GAME_TYPES.TEMPLATE_TO_PATTERN).stats.gamesPlayed).toBe(1);
     expect(getModeProgress(updated, GAME_TYPES.TEMPLATE_TO_PATTERN).history.t1).toEqual({ correct: 2, wrong: 0 });
     expect(getModeProgress(updated, GAME_TYPES.TEMPLATE_TO_PATTERN).meta.note).toBe("ok");
+  });
+
+  it("normalizes and caps attempt events and round snapshots in meta", () => {
+    const oversizedAttempts = Array.from({ length: MAX_ATTEMPT_EVENTS + 5 }, (_, index) => ({
+      ts: index + 1,
+      gameType: GAME_TYPES.QUESTION_TO_PATTERN,
+      itemId: `q-${index + 1}`,
+      chosen: "DFS",
+      pattern: "Hash Map",
+      correct: false,
+    }));
+    const oversizedSnapshots = Array.from({ length: MAX_ROUND_SNAPSHOTS + 5 }, (_, index) => ({
+      ts: index + 1,
+      gameType: GAME_TYPES.QUESTION_TO_PATTERN,
+      answered: 10,
+      correct: 7,
+      pct: 70,
+    }));
+
+    const normalized = normalizeProgress({
+      byGameType: {
+        [GAME_TYPES.QUESTION_TO_PATTERN]: {
+          stats: {},
+          history: {},
+          meta: {
+            attemptEvents: oversizedAttempts,
+            roundSnapshots: oversizedSnapshots,
+            untouched: "value",
+          },
+        },
+      },
+    });
+
+    const meta = normalized.byGameType[GAME_TYPES.QUESTION_TO_PATTERN].meta;
+    expect(meta.attemptEvents).toHaveLength(MAX_ATTEMPT_EVENTS);
+    expect(meta.roundSnapshots).toHaveLength(MAX_ROUND_SNAPSHOTS);
+    expect(meta.untouched).toBe("value");
+    expect(meta.attemptEvents[0].itemId).toBe("q-6");
+    expect(meta.roundSnapshots[0].ts).toBe(6);
   });
 });

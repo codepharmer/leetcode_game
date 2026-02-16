@@ -119,4 +119,23 @@ describe("hooks/useRouteSettings", () => {
       undefined
     );
   });
+
+  it("navigates to review route when review mode is selected", () => {
+    locationRef.current = {
+      pathname: "/",
+      search: "?difficulty=Hard&count=10",
+    };
+
+    const { result } = renderHook(() => useRouteSettings());
+    navigateMock.mockClear();
+
+    act(() => {
+      result.current.setMode(MODES.REVIEW);
+    });
+
+    expect(navigateMock).toHaveBeenCalledWith(
+      { pathname: "/review", search: "?difficulty=Hard&count=10" },
+      undefined
+    );
+  });
 });

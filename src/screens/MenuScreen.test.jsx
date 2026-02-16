@@ -42,6 +42,7 @@ function createBaseProps() {
     startGame: vi.fn(),
     goBrowse: vi.fn(),
     goTemplates: vi.fn(),
+    goReview: vi.fn(),
     showResetConfirm: false,
     setShowResetConfirm: vi.fn(),
     resetAllData: vi.fn(),
@@ -77,6 +78,7 @@ function createBaseProps() {
     },
     onOpenBlueprintDaily: vi.fn(),
     onOpenBlueprintWorld: vi.fn(),
+    accuracyTrend: [],
   };
 }
 
@@ -105,6 +107,9 @@ describe("screens/MenuScreen", () => {
     expect(props.setTotalQuestions).toHaveBeenCalledWith(10);
     fireEvent.click(screen.getByRole("button", { name: /Start Round/i }));
     expect(props.startGame).toHaveBeenCalled();
+    expect(screen.getByText(/Play a few rounds to unlock your trend chart/i)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /review mistakes/i }));
+    expect(props.goReview).toHaveBeenCalled();
   });
 
   it("renders signed-in and reset confirm state", () => {
@@ -150,9 +155,27 @@ describe("screens/MenuScreen", () => {
 
     expect(screen.queryByRole("button", { name: /browse patterns/i })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /view templates/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /review mistakes/i })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Continue Challenge/i })).toBeInTheDocument();
     expect(screen.getByText(/^stars$/i)).toBeInTheDocument();
     expect(screen.getByText(/^worlds$/i)).toBeInTheDocument();
     expect(screen.queryByText("--")).not.toBeInTheDocument();
+  });
+
+  it("renders a trend chart when historical snapshots exist", () => {
+    const props = createBaseProps();
+    render(
+      <MenuScreen
+        {...props}
+        accuracyTrend={[
+          { ts: 1, pct: 40, answered: 10, correct: 4 },
+          { ts: 2, pct: 70, answered: 10, correct: 7 },
+          { ts: 3, pct: 90, answered: 10, correct: 9 },
+        ]}
+      />
+    );
+
+    expect(screen.getByTestId("accuracy-trend-chart")).toBeInTheDocument();
+    expect(screen.getByText(/latest: 90%/i)).toBeInTheDocument();
   });
 });

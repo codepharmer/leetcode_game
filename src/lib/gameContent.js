@@ -17,6 +17,9 @@ const QUESTION_PATTERNS = Object.freeze([...new Set(QUESTION_ITEMS.map((item) =>
 const TEMPLATE_ITEMS = getTemplateToPatternItems();
 const { patterns: ALL_PATTERNS, confusionMap: PATTERN_CONFUSION_MAP } = getPatternIndex();
 
+export const TUTORIAL_QUESTION_IDS = Object.freeze([1, 2, 9, 13]);
+export const TUTORIAL_TEMPLATE_IDS = Object.freeze(["tpl-001", "tpl-006", "tpl-010", "tpl-024"]);
+
 const GAME_TYPE_CONFIG = {
   [GAME_TYPES.QUESTION_TO_PATTERN]: {
     value: GAME_TYPES.QUESTION_TO_PATTERN,

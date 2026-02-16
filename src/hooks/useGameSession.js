@@ -15,12 +15,26 @@ const EMPTY_SNAPSHOT = {
   showNext: false,
   showDesc: false,
   showTemplate: false,
+  roundMeta: {
+    isTutorial: false,
+    flowKey: "",
+  },
 };
 
 function toSafeNumber(value, fallback = 0) {
   const next = Number(value);
   if (!Number.isFinite(next)) return fallback;
   return next;
+}
+
+function normalizeRoundMeta(roundMeta) {
+  if (!roundMeta || typeof roundMeta !== "object" || Array.isArray(roundMeta)) {
+    return { isTutorial: false, flowKey: "" };
+  }
+  return {
+    isTutorial: roundMeta.isTutorial === true,
+    flowKey: typeof roundMeta.flowKey === "string" ? roundMeta.flowKey : "",
+  };
 }
 
 function normalizeRoundSnapshot(snapshot) {
@@ -49,6 +63,7 @@ function normalizeRoundSnapshot(snapshot) {
     showNext: snapshot.showNext === true,
     showDesc: snapshot.showDesc === true,
     showTemplate: snapshot.showTemplate === true,
+    roundMeta: normalizeRoundMeta(snapshot.roundMeta),
   };
 }
 
@@ -68,6 +83,7 @@ export function useGameSession({
   setHistory,
   history,
   persistModeProgress,
+  buildRoundMeta,
   resetViewport,
   onRoundComplete,
   initialRoundState,
@@ -226,7 +242,11 @@ export function useGameSession({
       };
 
       setStats(nextStats);
-      void persistModeProgress(nextStats, historyRef.current);
+      const nextMeta =
+        typeof buildRoundMeta === "function"
+          ? (prevMeta) => buildRoundMeta({ prevMeta, roundItems, results, finalCorrect })
+          : undefined;
+      void persistModeProgress(nextStats, historyRef.current, nextMeta);
       setMode(MODES.RESULTS);
       onRoundComplete?.();
       resetViewport();
@@ -243,6 +263,7 @@ export function useGameSession({
     resetViewport();
   }, [
     bestStreak,
+    buildRoundMeta,
     currentIdx,
     getChoices,
     onRoundComplete,
@@ -268,7 +289,10 @@ export function useGameSession({
         return;
       }
 
-      if ((event.key === "d" || event.key === "D") && currentItem?.promptKind === "question") {
+      const isDescriptionHotkey =
+        event.code === "KeyD" || (event.code !== "KeyD" && (event.key === "d" || event.key === "D"));
+
+      if (isDescriptionHotkey && currentItem?.promptKind === "question") {
         setShowDesc((value) => !value);
         return;
       }
