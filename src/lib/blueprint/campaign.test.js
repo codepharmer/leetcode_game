@@ -9,12 +9,12 @@ function completeLevels(levelIds) {
 }
 
 describe("lib/blueprint/campaign", () => {
-  it("builds ten worlds and unlocks worlds 1-3 by default", () => {
+  it("builds eleven worlds and unlocks worlds 0-3 by default", () => {
     const campaign = getBlueprintCampaign({});
-    expect(campaign.worlds).toHaveLength(10);
+    expect(campaign.worlds).toHaveLength(11);
 
     const unlocked = campaign.worlds.filter((world) => world.isUnlocked).map((world) => world.id);
-    expect(unlocked).toEqual([1, 2, 3]);
+    expect(unlocked).toEqual([0, 1, 2, 3]);
   });
 
   it("unlocks worlds 4-6 after completing any two worlds", () => {
@@ -55,5 +55,16 @@ describe("lib/blueprint/campaign", () => {
     expect(campaignA.dailyChallenge).toBeTruthy();
     expect(campaignA.dailyChallenge?.levelId).toBe(campaignB.dailyChallenge?.levelId);
     expect([1, 2, 3]).toContain(campaignA.dailyChallenge?.worldId);
+  });
+
+  it("does not count world 0 completion toward core world unlock thresholds", () => {
+    const initial = getBlueprintCampaign({});
+    const world0Ids = initial.worlds.find((world) => world.id === 0)?.levelIds || [];
+    const campaign = getBlueprintCampaign(completeLevels(world0Ids));
+
+    expect(campaign.completedCoreWorlds).toBe(0);
+    for (const worldId of [4, 5, 6]) {
+      expect(campaign.worlds.find((world) => world.id === worldId)?.isUnlocked).toBe(false);
+    }
   });
 });

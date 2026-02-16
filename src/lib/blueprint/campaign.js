@@ -71,6 +71,33 @@ const TIER_SLOT_META = [
 
 const WORLD_DEFINITIONS = [
   {
+    id: 0,
+    name: "World 0",
+    family: "Primitives",
+    problemRange: "16-18",
+    randomUnlock: false,
+    isPrimitive: true,
+    levelIds: [
+      "q-1",
+      "q-2",
+      "q-4",
+      "q-9",
+      1,
+      "q-14",
+      "q-17",
+      "q-21",
+      "q-27",
+      "q-28",
+      "q-29",
+      "q-31",
+      "q-33",
+      "q-34",
+      "q-38",
+      "q-54",
+      "q-57",
+    ],
+  },
+  {
     id: 1,
     name: "World 1",
     family: "Hash Maps & Sets",
@@ -301,6 +328,7 @@ function buildWorldProgress(worldDefinition, levelStars) {
     family: worldDefinition.family,
     problemRange: worldDefinition.problemRange,
     randomUnlock: worldDefinition.randomUnlock,
+    isPrimitive: !!worldDefinition.isPrimitive,
     levelIds: orderedLevelIds,
     challengeByLevelId,
     stages,
@@ -315,7 +343,7 @@ function buildWorldProgress(worldDefinition, levelStars) {
 function pickDailyChallenge(worlds, now, levelStars) {
   const dateKey = getLocalDateKey(now);
   const allCandidates = worlds
-    .filter((world) => world.isUnlocked)
+    .filter((world) => world.isUnlocked && !world.isPrimitive)
     .flatMap((world) =>
       world.levelIds.map((levelId) => ({
         worldId: world.id,
@@ -351,7 +379,7 @@ export function getBlueprintCampaign(levelStars = {}, now = new Date()) {
   }
 
   const baseWorlds = WORLD_DEFINITIONS.map((world) => buildWorldProgress(world, safeStars));
-  const completedCoreWorlds = baseWorlds.filter((world) => world.id <= 9 && world.isComplete).length;
+  const completedCoreWorlds = baseWorlds.filter((world) => !world.isPrimitive && world.id <= 9 && world.isComplete).length;
 
   const worlds = baseWorlds.map((world) => {
     const unlockRule = getUnlockRule(world.id);
@@ -394,4 +422,5 @@ export const BLUEPRINT_WORLD_DEFINITIONS = WORLD_DEFINITIONS.map((world) => ({
   name: world.name,
   family: world.family,
   problemRange: world.problemRange,
+  isPrimitive: !!world.isPrimitive,
 }));

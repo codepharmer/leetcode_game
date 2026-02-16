@@ -65,6 +65,22 @@ describe("screens/BlueprintScreen", () => {
     expect(screen.getByText("Run Blueprint")).toBeInTheDocument();
   });
 
+  it("uses a single world-detail nav bar with worlds back, title, and progress/stars meta", () => {
+    renderBlueprint({
+      path: "/blueprint/world/1",
+      initialStars: {
+        "q-1": 2,
+        "q-2": 3,
+      },
+    });
+
+    expect(screen.getByRole("button", { name: /^worlds$/i })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^back$/i })).not.toBeInTheDocument();
+    expect(screen.getByText(/World 1 Set 1: Hash Maps & Sets/i)).toBeInTheDocument();
+    expect(screen.getByTestId("blueprint-world-progress")).toHaveTextContent("2/8");
+    expect(screen.getByTestId("blueprint-world-stars")).toHaveTextContent("stars: 5");
+  });
+
   it("shows a live countdown while building", () => {
     vi.useFakeTimers();
     try {
@@ -344,6 +360,33 @@ describe("screens/BlueprintScreen", () => {
     expect(within(targetSlot).getByTestId(/blueprint-placed-card-/)).toBeInTheDocument();
   });
 
+  it("warns about unresolved dependencies while dragging", () => {
+    renderBlueprint();
+    fireEvent.click(screen.getByRole("button", { name: /Two Sum/i }));
+
+    const deckCard = screen.getAllByTestId(/blueprint-deck-card-/).find((card) => String(card.textContent || "").includes("target - nums[i]"));
+    expect(deckCard).toBeTruthy();
+    const targetSlot = screen.getAllByTestId(/blueprint-slot-/)[0];
+
+    const dataTransfer = {
+      data: {},
+      setData(type, value) {
+        this.data[type] = value;
+      },
+      getData(type) {
+        return this.data[type] || "";
+      },
+      effectAllowed: "move",
+      dropEffect: "move",
+    };
+
+    fireEvent.dragStart(deckCard, { dataTransfer });
+    fireEvent.dragOver(targetSlot, { dataTransfer });
+
+    expect(screen.getByTestId("blueprint-dependency-warning")).toBeInTheDocument();
+    expect(screen.getByText(/(isn't defined until|is not declared)/i)).toBeInTheDocument();
+  });
+
   it("keeps run disabled until all solution cards are placed", () => {
     renderBlueprint();
     fireEvent.click(screen.getByRole("button", { name: /Two Sum/i }));
@@ -390,6 +433,37 @@ describe("screens/BlueprintScreen", () => {
     fireEvent.click(screen.getByTestId("blueprint-slot-sheet-scrim"));
     expect(screen.queryByTestId("blueprint-slot-sheet")).not.toBeInTheDocument();
     expect(screen.getByTestId("blueprint-card-tray")).toBeInTheDocument();
+  });
+
+  it("shows per-card feedback badges after a failed run", () => {
+    renderBlueprint();
+    fireEvent.click(screen.getByRole("button", { name: /Two Sum/i }));
+
+    const targetSlot = screen.getAllByTestId(/blueprint-slot-/)[0];
+    while (screen.queryAllByTestId(/blueprint-deck-card-/).length > 0) {
+      const card = screen.getAllByTestId(/blueprint-deck-card-/)[0];
+      const dataTransfer = {
+        data: {},
+        setData(type, value) {
+          this.data[type] = value;
+        },
+        getData(type) {
+          return this.data[type] || "";
+        },
+        effectAllowed: "move",
+        dropEffect: "move",
+      };
+
+      fireEvent.dragStart(card, { dataTransfer });
+      fireEvent.dragOver(targetSlot, { dataTransfer });
+      fireEvent.drop(targetSlot, { dataTransfer });
+      fireEvent.dragEnd(card, { dataTransfer });
+    }
+
+    fireEvent.click(screen.getByRole("button", { name: /run blueprint/i }));
+    fireEvent.click(screen.getByRole("button", { name: /edit blueprint/i }));
+
+    expect(screen.getAllByTestId(/blueprint-card-feedback-/).length).toBeGreaterThan(0);
   });
 
   it("does not loop when initialStars prop identity changes with same values", () => {

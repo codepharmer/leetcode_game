@@ -145,6 +145,12 @@ export function useGameSession({
     setChoices(getChoices(currentItem.pattern));
   }, [choices.length, currentItem, getChoices]);
 
+  useEffect(() => {
+    if (mode !== MODES.PLAY) return;
+    if (currentItem?.promptKind !== "code") return;
+    resetViewport();
+  }, [currentItem?.id, currentItem?.promptKind, mode, resetViewport]);
+
   const startGame = useCallback(() => {
     let pool = itemsPool || [];
     if (filterDifficulty !== "All") pool = pool.filter((item) => item.difficulty === filterDifficulty);

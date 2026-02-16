@@ -19,16 +19,19 @@ export function BlueprintMenu({
   onOpenWorld,
 }) {
   const activeTab = menuView === TAB_DAILY ? TAB_DAILY : TAB_MAP;
+  const isWorldView = menuView === "world";
 
   return (
     <div style={S.blueprintMenuContainer}>
-      <div style={S.topBar}>
-        <button onClick={goMenu} style={{ ...S.backBtn, minHeight: 44, minWidth: 44 }}>
-          back
-        </button>
-        <span style={S.blueprintTitle}>Blueprint Builder</span>
-        <div style={S.blueprintTopMeta}>stars: {totalStars}</div>
-      </div>
+      {!isWorldView ? (
+        <div style={S.topBar}>
+          <button onClick={goMenu} style={{ ...S.backBtn, minHeight: 44, minWidth: 44 }}>
+            back
+          </button>
+          <span style={S.blueprintTitle}>Blueprint Builder</span>
+          <div style={S.blueprintTopMeta}>stars: {totalStars}</div>
+        </div>
+      ) : null}
 
       {menuView === TAB_MAP ? (
         <BlueprintMapView
@@ -44,6 +47,7 @@ export function BlueprintMenu({
         <BlueprintWorldDetailView
           world={selectedWorld}
           completed={completed}
+          totalStars={totalStars}
           onBack={onOpenMap}
           onStartChallenge={startChallenge}
         />

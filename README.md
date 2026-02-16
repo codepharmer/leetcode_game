@@ -11,7 +11,7 @@ This app trains pattern-first thinking through repeated, structured practice:
 
 - `question -> pattern`: map problem statements to core solution patterns.
 - `template -> pattern`: map code snippets to the underlying pattern they represent.
-- `blueprint builder`: assemble solution flow cards, run execution traces, and learn ordering/invariants through feedback.
+- `blueprint builder`: assemble solution flow cards, validate against tests (with adaptive structural fallback), run traces, and learn invariants through per-card feedback.
 
 The result is faster pattern recall, clearer solving structure, and better interview consistency.
 
@@ -33,9 +33,10 @@ Maps Blind 75-style question prompts to the most likely solving pattern (importe
 2. `template -> pattern`
 Maps code snippets/templates to the pattern they represent, using confusion-aware distractors.
 Mobile play view keeps code prompts full-width with horizontal scrolling to avoid left/right clipping on small screens.
+Template rounds reset the viewport to the top when advancing with `next`, matching question-mode navigation flow.
 
 3. `blueprint builder`
-Card-based algorithm assembly mode with worlds, tiers, daily challenge, test execution traces, hints, and star ratings.
+Card-based algorithm assembly mode with worlds, tiers, daily challenge, adaptive validation (test-run when executable, dependency-aware structural fallback otherwise), execution traces, hints, and star ratings.
 Mobile build view uses a compact fixed-row slot gutter, a bottom-sheet slot editor, and a bottom-docked stacked card tray.
 
 ## Live URLs
@@ -115,6 +116,8 @@ Base URL for the storage/session API (Lambda Function URL or equivalent).
 - CI/reporting enforces: `problemSpecificStrategyCount = 87`, `placeholderContractCount = 0`, `semanticProbeUsageCount = 0`.
 - In Blueprint challenge headers, auto-generated questions show objective text instead of exposed solution-code preview lines.
 - Auto and tutorial levels now render pattern-family slot flows (for example: array/hash uses `seed -> loop -> probe -> store -> emit`, alongside two pointers, sliding window, binary search, stack/heap, linked list, intervals/greedy, tree/graph, DP-state, backtracking) instead of one universal slot scaffold.
+- Campaign includes a `World 0` primitive onboarding lane built from foundational existing levels before the main world track.
+- `World 0` is excluded from daily challenge selection and from core-world unlock counting so existing unlock pacing remains stable.
 
 ## Content Ownership
 
@@ -363,10 +366,10 @@ Strategy selection + verification + IR conversion + strict no-fallback default b
 Base handcrafted levels + auto-generated levels for all questions.
 
 - `src/lib/blueprint/campaign.js`
-World/tier progression model, unlock rules, deterministic daily challenge selection.
+World/tier progression model, unlock rules, deterministic daily challenge selection, and primitive onboarding world handling (`World 0` excluded from daily/core-unlock counts).
 
 - `src/lib/blueprint/engine.js`
-Blueprint executor, test runner, trace generation, divergence detection.
+Blueprint executor, adaptive validator (composed test execution + structural fallback), known-valid ordering cache, trace generation, and divergence detection.
 
 ### `src/screens`
 
@@ -399,19 +402,19 @@ Blueprint tab shell (`Map`, `Daily`, placeholder `Stats`).
 World progression map, continue CTA, daily banner.
 
 - `src/screens/blueprint/BlueprintWorldDetailView.jsx`
-World stage/tier detail and challenge launch UI. Already-unlocked earlier tiers remain replayable after progressing to later tiers.
+World stage/tier detail and challenge launch UI. Uses a single world-detail top nav (`Worlds` back to map, centered `World N Set X: Family` title, right-side progress and star meta). Already-unlocked earlier tiers remain replayable after progressing to later tiers.
 
 - `src/screens/blueprint/BlueprintDailyView.jsx`
 Daily challenge detail/start screen.
 
 - `src/screens/blueprint/BlueprintGame.jsx`
-Blueprint build/execution UI: compact slot rows, drag/drop/touch support (including moving already placed cards between slots and placing multiple cards in the same step), bottom-sheet slot editing, fixed mobile tray, live countdown timer, and run/reset controls. Step badge initials are derived from each slot name so template-specific naming stays visually aligned.
+Blueprint build/execution UI: compact slot rows, drag/drop/touch support (including moving already placed cards between slots and placing multiple cards in the same step), dependency warnings during placement, per-card failure badges/tooltips (`correct`, `misplaced`, `wrong phase`), bottom-sheet slot editing, fixed mobile tray, live countdown timer, and run/reset controls. Step badge initials are derived from each slot name so template-specific naming stays visually aligned.
 
 - `src/screens/blueprint/BlueprintExecution.jsx`
 Execution trace stepping and feedback display with denser mobile-friendly test/result formatting.
 
 - `src/screens/blueprint/useBlueprintGameSession.js`
-Blueprint gameplay state machine (deck/slots/attempts/hints/stars/timing).
+Blueprint gameplay state machine (deck/slots/attempts/hints/stars/timing), dependency analysis, and failed-card feedback state.
 
 - `src/screens/blueprint/shared.js`
 Shared utilities for star normalization, hint text, badge colors, duration formatting.

@@ -1,4 +1,5 @@
 import { getBlueprintSeedByQuestionId, getQuestionToPatternItems } from "../content/registry";
+import { getQuestionContract } from "./contracts";
 import { buildCardsFromIr, buildSlotLimits } from "./ir";
 import { buildGeneratedSolutionForQuestion } from "./solutionPipeline";
 import { buildTemplateIrForQuestion } from "./templatePlan";
@@ -149,6 +150,14 @@ function buildExpectedSignature(templateId, cards) {
   return slots.map((slotId) => `${slotId}:${bySlot[slotId].map((card) => card.key).join(">")}`).join("|");
 }
 
+function cloneValue(value) {
+  if (value === undefined) return undefined;
+  if (typeof globalThis.structuredClone === "function") {
+    return globalThis.structuredClone(value);
+  }
+  return JSON.parse(JSON.stringify(value));
+}
+
 function summarizeDescription(desc) {
   if (!desc) return "Assemble the canonical solution flow.";
   const first = String(desc).split(". ")[0]?.trim() || "";
@@ -166,12 +175,20 @@ const AUTO_BLUEPRINT_LEVELS = getQuestionToPatternItems().map((questionItem) => 
   const blueprintSeed = getBlueprintSeedByQuestionId(questionItem.id);
   const question = blueprintSeed?.question || questionItem;
   const levelId = `q-${question.id}`;
+  const contract = getQuestionContract(question);
   const generated = buildGeneratedSolutionForQuestion({
     question,
     levelId,
     fallback: () => buildFallbackGeneration(levelId, question, blueprintSeed),
   });
   const { templateId, cards, snippetName } = generated;
+  const deterministicCases = Array.isArray(contract?.deterministicCases) && contract.deterministicCases.length > 0
+    ? contract.deterministicCases.map((testCase) => ({
+      input: testCase?.input === undefined ? {} : cloneValue(testCase.input),
+      expected: cloneValue(testCase?.expected),
+    }))
+    : [];
+  const signatureFallback = { input: {}, expected: buildExpectedSignature(templateId, cards) };
 
   return {
     id: levelId,
@@ -184,7 +201,9 @@ const AUTO_BLUEPRINT_LEVELS = getQuestionToPatternItems().map((questionItem) => 
     hints: false,
     slotLimits: buildSlotLimits(cards),
     cards,
-    testCases: [{ input: {}, expected: buildExpectedSignature(templateId, cards) }],
+    testCases: deterministicCases.length > 0 ? deterministicCases : [signatureFallback],
+    testOutputMode: contract?.constraints?.outputMode || "normalized",
+    validationMode: deterministicCases.length > 0 ? "adaptive" : "default",
     generationSource: generated.source,
     generationStrategyId: generated.strategyId,
     generationContractId: generated.contractId,

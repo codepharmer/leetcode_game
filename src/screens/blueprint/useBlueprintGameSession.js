@@ -1,5 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 
+import {
+  analyzeCardDependencies,
+  buildCardPlacementFeedback,
+  buildDependencyWarningForCard,
+  collectExternalIdentifiersFromTests,
+  simulateCardPlacement,
+} from "../../lib/blueprint/dependencyHints";
 import { findDivergence, getCorrectTrace, runAllTests } from "../../lib/blueprint/engine";
 import { getBlueprintTemplate } from "../../lib/blueprint/templates";
 import { shuffle } from "../../lib/utils";
@@ -14,10 +21,18 @@ function createEmptySlots(slotIds) {
 export function useBlueprintGameSession({ level, challenge }) {
   const slotDefs = useMemo(() => getBlueprintTemplate(level.templateId).slots, [level.templateId]);
   const slotIds = useMemo(() => slotDefs.map((slot) => slot.id), [slotDefs]);
+  const slotNameById = useMemo(
+    () => Object.fromEntries(slotDefs.map((slot) => [String(slot.id), String(slot.name || slot.id)])),
+    [slotDefs]
+  );
   const solutionCards = useMemo(() => {
     const required = (level.cards || []).filter((card) => !!card.correctSlot);
     return required.length > 0 ? required : level.cards || [];
   }, [level.cards]);
+  const externalIdentifiers = useMemo(
+    () => collectExternalIdentifiersFromTests(level.testCases || []),
+    [level.testCases]
+  );
 
   const hintsMode = challenge?.hintsMode || (level.hints ? "full" : "none");
   const guided = !!challenge?.guided;
@@ -48,6 +63,13 @@ export function useBlueprintGameSession({ level, challenge }) {
   const [startedAt, setStartedAt] = useState(Date.now());
   const [nowMs, setNowMs] = useState(Date.now());
   const [runSummary, setRunSummary] = useState(null);
+  const [cardFeedbackById, setCardFeedbackById] = useState({});
+  const [dependencyWarning, setDependencyWarning] = useState("");
+
+  const dependencyAnalysis = useMemo(
+    () => analyzeCardDependencies({ slotIds, slots, externalIdentifiers }),
+    [externalIdentifiers, slotIds, slots]
+  );
 
   const resetRound = () => {
     const nextNow = Date.now();
@@ -68,6 +90,8 @@ export function useBlueprintGameSession({ level, challenge }) {
     setStartedAt(nextNow);
     setNowMs(nextNow);
     setRunSummary(null);
+    setCardFeedbackById({});
+    setDependencyWarning("");
   };
 
   useEffect(() => {
@@ -117,6 +141,8 @@ export function useBlueprintGameSession({ level, challenge }) {
       return next;
     });
     setSelected(null);
+    clearPlacementFeedback();
+    setDependencyWarning("");
     return true;
   };
 
@@ -128,6 +154,7 @@ export function useBlueprintGameSession({ level, challenge }) {
   const clearDragState = () => {
     setDraggingCardId(null);
     setDragOverSlotId(null);
+    setDependencyWarning("");
   };
 
   const handleCardClick = (card) => {
@@ -136,6 +163,7 @@ export function useBlueprintGameSession({ level, challenge }) {
       setSelected(null);
       return;
     }
+    setDependencyWarning("");
     setSelected(card);
   };
 
@@ -144,11 +172,17 @@ export function useBlueprintGameSession({ level, challenge }) {
     placeCardInSlot(selectedOrGuided.id, slotId);
   };
 
+  const clearPlacementFeedback = () => {
+    setCardFeedbackById({});
+  };
+
   const removeFromSlot = (card, slotId) => {
     if (phase !== "build") return;
     setSlots((prev) => ({ ...prev, [slotId]: prev[slotId].filter((item) => item.id !== card.id) }));
     setDeck((prev) => [...prev, card]);
     setSelected(null);
+    clearPlacementFeedback();
+    setDependencyWarning("");
   };
 
   const moveInSlot = (slotId, idx, dir) => {
@@ -160,6 +194,31 @@ export function useBlueprintGameSession({ level, challenge }) {
       [items[idx], items[nextIdx]] = [items[nextIdx], items[idx]];
       return { ...prev, [slotId]: items };
     });
+    clearPlacementFeedback();
+    setDependencyWarning("");
+  };
+
+  const getPlacementDependencyWarning = (cardId, slotId) => {
+    if (!cardId || !slotId) return "";
+    const card = getCardById(cardId);
+    if (!card) return "";
+    const projectedSlots = simulateCardPlacement(slots, card, slotId);
+    const projectedAnalysis = analyzeCardDependencies({
+      slotIds,
+      slots: projectedSlots,
+      externalIdentifiers,
+    });
+    return buildDependencyWarningForCard(cardId, projectedAnalysis, slotNameById);
+  };
+
+  const previewPlacementWarning = (cardId, slotId) => {
+    const warning = getPlacementDependencyWarning(cardId, slotId);
+    setDependencyWarning(warning);
+    return warning;
+  };
+
+  const clearDependencyWarning = () => {
+    setDependencyWarning("");
   };
 
   const handleRun = () => {
@@ -190,9 +249,20 @@ export function useBlueprintGameSession({ level, challenge }) {
     if (!didPass) {
       const correct = getCorrectTrace(level);
       setDivergence(findDivergence(firstTrace, correct.trace));
+      setCardFeedbackById(
+        buildCardPlacementFeedback({
+          level,
+          slots,
+          slotIds,
+          slotNameById,
+          dependencyAnalysis,
+        })
+      );
     } else {
       setDivergence(null);
+      setCardFeedbackById({});
     }
+    setDependencyWarning("");
   };
 
   const handleReset = () => {
@@ -206,6 +276,7 @@ export function useBlueprintGameSession({ level, challenge }) {
     setExecStep(0);
     setDivergence(null);
     setRunSummary(null);
+    setDependencyWarning("");
   };
 
   const toggleHint = (cardId, canOpenHint) => {
@@ -253,6 +324,8 @@ export function useBlueprintGameSession({ level, challenge }) {
     showHint,
     hintUses,
     runSummary,
+    cardFeedbackById,
+    dependencyWarning,
     allPassed,
     stars,
     totalPlaced,
@@ -265,8 +338,11 @@ export function useBlueprintGameSession({ level, challenge }) {
     setDragOverSlotId,
     getDraggedCardId,
     clearDragState,
+    previewPlacementWarning,
+    clearDependencyWarning,
     canPlaceCardInSlot,
     placeCardInSlot,
+    getPlacementDependencyWarning,
     handleCardClick,
     handleSlotClick,
     removeFromSlot,

@@ -70,7 +70,7 @@ function createBaseProps() {
         challenge: { level: { title: "Daily Two Sum", difficulty: "Easy" } },
       },
       worlds: [
-        { worldId: 1, label: "Fundamentals", progressLabel: "0/2" },
+        { worldId: 0, label: "Primitives", progressLabel: "0/17" },
         { worldId: 7, label: "Graphs", progressLabel: "0/2" },
         { worldId: 8, label: "Dynamic Programming", progressLabel: "0/2" },
       ],

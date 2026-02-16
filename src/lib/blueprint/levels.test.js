@@ -41,7 +41,8 @@ describe("lib/blueprint/levels", () => {
       expect(level.cards.length).toBeGreaterThan(0);
       expect(level.cards.every((card) => !!card.correctSlot)).toBe(true);
       expect(level.testCases?.length).toBeGreaterThan(0);
-      expect(typeof level.testCases[0].expected).toBe("string");
+      expect(typeof level.validationMode).toBe("string");
+      expect(typeof level.testOutputMode).toBe("string");
     }
   });
 
@@ -109,5 +110,14 @@ describe("lib/blueprint/levels", () => {
     expect(byKey.get("need-target")).toBe("probe");
     expect(byKey.get("found-match")).toBe("probe");
     expect(byKey.get("save-index")).toBe("store");
+  });
+
+  it("enables adaptive validation with contract output modes for generated levels", () => {
+    const groupAnagrams = BLUEPRINT_LEVELS.find((level) => String(level.id) === "q-4");
+    expect(groupAnagrams?.validationMode).toBe("adaptive");
+    expect(groupAnagrams?.testOutputMode).toBe("unordered-nested-members");
+    expect(Array.isArray(groupAnagrams?.testCases)).toBe(true);
+    expect(groupAnagrams.testCases.length).toBeGreaterThan(0);
+    expect(Array.isArray(groupAnagrams.testCases[0].expected)).toBe(true);
   });
 });

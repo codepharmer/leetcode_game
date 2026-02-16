@@ -15,6 +15,20 @@ function getStepBadgeLabel(meta) {
   return explicit || "#";
 }
 
+function getFeedbackTone(status) {
+  if (status === "correct") return "var(--accent)";
+  if (status === "misplaced") return "var(--warn)";
+  if (status === "wrong-phase") return "var(--danger)";
+  return "var(--dim)";
+}
+
+function getFeedbackLabel(status) {
+  if (status === "correct") return "correct";
+  if (status === "misplaced") return "misplaced";
+  if (status === "wrong-phase") return "wrong phase";
+  return "";
+}
+
 export function BlueprintGame({ level, challenge, onBack, onComplete }) {
   const touchDragRef = useRef({
     pointerId: null,
@@ -55,6 +69,8 @@ export function BlueprintGame({ level, challenge, onBack, onComplete }) {
     showHint,
     hintUses,
     runSummary,
+    cardFeedbackById,
+    dependencyWarning,
     allPassed,
     stars,
     totalPlaced,
@@ -67,6 +83,8 @@ export function BlueprintGame({ level, challenge, onBack, onComplete }) {
     setDragOverSlotId,
     getDraggedCardId,
     clearDragState,
+    previewPlacementWarning,
+    clearDependencyWarning,
     canPlaceCardInSlot,
     placeCardInSlot,
     handleCardClick,
@@ -151,6 +169,7 @@ export function BlueprintGame({ level, challenge, onBack, onComplete }) {
       startY: event.clientY,
       dragging: false,
     };
+    clearDependencyWarning();
     setDraggingCardId(card.id);
     setDragOverSlotId(null);
     setTouchGhost({ visible: false, text: card.text });
@@ -175,9 +194,11 @@ export function BlueprintGame({ level, challenge, onBack, onComplete }) {
     const slotId = getSlotIdAtPoint(event.clientX, event.clientY);
     if (!slotId || !canPlaceCardInSlot(cardId, slotId)) {
       setDragOverSlotId((prev) => (prev === null ? prev : null));
+      clearDependencyWarning();
       return;
     }
     setDragOverSlotId((prev) => (prev === slotId ? prev : slotId));
+    previewPlacementWarning(cardId, slotId);
   };
 
   const handleTouchDragEnd = (event, cardId) => {
@@ -194,6 +215,7 @@ export function BlueprintGame({ level, challenge, onBack, onComplete }) {
         placeCardInSlotWithFeedback(cardId, slotId, true);
       }
       clearDragState();
+      clearDependencyWarning();
       suppressClickCardIdRef.current = cardId;
       setTimeout(() => {
         if (suppressClickCardIdRef.current === cardId) suppressClickCardIdRef.current = null;
@@ -201,6 +223,7 @@ export function BlueprintGame({ level, challenge, onBack, onComplete }) {
     }
 
     clearDragState();
+    clearDependencyWarning();
     hideTouchGhost();
     resetTouchDrag();
   };
@@ -211,6 +234,7 @@ export function BlueprintGame({ level, challenge, onBack, onComplete }) {
     if (state.pointerId !== event.pointerId || state.cardId !== cardId) return;
     event.currentTarget.releasePointerCapture?.(event.pointerId);
     clearDragState();
+    clearDependencyWarning();
     hideTouchGhost();
     resetTouchDrag();
   };
@@ -238,6 +262,7 @@ export function BlueprintGame({ level, challenge, onBack, onComplete }) {
       event.dataTransfer.setData("text/plain", cardId);
       event.dataTransfer.effectAllowed = "move";
     }
+    clearDependencyWarning();
     setDraggingCardId(cardId);
   };
 
@@ -247,6 +272,7 @@ export function BlueprintGame({ level, challenge, onBack, onComplete }) {
       setEditingSlotId(slotId);
       return;
     }
+    if (selectedOrGuided?.id) previewPlacementWarning(selectedOrGuided.id, slotId);
     handleSlotClick(slotId);
   };
 
@@ -288,6 +314,11 @@ export function BlueprintGame({ level, challenge, onBack, onComplete }) {
         <span style={{ ...S.blueprintStatsItem, color: timerColor }}>{timerLabel}</span>
         <span style={S.blueprintStatsItem}>attempts {attempts}</span>
       </div>
+      {phase === "build" && dependencyWarning ? (
+        <div data-testid="blueprint-dependency-warning" style={S.blueprintDependencyWarning}>
+          {dependencyWarning}
+        </div>
+      ) : null}
 
       {showProblem ? (
         <div data-testid="blueprint-problem-card" style={S.blueprintProblemCard}>
@@ -335,9 +366,11 @@ export function BlueprintGame({ level, challenge, onBack, onComplete }) {
                     event.preventDefault();
                     if (event.dataTransfer) event.dataTransfer.dropEffect = "move";
                     setDragOverSlotId(slotId);
+                    previewPlacementWarning(cardId, slotId);
                   }}
                   onDragLeave={() => {
                     if (dragOverSlotId === slotId) setDragOverSlotId(null);
+                    clearDependencyWarning();
                   }}
                   onDrop={(event) => {
                     const cardId = getDraggedCardId(event);
@@ -345,6 +378,7 @@ export function BlueprintGame({ level, challenge, onBack, onComplete }) {
                     event.preventDefault();
                     placeCardInSlotWithFeedback(cardId, slotId, true);
                     clearDragState();
+                    clearDependencyWarning();
                   }}
                   style={{
                     ...S.blueprintSlot,
@@ -378,28 +412,46 @@ export function BlueprintGame({ level, challenge, onBack, onComplete }) {
                     {hasCards ? (
                       <div style={S.blueprintSlotFilledRow}>
                         <div style={S.blueprintPlacedInlineMask}>
-                          {cards.map((card, idx) => (
-                            <div key={card.id} style={S.blueprintPlacedRow}>
-                              {idx > 0 ? <span style={S.blueprintInlineSeparator}>||</span> : null}
-                              <button
-                                data-testid={`blueprint-placed-card-${card.id}`}
-                                draggable={phase === "build"}
-                                onDragStart={(event) => handleDesktopDragStart(event, card.id)}
-                                onDragEnd={clearDragState}
-                                onPointerDown={(event) => handleTouchDragStart(event, card)}
-                                onPointerMove={(event) => handleTouchDragMove(event, card.id)}
-                                onPointerUp={(event) => handleTouchDragEnd(event, card.id)}
-                                onPointerCancel={(event) => handleTouchDragCancel(event, card.id)}
-                                onClick={(event) => handlePlacedCardClick(event, card.id, slotId)}
-                                style={{
-                                  ...S.blueprintPlacedCard,
-                                  touchAction: "none",
-                                }}
-                              >
-                                <span style={S.blueprintCardCodeInline}>{card.text}</span>
-                              </button>
-                            </div>
-                          ))}
+                          {cards.map((card, idx) => {
+                            const feedback = cardFeedbackById?.[card.id] || null;
+                            const feedbackTone = getFeedbackTone(feedback?.status);
+                            return (
+                              <div key={card.id} style={S.blueprintPlacedRow}>
+                                {idx > 0 ? <span style={S.blueprintInlineSeparator}>||</span> : null}
+                                <button
+                                  data-testid={`blueprint-placed-card-${card.id}`}
+                                  draggable={phase === "build"}
+                                  onDragStart={(event) => handleDesktopDragStart(event, card.id)}
+                                  onDragEnd={clearDragState}
+                                  onPointerDown={(event) => handleTouchDragStart(event, card)}
+                                  onPointerMove={(event) => handleTouchDragMove(event, card.id)}
+                                  onPointerUp={(event) => handleTouchDragEnd(event, card.id)}
+                                  onPointerCancel={(event) => handleTouchDragCancel(event, card.id)}
+                                  onClick={(event) => handlePlacedCardClick(event, card.id, slotId)}
+                                  title={feedback?.reason || undefined}
+                                  style={{
+                                    ...S.blueprintPlacedCard,
+                                    touchAction: "none",
+                                  }}
+                                >
+                                  <span style={{ ...S.blueprintCardCodeInline, color: feedback ? feedbackTone : "var(--text)" }}>{card.text}</span>
+                                  {feedback ? (
+                                    <span
+                                      data-testid={`blueprint-card-feedback-${card.id}`}
+                                      style={{
+                                        ...S.blueprintFeedbackBadge,
+                                        color: feedbackTone,
+                                        borderColor: `${feedbackTone}66`,
+                                        background: `${feedbackTone}1A`,
+                                      }}
+                                    >
+                                      {getFeedbackLabel(feedback.status)}
+                                    </span>
+                                  ) : null}
+                                </button>
+                              </div>
+                            );
+                          })}
                         </div>
                         <span style={{ ...S.blueprintSlotLimit, color: displayMeta.color, borderColor: `${displayMeta.color}55` }}>
                           {cards.length}
@@ -507,36 +559,55 @@ export function BlueprintGame({ level, challenge, onBack, onComplete }) {
                   </button>
                 </div>
                 <div style={S.blueprintSheetList}>
-                  {editingCards.map((card, idx) => (
-                    <div key={card.id} style={S.blueprintSheetCard}>
-                      <pre style={S.blueprintCardCode}>{card.text}</pre>
-                      <div style={S.blueprintSheetActions}>
-                        <button
-                          onClick={() => moveInSlot(editingSlotId, idx, -1)}
-                          disabled={idx === 0}
-                          style={{ ...S.blueprintReorderBtn, minWidth: 36, minHeight: 36, opacity: idx === 0 ? 0.45 : 1, cursor: idx === 0 ? "not-allowed" : "pointer" }}
-                          aria-label="Move card up"
-                        >
-                          up
-                        </button>
-                        <button
-                          onClick={() => moveInSlot(editingSlotId, idx, 1)}
-                          disabled={idx >= editingCards.length - 1}
-                          style={{ ...S.blueprintReorderBtn, minWidth: 36, minHeight: 36, opacity: idx >= editingCards.length - 1 ? 0.45 : 1, cursor: idx >= editingCards.length - 1 ? "not-allowed" : "pointer" }}
-                          aria-label="Move card down"
-                        >
-                          down
-                        </button>
-                        <button
-                          onClick={() => removeFromSlot(card, editingSlotId)}
-                          style={{ ...S.blueprintReorderBtn, minWidth: 64, minHeight: 36, color: "var(--danger)" }}
-                          aria-label="Remove card"
-                        >
-                          remove
-                        </button>
+                  {editingCards.map((card, idx) => {
+                    const feedback = cardFeedbackById?.[card.id] || null;
+                    const feedbackTone = getFeedbackTone(feedback?.status);
+                    return (
+                      <div key={card.id} style={S.blueprintSheetCard}>
+                        <pre style={S.blueprintCardCode}>{card.text}</pre>
+                        {feedback ? (
+                          <div
+                            data-testid={`blueprint-sheet-feedback-${card.id}`}
+                            style={{
+                              ...S.blueprintDependencyWarning,
+                              margin: 0,
+                              borderColor: `${feedbackTone}66`,
+                              color: feedbackTone,
+                              background: `${feedbackTone}14`,
+                            }}
+                          >
+                            <strong style={{ marginRight: 4 }}>{getFeedbackLabel(feedback.status)}</strong>
+                            <span>{feedback.reason || "Check card placement."}</span>
+                          </div>
+                        ) : null}
+                        <div style={S.blueprintSheetActions}>
+                          <button
+                            onClick={() => moveInSlot(editingSlotId, idx, -1)}
+                            disabled={idx === 0}
+                            style={{ ...S.blueprintReorderBtn, minWidth: 36, minHeight: 36, opacity: idx === 0 ? 0.45 : 1, cursor: idx === 0 ? "not-allowed" : "pointer" }}
+                            aria-label="Move card up"
+                          >
+                            up
+                          </button>
+                          <button
+                            onClick={() => moveInSlot(editingSlotId, idx, 1)}
+                            disabled={idx >= editingCards.length - 1}
+                            style={{ ...S.blueprintReorderBtn, minWidth: 36, minHeight: 36, opacity: idx >= editingCards.length - 1 ? 0.45 : 1, cursor: idx >= editingCards.length - 1 ? "not-allowed" : "pointer" }}
+                            aria-label="Move card down"
+                          >
+                            down
+                          </button>
+                          <button
+                            onClick={() => removeFromSlot(card, editingSlotId)}
+                            style={{ ...S.blueprintReorderBtn, minWidth: 64, minHeight: 36, color: "var(--danger)" }}
+                            aria-label="Remove card"
+                          >
+                            remove
+                          </button>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             </div>

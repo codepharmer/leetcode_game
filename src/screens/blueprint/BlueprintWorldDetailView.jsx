@@ -53,7 +53,7 @@ function ProblemRow({ challenge, stars, accent, canPlay, onStart }) {
   );
 }
 
-export function BlueprintWorldDetailView({ world, completed, onBack, onStartChallenge }) {
+export function BlueprintWorldDetailView({ world, completed, totalStars, onBack, onStartChallenge }) {
   const accent = getWorldAccent(world?.id || 1);
   const [expandedByTier, setExpandedByTier] = useState({ 0: true });
   const worldId = world?.id ?? null;
@@ -76,6 +76,9 @@ export function BlueprintWorldDetailView({ world, completed, onBack, onStartChal
 
   const stage = useMemo(() => world?.activeStage || world?.stages?.[0] || null, [world]);
   const tiers = stage?.tiers || [];
+  const stageLabel = stage?.label || "Set 1";
+  const navTitle = `${world?.name || "World"} ${stageLabel}: ${world?.family || ""}`.trim();
+  const safeTotalStars = Math.max(0, Number(totalStars) || 0);
 
   if (!world) {
     return (
@@ -87,29 +90,20 @@ export function BlueprintWorldDetailView({ world, completed, onBack, onStartChal
 
   return (
     <div style={{ ...S.blueprintViewPane, animation: "blueprintViewIn 0.24s ease" }}>
-      <div style={S.blueprintDetailHeader}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0, flex: 1 }}>
-          <button className="pressable-200" onClick={onBack} style={{ ...S.backBtn, minHeight: 44, minWidth: 44 }}>
-            back
-          </button>
+      <div style={S.blueprintWorldNavBar}>
+        <button className="pressable-200" onClick={onBack} style={{ ...S.backBtn, minHeight: 44, width: "fit-content" }}>
+          Worlds
+        </button>
 
-          <div style={{ display: "flex", flexDirection: "column", gap: 3, minWidth: 0, flex: 1 }}>
-            <span style={{ ...S.diffBadge, color: accent.base, borderColor: accent.ring, alignSelf: "flex-start" }}>World {world.id}</span>
-            <div style={{ ...S.blueprintLevelTitle, fontSize: 22, lineHeight: 1.1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{world.name}</div>
-          </div>
+        <div style={S.blueprintWorldNavTitle} title={navTitle}>
+          {navTitle}
         </div>
 
-        <div style={{ ...S.blueprintNodeTitle, color: accent.base, fontSize: 24, minWidth: 64, textAlign: "right" }}>
-          {world.completedCount}/{world.totalCount}
-        </div>
-      </div>
-
-      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        <div style={S.progressTrack}>
-          <div style={{ ...S.progressBar, width: `${world.progressPct}%`, background: accent.base }} />
-        </div>
-        <div style={S.blueprintNodeMeta}>
-          {stage?.label || "Set 1"} | {world.family}
+        <div style={S.blueprintWorldNavMeta}>
+          <span data-testid="blueprint-world-progress" style={{ color: accent.base }}>
+            {world.completedCount}/{world.totalCount}
+          </span>
+          <span data-testid="blueprint-world-stars">stars: {safeTotalStars}</span>
         </div>
       </div>
 

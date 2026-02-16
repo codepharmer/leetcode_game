@@ -29,7 +29,7 @@ import { ResultsScreen } from "./screens/ResultsScreen";
 import { TemplatesScreen } from "./screens/TemplatesScreen";
 
 const BLUEPRINT_MENU_PREVIEW_WORLDS = [
-  { worldId: 1, label: "Fundamentals" },
+  { worldId: 0, label: "Primitives" },
   { worldId: 7, label: "Graphs" },
   { worldId: 8, label: "Dynamic Programming" },
 ];
@@ -332,7 +332,7 @@ export default function App() {
   const openBlueprintWorldPreview = useCallback(
     (worldId) => {
       const safeWorldId = Number(worldId);
-      if (!Number.isFinite(safeWorldId) || safeWorldId <= 0) return;
+      if (!Number.isFinite(safeWorldId) || safeWorldId < 0) return;
       navigateWithSettings(buildBlueprintWorldPath(safeWorldId));
       resetViewport();
     },

@@ -1,6 +1,6 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 
-import { findDivergence, getCorrectTrace, runAllTests } from "./engine";
+import { clearValidationCaches, findDivergence, getCorrectTrace, runAllTests } from "./engine";
 import { BLUEPRINT_LEVELS } from "./levels";
 
 function toSlots(level, cards) {
@@ -17,6 +17,10 @@ function toSlots(level, cards) {
 }
 
 describe("lib/blueprint/engine", () => {
+  beforeEach(() => {
+    clearValidationCaches();
+  });
+
   it("passes all tests for every level when using correct cards", () => {
     for (const level of BLUEPRINT_LEVELS) {
       const correctCards = level.cards.filter((card) => card.correctSlot);
@@ -48,5 +52,32 @@ describe("lib/blueprint/engine", () => {
 
     expect(divergence).toBeTruthy();
     expect(divergence.step).toBeGreaterThanOrEqual(0);
+  });
+
+  it("accepts alternative working card arrangements across all validations", () => {
+    const level = BLUEPRINT_LEVELS.find((item) => String(item.id) === "q-4");
+    const correctCards = level.cards.filter((card) => card.correctSlot);
+    const slots = toSlots(level, correctCards);
+
+    const moved = slots.store.find((card) => card.key === "push-group");
+    expect(moved).toBeTruthy();
+    slots.store = slots.store.filter((card) => card.key !== "push-group");
+    slots.probe = [...slots.probe, moved];
+
+    const results = runAllTests(level, slots);
+    expect(results.every((result) => result.passed)).toBe(true);
+  });
+
+  it("caches known-valid orderings", () => {
+    const level = BLUEPRINT_LEVELS.find((item) => String(item.id) === "q-4");
+    const correctCards = level.cards.filter((card) => card.correctSlot);
+    const slots = toSlots(level, correctCards);
+
+    const firstRun = runAllTests(level, slots);
+    expect(firstRun.every((result) => result.passed)).toBe(true);
+
+    const secondRun = runAllTests(level, slots);
+    expect(secondRun.every((result) => result.passed)).toBe(true);
+    expect(secondRun.some((result) => result.cached)).toBe(true);
   });
 });
