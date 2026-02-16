@@ -54,12 +54,6 @@ import { ReviewScreen } from "./screens/ReviewScreen";
 import { ResultsScreen } from "./screens/ResultsScreen";
 import { TemplatesScreen } from "./screens/TemplatesScreen";
 
-const BLUEPRINT_MENU_PREVIEW_WORLDS = [
-  { worldId: 0, label: "Primitives" },
-  { worldId: 7, label: "Graphs" },
-  { worldId: 8, label: "Dynamic Programming" },
-];
-
 function findNextBlueprintChallenge(campaign, levelStars) {
   const worlds = Array.isArray(campaign?.worlds) ? campaign.worlds : [];
   for (const world of worlds) {
@@ -1050,15 +1044,13 @@ export default function App() {
   );
 
   const blueprintCampaignPreview = useMemo(() => {
-    const worldsById = new Map((blueprintCampaign?.worlds || []).map((world) => [world.id, world]));
-    const worlds = BLUEPRINT_MENU_PREVIEW_WORLDS.map((entry) => {
-      const world = worldsById.get(entry.worldId);
-      return {
-        worldId: entry.worldId,
-        label: entry.label,
+    const worlds = (blueprintCampaign?.worlds || [])
+      .filter((world) => world?.isUnlocked)
+      .map((world) => ({
+        worldId: Number(world?.id || 0),
+        label: String(world?.family || world?.name || "World"),
         progressLabel: `${world?.completedCount || 0}/${world?.totalCount || 0}`,
-      };
-    });
+      }));
     return { dailyChallenge: blueprintCampaign?.dailyChallenge || null, worlds };
   }, [blueprintCampaign]);
 

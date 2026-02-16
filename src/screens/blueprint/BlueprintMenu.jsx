@@ -63,7 +63,7 @@ export function BlueprintMenu({
       ) : null}
 
       <div aria-hidden="true" style={S.blueprintTabFade} />
-      <div style={S.blueprintTabBar}>
+      <div style={{ ...S.blueprintTabBar, gridTemplateColumns: "1fr 1fr" }}>
         <button
           className="pressable-200"
           onClick={onOpenMap}
@@ -77,9 +77,6 @@ export function BlueprintMenu({
           style={{ ...S.blueprintTabBtn, ...(activeTab === TAB_DAILY ? S.blueprintTabBtnActive : null) }}
         >
           Daily
-        </button>
-        <button className="pressable-200" disabled style={{ ...S.blueprintTabBtn, opacity: 0.45, cursor: "not-allowed" }}>
-          Stats
         </button>
       </div>
     </div>

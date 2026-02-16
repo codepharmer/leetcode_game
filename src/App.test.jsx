@@ -308,4 +308,13 @@ describe("App", () => {
     const blueprintMenuProps = menuScreenMock.mock.calls.at(-1)?.[0];
     expect(blueprintMenuProps.startLabel).toBe("Continue Challenge");
   });
+
+  it("builds blueprint campaign preview rows from unlocked worlds only", () => {
+    renderApp();
+    fireEvent.click(screen.getByText("menu-blueprint"));
+
+    const blueprintMenuProps = menuScreenMock.mock.calls.at(-1)?.[0];
+    const previewWorldIds = (blueprintMenuProps.blueprintCampaignPreview?.worlds || []).map((world) => world.worldId);
+    expect(previewWorldIds).toEqual([0, 1, 2, 3]);
+  });
 });

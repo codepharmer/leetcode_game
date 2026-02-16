@@ -77,6 +77,7 @@ describe("screens/BlueprintScreen", () => {
     expect(screen.getByText("Blueprint Builder")).toBeInTheDocument();
     expect(screen.getByText(/Hash Maps & Sets/i)).toBeInTheDocument();
     expect(screen.getByText(/Daily Challenge/i)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^stats$/i })).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: /^back$/i }));
     expect(goMenu).toHaveBeenCalled();
@@ -564,6 +565,14 @@ describe("screens/BlueprintScreen", () => {
     fireEvent.click(screen.getByTestId("blueprint-slot-sheet-scrim"));
     expect(screen.queryByTestId("blueprint-slot-sheet")).not.toBeInTheDocument();
     expect(screen.getByTestId("blueprint-card-tray")).toBeInTheDocument();
+  });
+
+  it("keeps tray cards from shrinking in the stacked mobile tray list", () => {
+    renderBlueprint();
+    fireEvent.click(screen.getByRole("button", { name: /Two Sum/i }));
+
+    const firstDeckCard = screen.getAllByTestId(/blueprint-deck-card-/)[0];
+    expect(firstDeckCard).toHaveStyle("flex-shrink: 0");
   });
 
   it("shows per-card feedback badges after a failed run", () => {

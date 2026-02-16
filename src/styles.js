@@ -695,6 +695,7 @@ export const S = {
     borderRadius: 10,
     padding: 0,
     width: "100%",
+    flexShrink: 0,
     position: "relative",
     overflow: "hidden",
     cursor: "pointer",
