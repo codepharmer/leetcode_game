@@ -44,7 +44,7 @@ Both quiz modes now feed a persistent post-round review loop:
 Card-based algorithm assembly mode with worlds, tiers, daily challenge, adaptive validation (test-run when executable, dependency-aware structural fallback otherwise), execution traces, hints, and star ratings.
 Solve flow now auto-selects by problem size: `flat` mode for `<= 10` required blueprint slots (existing all-at-once run flow), and `phased` mode for `> 10` required slots (one phase active at a time with per-phase checks, phase locking, and immediate completion on final phase success).
 Mobile build view uses a compact fixed-row slot gutter, a bottom-sheet slot editor, and a bottom-docked stacked card tray.
-Tray cards preserve native vertical scroll gestures on mobile. Touch drag from tray cards is triggered from an inline drag handle, while placed cards still support direct touch drag between slots.
+On mobile, most of each tray card is a drag target while a dedicated right-edge scroll lane preserves vertical tray scrolling.
 
 Global + per-mode onboarding overlays are now built in:
 - First app visit: guided `MenuScreen` onboarding (`global` flow).
@@ -450,7 +450,7 @@ Daily challenge detail/start screen with a single `Worlds` back button (gameplay
 
 - `src/screens/blueprint/BlueprintGame.jsx`
 Blueprint build/execution UI: compact slot rows, drag/drop/touch support (including moving already placed cards between slots and placing multiple cards in the same step), dependency warnings during placement, per-card failure badges/tooltips (`correct`, `misplaced`, `wrong phase`, phased-check `incorrect`), bottom-sheet slot editing, fixed mobile tray, live countdown timer, and adaptive controls (`Run Blueprint` in flat mode, per-phase `Check [PHASE]` in phased mode). Large problems use phased slot states (`completed`, `active`, `locked`) with interaction restricted to the active phase. Emits tutorial run/pass/hint signals for onboarding and one-time tip logic.
-On mobile, tray cards keep native vertical scrolling and expose a dedicated drag handle for tray touch-drag actions.
+On mobile, tray cards reserve a slim right-edge scroll lane and allow drag-start from the rest of the card surface.
 
 - `src/screens/blueprint/BlueprintExecution.jsx`
 Execution trace stepping and feedback display with denser mobile-friendly test/result formatting and tutorial anchors for step navigator/star explanation overlays.

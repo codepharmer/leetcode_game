@@ -370,7 +370,7 @@ describe("screens/BlueprintScreen", () => {
     fireEvent.click(screen.getByRole("button", { name: /Two Sum/i }));
 
     const deckCardsBefore = screen.getAllByTestId(/blueprint-deck-card-/);
-    const draggedHandle = screen.getAllByTestId(/blueprint-deck-drag-handle-/)[0];
+    const draggedCard = deckCardsBefore[0];
     const targetSlot = screen.getAllByTestId(/blueprint-slot-/)[0];
 
     const originalElementFromPoint = document.elementFromPoint;
@@ -381,13 +381,13 @@ describe("screens/BlueprintScreen", () => {
       value: elementFromPointMock,
     });
 
-    fireEvent.pointerDown(draggedHandle, {
+    fireEvent.pointerDown(draggedCard, {
       pointerId: 1,
       pointerType: "touch",
       clientX: 20,
       clientY: 20,
     });
-    fireEvent.pointerMove(draggedHandle, {
+    fireEvent.pointerMove(draggedCard, {
       pointerId: 1,
       pointerType: "touch",
       clientX: 20,
@@ -395,7 +395,7 @@ describe("screens/BlueprintScreen", () => {
     });
     expect(screen.getByTestId("blueprint-touch-ghost")).toHaveStyle("visibility: visible");
 
-    fireEvent.pointerUp(draggedHandle, {
+    fireEvent.pointerUp(draggedCard, {
       pointerId: 1,
       pointerType: "touch",
       clientX: 20,
@@ -424,7 +424,7 @@ describe("screens/BlueprintScreen", () => {
     const slots = screen.getAllByTestId(/blueprint-slot-/);
     const sourceSlot = slots[0];
     const targetSlot = slots[1];
-    const deckHandle = screen.getAllByTestId(/blueprint-deck-drag-handle-/)[0];
+    const deckCard = screen.getAllByTestId(/blueprint-deck-card-/)[0];
 
     const originalElementFromPoint = document.elementFromPoint;
     const elementFromPointMock = vi.fn(() => sourceSlot);
@@ -434,19 +434,19 @@ describe("screens/BlueprintScreen", () => {
       value: elementFromPointMock,
     });
 
-    fireEvent.pointerDown(deckHandle, {
+    fireEvent.pointerDown(deckCard, {
       pointerId: 1,
       pointerType: "touch",
       clientX: 20,
       clientY: 20,
     });
-    fireEvent.pointerMove(deckHandle, {
+    fireEvent.pointerMove(deckCard, {
       pointerId: 1,
       pointerType: "touch",
       clientX: 20,
       clientY: 36,
     });
-    fireEvent.pointerUp(deckHandle, {
+    fireEvent.pointerUp(deckCard, {
       pointerId: 1,
       pointerType: "touch",
       clientX: 20,
