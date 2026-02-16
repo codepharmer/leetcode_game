@@ -44,6 +44,7 @@ Both quiz modes now feed a persistent post-round review loop:
 Card-based algorithm assembly mode with worlds, tiers, daily challenge, adaptive validation (test-run when executable, dependency-aware structural fallback otherwise), execution traces, hints, and star ratings.
 Solve flow now auto-selects by problem size: `flat` mode for `<= 10` required blueprint slots (existing all-at-once run flow), and `phased` mode for `> 10` required slots (one phase active at a time with per-phase checks, phase locking, and immediate completion on final phase success).
 Mobile build view uses a compact fixed-row slot gutter, a bottom-sheet slot editor, and a bottom-docked stacked card tray.
+Tray cards preserve native vertical scroll gestures on mobile, while touch-drag still activates after movement crosses the drag threshold.
 
 Global + per-mode onboarding overlays are now built in:
 - First app visit: guided `MenuScreen` onboarding (`global` flow).
@@ -412,7 +413,7 @@ Main menu with a top-level segmented mode selector (`Match`, `Template`, `Build`
 For quiz modes, menu also includes a secondary `review mistakes` entry and a lower-page accuracy trend card sourced from mode metadata.
 In blueprint mode, the primary CTA label is provided by app state (`Jump In`, `Continue Challenge`, or `Open Campaign Map`) so players can resume directly.
 For `blueprint builder`, the menu progress card derives `levels`, `stars`, `worlds`, and `mastered` values from `byGameType.blueprint_builder.meta.levelStars` plus campaign world completion, instead of quiz history counters.
-Menu also exposes onboarding replay/reset controls and per-mode `replay tutorial` entries.
+Menu also exposes onboarding replay/reset controls in a collapsed `tutorials` card below the primary CTA, plus per-mode `replay tutorial` entries.
 
 - `src/screens/PlayScreen.jsx`
 Question/snippet gameplay screen with robust `KeyD` description hotkey handling, a missing-description fallback message, and shared hotkey badges used by tutorial tips.
@@ -444,10 +445,11 @@ World progression map, continue CTA, daily banner, and tutorial anchor targets f
 World stage/tier detail and challenge launch UI. Uses a single world-detail top nav (`Worlds` back to map, centered `World N Set X: Family` title, right-side progress and star meta). Already-unlocked earlier tiers remain replayable after progressing to later tiers.
 
 - `src/screens/blueprint/BlueprintDailyView.jsx`
-Daily challenge detail/start screen.
+Daily challenge detail/start screen with a single `Worlds` back button (gameplay-style nav; no duplicate global `back` button on this view).
 
 - `src/screens/blueprint/BlueprintGame.jsx`
 Blueprint build/execution UI: compact slot rows, drag/drop/touch support (including moving already placed cards between slots and placing multiple cards in the same step), dependency warnings during placement, per-card failure badges/tooltips (`correct`, `misplaced`, `wrong phase`, phased-check `incorrect`), bottom-sheet slot editing, fixed mobile tray, live countdown timer, and adaptive controls (`Run Blueprint` in flat mode, per-phase `Check [PHASE]` in phased mode). Large problems use phased slot states (`completed`, `active`, `locked`) with interaction restricted to the active phase. Emits tutorial run/pass/hint signals for onboarding and one-time tip logic.
+On mobile, tray card gestures allow vertical tray scrolling and only transition into touch-drag after drag-intent movement.
 
 - `src/screens/blueprint/BlueprintExecution.jsx`
 Execution trace stepping and feedback display with denser mobile-friendly test/result formatting and tutorial anchors for step navigator/star explanation overlays.

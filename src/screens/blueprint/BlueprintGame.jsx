@@ -195,7 +195,6 @@ export function BlueprintGame({
   const handleTouchDragStart = (event, card, slotId = null) => {
     if (event.pointerType !== "touch" || phase !== "build") return;
     if (slotId && !isSlotInteractive(slotId)) return;
-    event.currentTarget.setPointerCapture?.(event.pointerId);
     touchDragRef.current = {
       pointerId: event.pointerId,
       cardId: card.id,
@@ -204,11 +203,7 @@ export function BlueprintGame({
       startY: event.clientY,
       dragging: false,
     };
-    clearDependencyWarning();
-    setDraggingCardId(card.id);
-    setDragOverSlotId(null);
     setTouchGhost({ visible: false, text: card.text });
-    positionTouchGhost(event.clientX, event.clientY);
   };
 
   const handleTouchDragMove = (event, cardId) => {
@@ -221,6 +216,10 @@ export function BlueprintGame({
 
     if (!state.dragging) {
       state.dragging = true;
+      event.currentTarget.setPointerCapture?.(event.pointerId);
+      clearDependencyWarning();
+      setDraggingCardId(cardId);
+      setDragOverSlotId(null);
       setTouchGhost({ visible: true, text: state.cardText });
     }
     event.preventDefault();
@@ -241,9 +240,8 @@ export function BlueprintGame({
     const state = touchDragRef.current;
     if (state.pointerId !== event.pointerId || state.cardId !== cardId) return;
 
-    event.currentTarget.releasePointerCapture?.(event.pointerId);
-
     if (state.dragging) {
+      event.currentTarget.releasePointerCapture?.(event.pointerId);
       event.preventDefault();
       const slotId = getSlotIdAtPoint(event.clientX, event.clientY) || dragOverSlotId;
       if (slotId && canPlaceCardInSlot(cardId, slotId)) {
@@ -267,7 +265,7 @@ export function BlueprintGame({
     if (event.pointerType !== "touch") return;
     const state = touchDragRef.current;
     if (state.pointerId !== event.pointerId || state.cardId !== cardId) return;
-    event.currentTarget.releasePointerCapture?.(event.pointerId);
+    if (state.dragging) event.currentTarget.releasePointerCapture?.(event.pointerId);
     clearDragState();
     clearDependencyWarning();
     hideTouchGhost();
@@ -620,7 +618,7 @@ export function BlueprintGame({
                         ...S.blueprintDeckCard,
                         borderColor: isSelected ? "var(--accent)" : "var(--border)",
                         background: isSelected ? "rgba(16, 185, 129, 0.1)" : "var(--surface-1)",
-                        touchAction: "none",
+                        touchAction: "pan-y",
                       }}
                     >
                       <pre style={S.blueprintCardCode}>{card.text}</pre>
