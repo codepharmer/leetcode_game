@@ -499,7 +499,7 @@ function TutorialSection({
   onResetOnboarding,
 }) {
   return (
-    <div style={{ ...S.card, animation: "fadeSlideIn 0.5s ease 0.28s both" }}>
+    <div style={{ ...S.card, animation: "fadeSlideIn 0.5s ease 0.58s both" }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
         <div style={{ ...S.sectionLabel, marginBottom: 0 }}>tutorials</div>
         <button
@@ -826,14 +826,6 @@ export function MenuScreen({
 
         <StartSection startGame={startGame} startLabel={resolvedStartLabel} />
 
-        <TutorialSection
-          expanded={showTutorialControls}
-          onToggleExpanded={() => setShowTutorialControls((prev) => !prev)}
-          onReplaySelectedTutorial={onReplaySelectedTutorial}
-          onReplayGlobalTutorial={onReplayGlobalTutorial}
-          onResetOnboarding={onResetOnboarding}
-        />
-
         <NeedsWorkSection needsWork={needsWork} />
         {!isBlueprintMode && <AccuracyTrendSection trendPoints={accuracyTrend} />}
 
@@ -850,6 +842,14 @@ export function MenuScreen({
           showResetConfirm={showResetConfirm}
           setShowResetConfirm={setShowResetConfirm}
           resetAllData={resetAllData}
+        />
+
+        <TutorialSection
+          expanded={showTutorialControls}
+          onToggleExpanded={() => setShowTutorialControls((prev) => !prev)}
+          onReplaySelectedTutorial={onReplaySelectedTutorial}
+          onReplayGlobalTutorial={onReplayGlobalTutorial}
+          onResetOnboarding={onResetOnboarding}
         />
       </div>
     </div>

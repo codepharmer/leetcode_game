@@ -173,6 +173,8 @@ describe("screens/MenuScreen", () => {
     const startButton = screen.getByRole("button", { name: /Start Round/i });
     const tutorialHeading = screen.getByText(/^tutorials$/i);
     expect(startButton.compareDocumentPosition(tutorialHeading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    const reviewButton = screen.getByRole("button", { name: /review mistakes/i });
+    expect(reviewButton.compareDocumentPosition(tutorialHeading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 
     fireEvent.click(screen.getByTestId("tutorial-toggle"));
     expect(screen.getByRole("button", { name: /replay global onboarding/i })).toBeInTheDocument();
