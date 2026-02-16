@@ -19,11 +19,11 @@ export function BlueprintMenu({
   onOpenWorld,
 }) {
   const activeTab = menuView === TAB_DAILY ? TAB_DAILY : TAB_MAP;
-  const isWorldView = menuView === "world";
+  const isMapView = menuView === TAB_MAP;
 
   return (
     <div style={S.blueprintMenuContainer}>
-      {!isWorldView ? (
+      {isMapView ? (
         <div style={S.topBar}>
           <button onClick={goMenu} style={{ ...S.backBtn, minHeight: 44, minWidth: 44 }}>
             back

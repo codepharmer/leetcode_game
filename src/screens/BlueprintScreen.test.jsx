@@ -135,6 +135,13 @@ describe("screens/BlueprintScreen", () => {
     expect(screen.getByTestId("blueprint-world-stars")).toHaveTextContent("stars: 5");
   });
 
+  it("uses a single daily nav back button", () => {
+    renderBlueprint({ path: "/blueprint/daily" });
+
+    expect(screen.getByRole("button", { name: /^worlds$/i })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^back$/i })).not.toBeInTheDocument();
+  });
+
   it("shows a live countdown while building", () => {
     vi.useFakeTimers();
     try {
