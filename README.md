@@ -134,8 +134,8 @@ If unset, analytics events are emitted only to `console.debug` in local dev (non
 
 - `VITE_BLUEPRINT_IR_V2`
 Optional blueprint IR extraction toggle for strategy-generated levels.  
-Default behavior is `enabled` (guarded v2 extraction + automatic legacy fallback on guard failure).  
-Set to `0`/`false` to force legacy extraction globally.
+Default behavior is `enabled` (guarded v2 two-pointer extraction + automatic legacy fallback on guard failure).  
+Set to `0`/`false`/`off`/`no` to force legacy extraction globally.
 
 ## High-Level Architecture
 
