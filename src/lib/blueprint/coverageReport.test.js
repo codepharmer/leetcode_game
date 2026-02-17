@@ -28,4 +28,14 @@ describe("lib/blueprint/coverageReport", () => {
     expect(report.per_pattern_completion["Dynamic Programming"].problem_specific_strategy_generated).toBe(8);
     expect(report.per_pattern_completion["Bit Manipulation"].semantic_passed).toBe(5);
   });
+
+  it("includes IR extraction diagnostics counters", () => {
+    const report = buildBlueprintCoverageReport(BLUEPRINT_LEVELS, QUESTIONS);
+    expect(typeof report.ir_v2_enabled_count).toBe("number");
+    expect(typeof report.ir_v2_fallback_count).toBe("number");
+    expect(typeof report.ir_bad_slot_incident_count).toBe("number");
+    expect(report.ir_v2_enabled_count).toBeGreaterThanOrEqual(0);
+    expect(report.ir_v2_fallback_count).toBeGreaterThanOrEqual(0);
+    expect(report.ir_bad_slot_incident_count).toBeGreaterThanOrEqual(0);
+  });
 });

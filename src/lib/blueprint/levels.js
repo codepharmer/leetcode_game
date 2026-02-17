@@ -239,6 +239,7 @@ const AUTO_BLUEPRINT_LEVELS = getQuestionToPatternItems().map((questionItem) => 
     generationSource: generated.source,
     generationStrategyId: generated.strategyId,
     generationContractId: generated.contractId,
+    generationIrDiagnostics: generated.irDiagnostics || null,
     verification: generated.verification,
   };
 });

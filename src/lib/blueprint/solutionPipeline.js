@@ -34,6 +34,7 @@ function buildNoFallbackResult({ levelId, strategyId, contractId, status, verifi
     source: "strategy-error",
     strategyId: strategyId || null,
     contractId,
+    irDiagnostics: null,
     verification: {
       ...verification,
       status,
@@ -57,6 +58,7 @@ function buildFallbackOrError({
       source: "template-fallback",
       strategyId: strategyId || null,
       contractId,
+      irDiagnostics: null,
       verification: {
         ...verification,
         status,
@@ -131,6 +133,7 @@ export function buildGeneratedSolutionForQuestion({ question, levelId, fallback,
     source: "strategy",
     strategyId: strategy.id,
     contractId: contract.id,
+    irDiagnostics: plan.irDiagnostics || null,
     verification: {
       ...verification,
       status: "passed-semantic-gate",

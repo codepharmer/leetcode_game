@@ -3,6 +3,19 @@ import { describe, expect, it } from "vitest";
 import { QUESTIONS } from "../questions";
 import { getBlueprintCampaign } from "./campaign";
 import { BLUEPRINT_LEVELS } from "./levels";
+import {
+  ARRAY_HASHING_TEMPLATE_ID,
+  BACKTRACKING_TEMPLATE_ID,
+  BINARY_SEARCH_TEMPLATE_ID,
+  DEFAULT_BLUEPRINT_TEMPLATE_ID,
+  DP_STATE_TEMPLATE_ID,
+  INTERVAL_GREEDY_TEMPLATE_ID,
+  LINKED_LIST_TEMPLATE_ID,
+  SLIDING_WINDOW_TEMPLATE_ID,
+  STACK_HEAP_TEMPLATE_ID,
+  TREE_GRAPH_TEMPLATE_ID,
+  TWO_POINTERS_TEMPLATE_ID,
+} from "./templates";
 
 describe("lib/blueprint/levels", () => {
   const OUTLINE_PLACEHOLDERS = new Set([
@@ -23,6 +36,18 @@ describe("lib/blueprint/levels", () => {
     "recurse into next state",
     "combine child results",
   ]);
+
+  function cardsInSlot(level, slotId) {
+    return (level?.cards || [])
+      .filter((card) => card.correctSlot === slotId)
+      .sort((a, b) => (a.correctOrder || 0) - (b.correctOrder || 0));
+  }
+
+  function slotSource(level, slotId) {
+    return cardsInSlot(level, slotId)
+      .map((card) => String(card.execText || card.text || ""))
+      .join("\n");
+  }
 
   it("includes an auto-generated blueprint level for every question", () => {
     const autoLevels = BLUEPRINT_LEVELS.filter((level) => String(level.id).startsWith("q-"));
@@ -163,6 +188,145 @@ describe("lib/blueprint/levels", () => {
     expect(autoLevels.get("q-27")?.slots).toEqual(["anchors", "walk", "relink", "guard", "emit"]);
     expect(autoLevels.get("q-33")?.slots).toEqual(["base-case", "branch", "prune", "traverse", "aggregate"]);
     expect(autoLevels.get("q-62")?.slots).toEqual(["base-state", "subproblem", "state-guard", "transition", "memoize"]);
+  });
+
+  it("enforces per-template slot invariants on generated levels", () => {
+    const autoLevels = BLUEPRINT_LEVELS.filter((level) => String(level.id).startsWith("q-"));
+    const hasLoop = (text) => /\b(for|while)\b/.test(String(text || ""));
+    const hasConditional = (text) => /\b(if|elif|else)\b/.test(String(text || ""));
+    const hasReturn = (text) => /\breturn\b/.test(String(text || ""));
+
+    for (const level of autoLevels) {
+      const templateId = String(level.templateId || "");
+      const anchors = slotSource(level, "anchors");
+      const loop = slotSource(level, "loop");
+      const ret = slotSource(level, "return");
+      const emit = slotSource(level, "emit");
+
+      if (templateId === TWO_POINTERS_TEMPLATE_ID) {
+        expect(anchors).toMatch(/\b(left|right|slow|fast|lo|hi|start|end)\b/);
+        expect(new Set((anchors.match(/\b(left|right|slow|fast|lo|hi|start|end)\b/g) || [])).size).toBeGreaterThanOrEqual(2);
+        expect(hasLoop(slotSource(level, "converge"))).toBe(true);
+        expect(hasConditional(slotSource(level, "compare"))).toBe(true);
+        expect(hasReturn(emit)).toBe(true);
+        continue;
+      }
+
+      if (templateId === SLIDING_WINDOW_TEMPLATE_ID) {
+        expect(hasLoop(slotSource(level, "expand"))).toBe(true);
+        expect(hasReturn(emit)).toBe(true);
+        continue;
+      }
+
+      if (templateId === STACK_HEAP_TEMPLATE_ID) {
+        expect(
+          String(slotSource(level, "iterate") || "").trim().length > 0 ||
+          String(slotSource(level, "push-pop") || "").trim().length > 0
+        ).toBe(true);
+        expect(slotSource(level, "init-structure")).toMatch(/(=|stack|heap|queue|map|set)/i);
+        expect(hasReturn(emit)).toBe(true);
+        continue;
+      }
+
+      if (templateId === BINARY_SEARCH_TEMPLATE_ID) {
+        expect(slotSource(level, "bounds")).toMatch(/(=|left|right|lo|hi|half|partition)/);
+        expect(hasLoop(slotSource(level, "halve"))).toBe(true);
+        expect(hasConditional(slotSource(level, "mid-check"))).toBe(true);
+        expect(hasReturn(emit)).toBe(true);
+        continue;
+      }
+
+      if (templateId === LINKED_LIST_TEMPLATE_ID) {
+        expect(slotSource(level, "anchors")).toMatch(/\b(head|slow|fast|cur|prev|next|dummy|tail)\b/);
+        expect(hasLoop(slotSource(level, "walk"))).toBe(true);
+        expect(hasReturn(emit)).toBe(true);
+        continue;
+      }
+
+      if (templateId === INTERVAL_GREEDY_TEMPLATE_ID) {
+        expect(slotSource(level, "order")).toMatch(/(sort|=)/);
+        expect(hasLoop(slotSource(level, "sweep"))).toBe(true);
+        expect(hasReturn(emit)).toBe(true);
+        continue;
+      }
+
+      if (templateId === BACKTRACKING_TEMPLATE_ID) {
+        expect(hasLoop(slotSource(level, "choose"))).toBe(true);
+        expect(String(slotSource(level, "constrain") || "").trim().length).toBeGreaterThan(0);
+        expect(String(slotSource(level, "base") || "").trim().length).toBeGreaterThan(0);
+        expect(hasReturn(ret)).toBe(true);
+        continue;
+      }
+
+      if (templateId === TREE_GRAPH_TEMPLATE_ID) {
+        expect(String(slotSource(level, "base-case") || "").trim().length).toBeGreaterThan(0);
+        expect(hasReturn(slotSource(level, "aggregate"))).toBe(true);
+        continue;
+      }
+
+      if (templateId === DP_STATE_TEMPLATE_ID) {
+        expect(slotSource(level, "base-state")).toMatch(/(=|fill\()/);
+        expect(hasLoop(slotSource(level, "subproblem"))).toBe(true);
+        expect(hasReturn(slotSource(level, "memoize"))).toBe(true);
+        continue;
+      }
+
+      if (templateId === ARRAY_HASHING_TEMPLATE_ID) {
+        expect(hasLoop(loop)).toBe(true);
+        expect(hasReturn(emit)).toBe(true);
+        continue;
+      }
+
+      if (templateId === DEFAULT_BLUEPRINT_TEMPLATE_ID) {
+        expect(hasLoop(loop)).toBe(true);
+        expect(hasReturn(ret)).toBe(true);
+      }
+    }
+  });
+
+  it("keeps fragile two-pointer levels aligned to slot semantics (q-10, q-11, q-12)", () => {
+    const q10 = BLUEPRINT_LEVELS.find((level) => String(level.id) === "q-10");
+    const q11 = BLUEPRINT_LEVELS.find((level) => String(level.id) === "q-11");
+    const q12 = BLUEPRINT_LEVELS.find((level) => String(level.id) === "q-12");
+
+    expect(q10?.templateId).toBe(TWO_POINTERS_TEMPLATE_ID);
+    expect(q11?.templateId).toBe(TWO_POINTERS_TEMPLATE_ID);
+    expect(q12?.templateId).toBe(TWO_POINTERS_TEMPLATE_ID);
+
+    expect(slotSource(q10, "anchors")).toMatch(/\bleft\b/);
+    expect(slotSource(q10, "anchors")).toMatch(/\bright\b/);
+    expect(slotSource(q10, "shift")).toMatch(/\bsum\b/);
+
+    expect(slotSource(q11, "anchors")).toMatch(/\bleft\b/);
+    expect(slotSource(q11, "anchors")).toMatch(/\bright\b/);
+    expect(slotSource(q11, "converge")).toMatch(/\bwhile\b/);
+    expect(slotSource(q11, "compare")).toMatch(/\bif\b/);
+
+    expect(slotSource(q12, "anchors")).toMatch(/\bleft\b/);
+    expect(slotSource(q12, "anchors")).toMatch(/\bright\b/);
+    expect(slotSource(q12, "converge")).toMatch(/\bwhile\b/);
+    expect(slotSource(q12, "compare")).toMatch(/height\[left\]\s*<=\s*height\[right\]/);
+    expect(slotSource(q12, "emit")).toMatch(/\breturn\s+water\b/);
+  });
+
+  it("keeps movement slots free of pointer-initialization lines across two-pointer levels", () => {
+    const twoPointerLevels = BLUEPRINT_LEVELS.filter((level) => level.templateId === TWO_POINTERS_TEMPLATE_ID);
+
+    const isInitLine = (source) => {
+      const normalized = String(source || "").trim().replace(/\s+/g, " ");
+      if (!normalized) return false;
+      if (/^(const|let|var)\s+(left|right|slow|fast|lo|hi|start|end)\b/.test(normalized)) return true;
+      if (/^(left|right|slow|fast|lo|hi|start|end)\s*=\s*(0|-?1|null|head|tail)\b/.test(normalized)) return true;
+      if (/^(left|right|slow|fast|lo|hi|start|end)\s*=\s*.*\b(length|len)\b/.test(normalized)) return true;
+      return false;
+    };
+
+    for (const level of twoPointerLevels) {
+      for (const card of cardsInSlot(level, "shift")) {
+        const source = String(card.execText || card.text || "");
+        expect(isInitLine(source)).toBe(false);
+      }
+    }
   });
 
   it("keeps invert binary tree solution cards self-contained", () => {

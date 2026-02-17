@@ -703,7 +703,7 @@ export function createFirstTenStrategies() {
           irStep("setup", "init-out", "const out = []", "declare"),
           irStep("loop", "for-i", "for (let i = 0; i < nums.length - 2; i++)", "loop"),
           irStep("check", "skip-dup-i", "if (i > 0 && nums[i] === nums[i - 1]) continue", "branch"),
-          irStep("update", "init-lr", "let left = i + 1; let right = nums.length - 1", "update"),
+          irStep("setup", "init-lr", "let left = i + 1; let right = nums.length - 1", "declare"),
           irStep("loop", "while-lr", "while (left < right)", "loop"),
           irStep("update", "calc-sum", "const sum = nums[i] + nums[left] + nums[right]", "compute"),
           irStep(

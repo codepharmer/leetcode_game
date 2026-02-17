@@ -1,4 +1,5 @@
 import { compareByOutputMode } from "./comparators";
+import { getProblemIrDiagnostics } from "./problemIr";
 import { randInt } from "./shared";
 
 function cloneValue(value) {
@@ -67,10 +68,12 @@ export function createStrategiesFromProblemSpecs(problemSpecs) {
     appliesTo: (contract) => contract?.strategyId === spec.strategyId,
     buildPlan: (contract) => {
       const outputMode = contract?.constraints?.outputMode;
+      const irDiagnostics = getProblemIrDiagnostics(spec.ir);
       return {
         templateId: spec.templateId,
         snippetName: spec.snippetName,
         ir: spec.ir || [],
+        irDiagnostics,
         solve: spec.solve,
         deterministicCases: contract.deterministicCases,
         randomTrials: contract.randomTrials,
@@ -94,4 +97,3 @@ export function createStrategiesFromProblemSpecs(problemSpecs) {
 }
 
 export { cloneValue };
-

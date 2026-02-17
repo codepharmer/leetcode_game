@@ -132,6 +132,11 @@ Base URL for the storage/session API (Lambda Function URL or equivalent).
 Optional analytics ingest endpoint used by `trackEvent()` (`src/lib/analytics.js`).  
 If unset, analytics events are emitted only to `console.debug` in local dev (non-test mode).
 
+- `VITE_BLUEPRINT_IR_V2`
+Optional blueprint IR extraction toggle for strategy-generated levels.  
+Default behavior is `enabled` (guarded v2 extraction + automatic legacy fallback on guard failure).  
+Set to `0`/`false` to force legacy extraction globally.
+
 ## High-Level Architecture
 
 1. Frontend:
@@ -168,6 +173,9 @@ If unset, analytics events are emitted only to `console.debug` in local dev (non
 - `World 0` is excluded from daily challenge selection and from core-world unlock counting so existing unlock pacing remains stable.
 - Blueprint cards now avoid placeholder pseudocode/comment markers across all levels and ship concrete runnable code steps from strategy solve implementations.
 - Blueprint cards now store display text (`text`, Python) and execution text (`execText`, JS) so adaptive composed execution, traces, and dependency checks remain stable while the UI language is Python-first.
+- Problem-level IR extraction now includes guarded v2 two-pointer slot extraction (`anchors`, `converge`, `shift`, `compare`, `emit`) with automatic legacy fallback when slot-semantic guards fail.
+- Generated levels now expose IR diagnostics (`generationIrDiagnostics`) so reporting can track `ir_v2_enabled_count`, `ir_v2_fallback_count`, and `ir_bad_slot_incident_count`.
+- `npm run blueprint:report` includes the IR diagnostics counters for rollout monitoring.
 - Tree World 0 solution cards (`q-33`, `q-34`, `q-35`, `q-36`, `q-38`, `q-39`, `q-40`, `q-42`, `q-43`) are self-contained and no longer reference hidden tree conversion helpers (`arrayToTree` / `treeToArray`) in the displayed flow.
 - Invert Binary Tree (`q-33`) now demonstrates the swap-first DFS order (`swap children -> recurse left -> recurse right`) in both execution and displayed blueprint steps.
 
@@ -412,7 +420,7 @@ Problem-specific strategy families for `q-11..q-87` with per-question solve/orac
 Pattern-to-archetype taxonomy with wave assignment and reusable slot-set mapping.
 
 - `src/lib/blueprint/coverageReport.js`
-Coverage and quality metrics (`strategy coverage`, `semantic pass`, `problemSpecificStrategyCount`, `placeholderContractCount`, `semanticProbeUsageCount`, `per-wave`, `per-pattern`).
+Coverage and quality metrics (`strategy coverage`, `semantic pass`, `problemSpecificStrategyCount`, `placeholderContractCount`, `semanticProbeUsageCount`, IR diagnostics counters, `per-wave`, `per-pattern`).
 
 - `src/lib/blueprint/semanticVerifier.js`
 Deterministic/random verification gate for strategy solve plans.
@@ -424,7 +432,7 @@ Converts verified IR nodes into card payloads and slot limits, filters standalon
 JS-to-Python display converter used for blueprint card text normalization.
 
 - `src/lib/blueprint/solutionPipeline.js`
-Strategy selection + verification + IR conversion + strict no-fallback default behavior.
+Strategy selection + verification + IR conversion + strict no-fallback default behavior, including per-level IR diagnostics passthrough.
 
 - `src/lib/blueprint/levels.js`
 Base handcrafted levels + auto-generated levels for all questions.

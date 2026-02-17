@@ -8,11 +8,30 @@ import {
   STACK_HEAP_TEMPLATE_ID,
   TREE_GRAPH_TEMPLATE_ID,
   TWO_POINTERS_TEMPLATE_ID,
+  getTemplateSlotIds,
 } from "../templates";
 import { irStep } from "./shared";
 
+const PROBLEM_IR_DIAGNOSTICS_KEY = "__problemIrDiagnostics";
+const POINTER_NAMES = new Set(["left", "right", "slow", "fast", "lo", "hi", "start", "end", "l", "r"]);
+
 function compactCodeLine(line) {
   return String(line || "").replace(/\s+/g, " ").trim();
+}
+
+function normalizeControlLine(line) {
+  return String(line || "").trim().replace(/^\}+\s*/, "");
+}
+
+function splitStatements(line) {
+  return String(line || "")
+    .split(";")
+    .map((part) => part.trim())
+    .filter(Boolean);
+}
+
+function stripTrailingSemicolon(text) {
+  return String(text || "").trim().replace(/;$/, "");
 }
 
 function extractSolveBodyLines(solveFn) {
@@ -29,6 +48,10 @@ function extractSolveBodyLines(solveFn) {
     .filter(Boolean)
     .filter((line) => !/^\}?;?$/.test(line))
     .filter((line) => !/^(\/\/|\/\*|\*)/.test(line));
+}
+
+function toLineEntries(lines) {
+  return (lines || []).map((text, index) => ({ text, index }));
 }
 
 function pickLine(lines, used, matchers) {
@@ -53,20 +76,189 @@ function pickAnyUnused(lines, used, fallbackText) {
   return fallbackText;
 }
 
-const isReturnLine = (line) => /^return\b/.test(line);
-const isLoopLine = (line) => /^(for|while)\b/.test(line);
-const isIfLine = (line) => /^(if|else if|else)\b/.test(line);
-const isDeclarationLine = (line) => /^(const|let|var|function)\b/.test(line);
+function pickEntry(entries, matchers) {
+  for (const matcher of matchers) {
+    for (const entry of entries) {
+      if (!matcher(entry)) continue;
+      return entry;
+    }
+  }
+  return null;
+}
+
+const isReturnLine = (line) => /^return\b/.test(normalizeControlLine(line));
+const isLoopLine = (line) => /^(for|while)\b/.test(normalizeControlLine(line));
+const isIfLine = (line) => /^(if|else if|else)\b/.test(normalizeControlLine(line));
+const isDeclarationLine = (line) => /^(const|let|var|function)\b/.test(normalizeControlLine(line));
 const isMutationLine = (line) =>
-  /(=|\+\+|--|\.push\(|\.pop\(|\.shift\(|\.unshift\(|\.set\(|\.add\(|\.delete\(|\.splice\()/.test(line);
+  /(=|\+\+|--|\.push\(|\.pop\(|\.shift\(|\.unshift\(|\.set\(|\.add\(|\.delete\(|\.splice\()/.test(normalizeControlLine(line));
 
-const mentionsPointerState = (line) => /\b(left|right|slow|fast|prev|cur|head)\b/.test(line);
-const mentionsLinearStructure = (line) => /\b(stack|queue|heap|indegree|graph|out)\b/.test(line);
-const mentionsDpState = (line) => /\b(dp|memo|tails|rob1|rob2|curMax|curMin|maxCount|best)\b/.test(line);
-const mentionsTraversal = (line) => /\b(node|grid|dfs|bfs|neighbors|queue)\b/.test(line);
-const mentionsRecursion = (line) => /\b(dfs|bfs|invert|depth|build|valid|contains|expand)\s*\(/.test(line);
+const mentionsPointerState = (line) => /\b(left|right|slow|fast|prev|cur|head|lo|hi|start|end)\b/.test(normalizeControlLine(line));
+const mentionsLinearStructure = (line) => /\b(stack|queue|heap|indegree|graph|out)\b/.test(normalizeControlLine(line));
+const mentionsDpState = (line) => /\b(dp|memo|tails|rob1|rob2|curMax|curMin|maxCount|best)\b/.test(normalizeControlLine(line));
+const mentionsTraversal = (line) => /\b(node|grid|dfs|bfs|neighbors|queue)\b/.test(normalizeControlLine(line));
+const mentionsRecursion = (line) => /\b(dfs|bfs|invert|depth|build|valid|contains|expand)\s*\(/.test(normalizeControlLine(line));
 
-function buildSolveDerivedIr(templateId, solveFn) {
+function parseAssignedPointerNames(statement) {
+  const trimmed = stripTrailingSemicolon(statement);
+  if (!trimmed) return [];
+
+  const names = [];
+  const declaration = trimmed.match(/^(?:const|let|var)\s+(.+)$/);
+  if (declaration) {
+    for (const segment of declaration[1].split(",")) {
+      const match = segment.trim().match(/^([A-Za-z_$][\w$]*)\s*=/);
+      if (!match) continue;
+      const name = match[1];
+      if (POINTER_NAMES.has(name)) names.push(name);
+    }
+    return names;
+  }
+
+  const assignment = trimmed.match(/^([A-Za-z_$][\w$]*)\s*=\s*[^=]/);
+  if (assignment && POINTER_NAMES.has(assignment[1])) names.push(assignment[1]);
+  return names;
+}
+
+function extractPointerNamesFromText(text) {
+  const names = new Set();
+  const normalized = String(text || "");
+  const regex = /\b([A-Za-z_$][\w$]*)\b/g;
+  for (const match of normalized.matchAll(regex)) {
+    const candidate = match[1];
+    if (POINTER_NAMES.has(candidate)) names.add(candidate);
+  }
+  return [...names];
+}
+
+function isPointerInitializationStatement(statement) {
+  const normalized = normalizeControlLine(statement);
+  if (!normalized) return false;
+  if (!parseAssignedPointerNames(normalized).length) return false;
+  if (/(\+\+|--|\+=|-=)/.test(normalized)) return false;
+  if (/^(const|let|var)\b/.test(normalized)) return true;
+  if (/=\s*(?:0|-?1|null|head|tail)\b/.test(normalized)) return true;
+  if (/\b(length|len)\b/.test(normalized)) return true;
+  return false;
+}
+
+function looksLikePointerInitializationLine(line) {
+  const normalized = normalizeControlLine(line);
+  if (!normalized) return false;
+  return isPointerInitializationStatement(normalized);
+}
+
+function isPointerMovementLine(line) {
+  const normalized = normalizeControlLine(line);
+  if (!normalized) return false;
+  if (!mentionsPointerState(normalized)) return false;
+  if (/\+\+|--|\+=|-=/.test(normalized)) return true;
+  return parseAssignedPointerNames(normalized).length > 0;
+}
+
+function selectTwoPointerAnchors(entries, loopIndex) {
+  const beforeLoop = entries.filter((entry) => loopIndex < 0 || entry.index < loopIndex);
+  const selected = [];
+  const seen = new Set();
+
+  const collect = (allowNonInit) => {
+    for (const entry of beforeLoop) {
+      const statements = splitStatements(entry.text);
+      for (const statement of statements) {
+        const names = parseAssignedPointerNames(statement);
+        if (!names.length) continue;
+        if (!allowNonInit && !isPointerInitializationStatement(statement)) continue;
+        const adds = names.filter((name) => !seen.has(name));
+        if (!adds.length) continue;
+        selected.push({
+          text: stripTrailingSemicolon(statement),
+          index: entry.index,
+          names,
+        });
+        for (const name of adds) seen.add(name);
+        if (seen.size >= 2) return true;
+      }
+    }
+    return false;
+  };
+
+  if (!collect(false)) collect(true);
+  return {
+    statements: selected,
+    pointerNames: [...seen],
+  };
+}
+
+function buildTwoPointersSolveDerivedIrV2(solveFn) {
+  const entries = toLineEntries(extractSolveBodyLines(solveFn));
+  if (!entries.length) return null;
+
+  const loopEntry =
+    pickEntry(entries, [
+      (entry) => isLoopLine(entry.text) && mentionsPointerState(entry.text),
+      (entry) => isLoopLine(entry.text),
+    ]) || { text: "while (left < right)", index: -1 };
+  const loopIndex = loopEntry.index;
+
+  const returnEntry = pickEntry(
+    entries.filter((entry) => entry.index > loopIndex),
+    [(entry) => isReturnLine(entry.text)]
+  );
+  const returnIndex = returnEntry ? returnEntry.index : -1;
+
+  const anchorSelection = selectTwoPointerAnchors(entries, loopIndex);
+  const anchorText = anchorSelection.statements.length
+    ? anchorSelection.statements.map((item) => item.text).join("; ")
+    : "let left = 0; let right = data.length - 1";
+  const anchorIndex = anchorSelection.statements.length ? anchorSelection.statements[0].index : -1;
+
+  const loopBodyEntries = entries.filter((entry) => {
+    const afterLoop = loopIndex < 0 ? true : entry.index > loopIndex;
+    const beforeReturn = returnIndex < 0 ? true : entry.index < returnIndex;
+    return afterLoop && beforeReturn;
+  });
+
+  const shiftEntry =
+    pickEntry(loopBodyEntries, [
+      (entry) => isPointerMovementLine(entry.text) && !isIfLine(entry.text) && !isDeclarationLine(entry.text),
+      (entry) => isPointerMovementLine(entry.text) && !isDeclarationLine(entry.text),
+      (entry) => isMutationLine(entry.text) && mentionsPointerState(entry.text) && !isDeclarationLine(entry.text),
+      (entry) => isMutationLine(entry.text) && !isDeclarationLine(entry.text),
+    ]) || { text: "left += 1", index: -1 };
+
+  const compareEntry =
+    pickEntry(loopBodyEntries, [
+      (entry) => isIfLine(entry.text) && mentionsPointerState(entry.text),
+      (entry) => isIfLine(entry.text),
+    ]) ||
+    pickEntry(entries, [(entry) => isIfLine(entry.text)]) || { text: "if (score > best) best = score", index: -1 };
+
+  const emitEntry = returnEntry || pickEntry(entries, [(entry) => isReturnLine(entry.text)]) || { text: "return best", index: -1 };
+
+  return {
+    ir: [
+      irStep("anchors", "init-pointers", anchorText, "declare"),
+      irStep("converge", "scan-pairs", loopEntry.text || "while (left < right)", "loop"),
+      irStep("shift", "move-pointer", shiftEntry.text || "left += 1", "update"),
+      irStep("compare", "check-candidate", compareEntry.text || "if (score > best) best = score", "branch"),
+      irStep("emit", "return-answer", emitEntry.text || "return best", "return"),
+    ],
+    meta: {
+      loopIndex,
+      returnIndex,
+      slotSourceIndices: {
+        anchors: anchorIndex,
+        converge: loopEntry.index,
+        shift: shiftEntry.index,
+        compare: compareEntry.index,
+        emit: emitEntry.index,
+      },
+      anchorPointerNames: anchorSelection.pointerNames,
+    },
+  };
+}
+
+function buildSolveDerivedIrLegacy(templateId, solveFn) {
   const lines = extractSolveBodyLines(solveFn);
   if (!lines.length) return null;
 
@@ -173,10 +365,95 @@ function buildSolveDerivedIr(templateId, solveFn) {
   ];
 }
 
-export function buildProblemIr(templateId, label, solveFn) {
-  const solveDerived = buildSolveDerivedIr(templateId, solveFn);
-  if (solveDerived) return solveDerived;
+function buildSolveDerivedIrV2(templateId, solveFn) {
+  if (templateId === TWO_POINTERS_TEMPLATE_ID) return buildTwoPointersSolveDerivedIrV2(solveFn);
+  const legacy = buildSolveDerivedIrLegacy(templateId, solveFn);
+  if (!legacy) return null;
+  return { ir: legacy, meta: {} };
+}
 
+function validateSingleCardPerSlot(templateId, irNodes) {
+  const incidents = [];
+  const expectedSlots = getTemplateSlotIds(templateId);
+  const counts = Object.fromEntries(expectedSlots.map((slot) => [slot, 0]));
+  for (const node of irNodes || []) {
+    if (!node?.slot || !Object.prototype.hasOwnProperty.call(counts, node.slot)) continue;
+    counts[node.slot] += 1;
+  }
+
+  for (const slot of expectedSlots) {
+    if (counts[slot] !== 1) incidents.push(`slot:${slot}:count:${counts[slot]}`);
+  }
+  return incidents;
+}
+
+function validateTwoPointerExtraction(result) {
+  const incidents = [];
+  const nodes = result?.ir || [];
+  const bySlot = Object.fromEntries(nodes.map((node) => [String(node?.slot || ""), String(node?.text || "")]));
+  const sourceIndex = result?.meta?.slotSourceIndices || {};
+  const loopIndex = Number.isInteger(result?.meta?.loopIndex) ? result.meta.loopIndex : -1;
+  const returnIndex = Number.isInteger(result?.meta?.returnIndex) ? result.meta.returnIndex : -1;
+
+  const anchorPointers = new Set([
+    ...(result?.meta?.anchorPointerNames || []),
+    ...extractPointerNamesFromText(bySlot.anchors),
+  ]);
+
+  if (anchorPointers.size < 2) incidents.push("anchors-missing-two-pointers");
+  if (!isLoopLine(bySlot.converge)) incidents.push("converge-not-loop");
+  if (!isIfLine(bySlot.compare)) incidents.push("compare-not-conditional");
+  if (!isReturnLine(bySlot.emit)) incidents.push("emit-not-return");
+
+  const shiftIndex = Number.isInteger(sourceIndex.shift) ? sourceIndex.shift : -1;
+  const inLoopBody =
+    shiftIndex >= 0 &&
+    loopIndex >= 0 &&
+    shiftIndex > loopIndex &&
+    (returnIndex < 0 || shiftIndex < returnIndex);
+  if (!inLoopBody) incidents.push("shift-not-from-loop-body");
+  if (looksLikePointerInitializationLine(bySlot.shift)) incidents.push("shift-looks-like-init");
+
+  return incidents;
+}
+
+function validateSolveDerivedIrV2(templateId, result) {
+  if (!result?.ir?.length) {
+    return {
+      valid: false,
+      incidents: ["v2-empty-ir"],
+    };
+  }
+
+  const incidents = validateSingleCardPerSlot(templateId, result.ir);
+  if (templateId === TWO_POINTERS_TEMPLATE_ID) {
+    incidents.push(...validateTwoPointerExtraction(result));
+  }
+
+  return {
+    valid: incidents.length === 0,
+    incidents,
+  };
+}
+
+function isProblemIrV2Enabled() {
+  const envValue = import.meta?.env?.VITE_BLUEPRINT_IR_V2;
+  if (envValue === undefined || envValue === null || String(envValue).trim() === "") return true;
+  const normalized = String(envValue).trim().toLowerCase();
+  return normalized !== "0" && normalized !== "false" && normalized !== "off" && normalized !== "no";
+}
+
+function attachDiagnostics(irNodes, diagnostics) {
+  if (!Array.isArray(irNodes)) return irNodes;
+  Object.defineProperty(irNodes, PROBLEM_IR_DIAGNOSTICS_KEY, {
+    value: diagnostics,
+    enumerable: false,
+    configurable: true,
+  });
+  return irNodes;
+}
+
+function buildTemplateFallbackIr(templateId) {
   if (templateId === TWO_POINTERS_TEMPLATE_ID) {
     return [
       irStep("anchors", "init-pointers", "let left = 0; let right = data.length - 1", "declare"),
@@ -274,4 +551,108 @@ export function buildProblemIr(templateId, label, solveFn) {
     irStep("check", "check", "if (answer > best) best = answer", "branch"),
     irStep("return", "return", "return answer", "return"),
   ];
+}
+
+function makeDiagnostics({
+  templateId,
+  label,
+  v2Enabled,
+  extractor,
+  usedLegacyFallback,
+  fallbackReason,
+  badSlotIncidents,
+}) {
+  return {
+    templateId,
+    label: label || "",
+    v2Enabled,
+    extractor,
+    usedLegacyFallback: usedLegacyFallback === true,
+    fallbackReason: fallbackReason || null,
+    badSlotIncidents: [...(badSlotIncidents || [])],
+  };
+}
+
+export function getProblemIrDiagnostics(irNodes) {
+  if (!Array.isArray(irNodes)) return null;
+  return irNodes[PROBLEM_IR_DIAGNOSTICS_KEY] || null;
+}
+
+export function buildProblemIr(templateId, label, solveFn) {
+  const v2Enabled = isProblemIrV2Enabled();
+
+  if (v2Enabled) {
+    const v2Result = buildSolveDerivedIrV2(templateId, solveFn);
+    const v2Validation = validateSolveDerivedIrV2(templateId, v2Result);
+    if (v2Validation.valid) {
+      return attachDiagnostics(
+        v2Result.ir,
+        makeDiagnostics({
+          templateId,
+          label,
+          v2Enabled,
+          extractor: "v2",
+          usedLegacyFallback: false,
+          badSlotIncidents: [],
+        })
+      );
+    }
+
+    const legacy = buildSolveDerivedIrLegacy(templateId, solveFn);
+    if (legacy) {
+      return attachDiagnostics(
+        legacy,
+        makeDiagnostics({
+          templateId,
+          label,
+          v2Enabled,
+          extractor: "v1",
+          usedLegacyFallback: true,
+          fallbackReason: "v2-guard-failed",
+          badSlotIncidents: v2Validation.incidents,
+        })
+      );
+    }
+
+    return attachDiagnostics(
+      buildTemplateFallbackIr(templateId),
+      makeDiagnostics({
+        templateId,
+        label,
+        v2Enabled,
+        extractor: "template-fallback",
+        usedLegacyFallback: true,
+        fallbackReason: "v2-and-v1-empty",
+        badSlotIncidents: v2Validation.incidents,
+      })
+    );
+  }
+
+  const legacy = buildSolveDerivedIrLegacy(templateId, solveFn);
+  if (legacy) {
+    return attachDiagnostics(
+      legacy,
+      makeDiagnostics({
+        templateId,
+        label,
+        v2Enabled: false,
+        extractor: "v1",
+        usedLegacyFallback: false,
+        badSlotIncidents: [],
+      })
+    );
+  }
+
+  return attachDiagnostics(
+    buildTemplateFallbackIr(templateId),
+    makeDiagnostics({
+      templateId,
+      label,
+      v2Enabled: false,
+      extractor: "template-fallback",
+      usedLegacyFallback: false,
+      fallbackReason: "v1-empty",
+      badSlotIncidents: [],
+    })
+  );
 }

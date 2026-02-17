@@ -194,9 +194,11 @@ function StatRing({ label, value, percentage, delay = 0, accentColor }) {
             padding: "2px 6px",
             borderRadius: 999,
             color: "var(--text-strong)",
-            background: "var(--surface-1)",
-            border: "1px solid var(--border)",
-            boxShadow: "0 1px 2px rgba(0, 0, 0, 0.18)",
+            background: "var(--surface-overlay-strong)",
+            border: "1px solid var(--border-strong)",
+            boxShadow: "0 1px 3px rgba(0, 0, 0, 0.3)",
+            textShadow: "0 1px 1px rgba(0, 0, 0, 0.55)",
+            zIndex: 1,
             pointerEvents: "none",
           }}
         >

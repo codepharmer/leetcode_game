@@ -16,7 +16,7 @@ function questionIdFromLevel(level) {
 
 const SEMANTIC_PROBE_STRATEGY_IDS = new Set(Object.values(WAVE_TEMPLATE_STRATEGY_IDS || {}));
 
-function buildPatternSummary(seed = { total: 0, strategy: 0, passed: 0, fallback: 0, problemSpecific: 0, probe: 0 }) {
+function buildPatternSummary(seed = { total: 0, strategy: 0, passed: 0, fallback: 0, problemSpecific: 0, probe: 0, irV2: 0, irV2Fallback: 0, irBadSlotIncidents: 0 }) {
   return {
     total: seed.total,
     strategy_generated: seed.strategy,
@@ -24,12 +24,15 @@ function buildPatternSummary(seed = { total: 0, strategy: 0, passed: 0, fallback
     semantic_probe_usage_count: seed.probe,
     semantic_passed: seed.passed,
     fallback_count: seed.fallback,
+    ir_v2_enabled_count: seed.irV2,
+    ir_v2_fallback_count: seed.irV2Fallback,
+    ir_bad_slot_incident_count: seed.irBadSlotIncidents,
     strategy_coverage_pct: toPercent(seed.strategy, seed.total),
     semantic_pass_pct: toPercent(seed.passed, seed.total),
   };
 }
 
-function buildWaveSummary(seed = { total: 0, strategy: 0, passed: 0, fallback: 0, problemSpecific: 0, probe: 0, placeholders: 0 }) {
+function buildWaveSummary(seed = { total: 0, strategy: 0, passed: 0, fallback: 0, problemSpecific: 0, probe: 0, placeholders: 0, irV2: 0, irV2Fallback: 0, irBadSlotIncidents: 0 }) {
   return {
     total: seed.total,
     strategy_generated: seed.strategy,
@@ -38,6 +41,9 @@ function buildWaveSummary(seed = { total: 0, strategy: 0, passed: 0, fallback: 0
     placeholder_contract_count: seed.placeholders,
     semantic_passed: seed.passed,
     fallback_count: seed.fallback,
+    ir_v2_enabled_count: seed.irV2,
+    ir_v2_fallback_count: seed.irV2Fallback,
+    ir_bad_slot_incident_count: seed.irBadSlotIncidents,
     strategy_coverage_pct: toPercent(seed.strategy, seed.total),
     semantic_pass_pct: toPercent(seed.passed, seed.total),
   };
@@ -54,6 +60,9 @@ export function buildBlueprintCoverageReport(levels, questions = QUESTIONS) {
   let semanticPassed = 0;
   let fallbackCount = 0;
   let lowConfidenceCount = 0;
+  let irV2EnabledCount = 0;
+  let irV2FallbackCount = 0;
+  let irBadSlotIncidentCount = 0;
 
   const perPatternSeed = new Map();
   const perWaveSeed = new Map();
@@ -63,8 +72,8 @@ export function buildBlueprintCoverageReport(levels, questions = QUESTIONS) {
     const pattern = question.pattern;
     const wave = getPatternWave(pattern);
 
-    if (!perPatternSeed.has(pattern)) perPatternSeed.set(pattern, { total: 0, strategy: 0, passed: 0, fallback: 0, problemSpecific: 0, probe: 0 });
-    if (!perWaveSeed.has(wave)) perWaveSeed.set(wave, { total: 0, strategy: 0, passed: 0, fallback: 0, problemSpecific: 0, probe: 0, placeholders: 0 });
+    if (!perPatternSeed.has(pattern)) perPatternSeed.set(pattern, { total: 0, strategy: 0, passed: 0, fallback: 0, problemSpecific: 0, probe: 0, irV2: 0, irV2Fallback: 0, irBadSlotIncidents: 0 });
+    if (!perWaveSeed.has(wave)) perWaveSeed.set(wave, { total: 0, strategy: 0, passed: 0, fallback: 0, problemSpecific: 0, probe: 0, placeholders: 0, irV2: 0, irV2Fallback: 0, irBadSlotIncidents: 0 });
 
     const patternState = perPatternSeed.get(pattern);
     const waveState = perWaveSeed.get(wave);
@@ -78,6 +87,10 @@ export function buildBlueprintCoverageReport(levels, questions = QUESTIONS) {
     const semanticProbe = SEMANTIC_PROBE_STRATEGY_IDS.has(String(level?.generationStrategyId || ""));
     const problemSpecific = usedStrategy && !semanticProbe;
     const placeholderContract = hasPlaceholderProbeCases(contractByQuestionId.get(question.id));
+    const irDiagnostics = level?.generationIrDiagnostics;
+    const irV2Enabled = irDiagnostics?.v2Enabled === true;
+    const irV2Fallback = irDiagnostics?.usedLegacyFallback === true;
+    const badSlotIncidents = Array.isArray(irDiagnostics?.badSlotIncidents) ? irDiagnostics.badSlotIncidents.length : 0;
 
     if (usedStrategy) {
       strategyGenerated += 1;
@@ -103,6 +116,21 @@ export function buildBlueprintCoverageReport(levels, questions = QUESTIONS) {
       fallbackCount += 1;
       patternState.fallback += 1;
       waveState.fallback += 1;
+    }
+    if (irV2Enabled) {
+      irV2EnabledCount += 1;
+      patternState.irV2 += 1;
+      waveState.irV2 += 1;
+    }
+    if (irV2Fallback) {
+      irV2FallbackCount += 1;
+      patternState.irV2Fallback += 1;
+      waveState.irV2Fallback += 1;
+    }
+    if (badSlotIncidents > 0) {
+      irBadSlotIncidentCount += badSlotIncidents;
+      patternState.irBadSlotIncidents += badSlotIncidents;
+      waveState.irBadSlotIncidents += badSlotIncidents;
     }
     if (placeholderContract) {
       waveState.placeholders += 1;
@@ -130,12 +158,17 @@ export function buildBlueprintCoverageReport(levels, questions = QUESTIONS) {
         summary.problem_specific_strategy_generated === summary.total &&
         summary.semantic_probe_usage_count === 0 &&
         summary.placeholder_contract_count === 0 &&
-        summary.fallback_count === 0,
+        summary.fallback_count === 0 &&
+        summary.ir_v2_fallback_count === 0 &&
+        summary.ir_bad_slot_incident_count === 0,
       strategy_generated: summary.strategy_generated,
       problem_specific_strategy_generated: summary.problem_specific_strategy_generated,
       semantic_probe_usage_count: summary.semantic_probe_usage_count,
       placeholder_contract_count: summary.placeholder_contract_count,
       fallback_count: summary.fallback_count,
+      ir_v2_enabled_count: summary.ir_v2_enabled_count,
+      ir_v2_fallback_count: summary.ir_v2_fallback_count,
+      ir_bad_slot_incident_count: summary.ir_bad_slot_incident_count,
       total: summary.total,
     };
   }
@@ -149,6 +182,9 @@ export function buildBlueprintCoverageReport(levels, questions = QUESTIONS) {
     semantic_passed: semanticPassed,
     fallback_count: fallbackCount,
     low_confidence_count: lowConfidenceCount,
+    ir_v2_enabled_count: irV2EnabledCount,
+    ir_v2_fallback_count: irV2FallbackCount,
+    ir_bad_slot_incident_count: irBadSlotIncidentCount,
     strategy_coverage_pct: toPercent(strategyGenerated, totalQuestions),
     semantic_pass_pct: toPercent(semanticPassed, totalQuestions),
     per_pattern_completion: perPatternCompletion,
@@ -169,10 +205,13 @@ export function formatBlueprintCoverageReport(report) {
   lines.push(`Semantic Pass %: ${report.semantic_pass_pct}`);
   lines.push(`Fallback Count: ${report.fallback_count}`);
   lines.push(`Low Confidence Count: ${report.low_confidence_count}`);
+  lines.push(`IR v2 Enabled Count: ${report.ir_v2_enabled_count}`);
+  lines.push(`IR v2 Fallback Count: ${report.ir_v2_fallback_count}`);
+  lines.push(`IR Bad Slot Incident Count: ${report.ir_bad_slot_incident_count}`);
   lines.push("Per Wave Completion:");
   for (const [wave, waveSummary] of Object.entries(report.per_wave_completion || {})) {
     lines.push(
-      `- ${wave}: strategy ${waveSummary.strategy_generated}/${waveSummary.total}, problem-specific ${waveSummary.problem_specific_strategy_generated}/${waveSummary.total}, semantic ${waveSummary.semantic_passed}/${waveSummary.total}, probe ${waveSummary.semantic_probe_usage_count}, placeholders ${waveSummary.placeholder_contract_count}, fallback ${waveSummary.fallback_count}`
+      `- ${wave}: strategy ${waveSummary.strategy_generated}/${waveSummary.total}, problem-specific ${waveSummary.problem_specific_strategy_generated}/${waveSummary.total}, semantic ${waveSummary.semantic_passed}/${waveSummary.total}, probe ${waveSummary.semantic_probe_usage_count}, placeholders ${waveSummary.placeholder_contract_count}, fallback ${waveSummary.fallback_count}, ir-v2 ${waveSummary.ir_v2_enabled_count}, ir-v2-fallback ${waveSummary.ir_v2_fallback_count}, ir-incidents ${waveSummary.ir_bad_slot_incident_count}`
     );
   }
   lines.push("Per Wave Remediation Status:");
@@ -181,7 +220,7 @@ export function formatBlueprintCoverageReport(report) {
   }
   lines.push("Per Pattern Completion:");
   for (const [pattern, patternSummary] of Object.entries(report.per_pattern_completion || {})) {
-    lines.push(`- ${pattern}: strategy ${patternSummary.strategy_generated}/${patternSummary.total}, semantic ${patternSummary.semantic_passed}/${patternSummary.total}, fallback ${patternSummary.fallback_count}`);
+    lines.push(`- ${pattern}: strategy ${patternSummary.strategy_generated}/${patternSummary.total}, semantic ${patternSummary.semantic_passed}/${patternSummary.total}, fallback ${patternSummary.fallback_count}, ir-v2-fallback ${patternSummary.ir_v2_fallback_count}, ir-incidents ${patternSummary.ir_bad_slot_incident_count}`);
   }
   return lines.join("\n");
 }
