@@ -32,14 +32,13 @@ function getRequiredSlotCount(level) {
   return (level?.cards || []).filter((card) => card?.correctSlot).length;
 }
 
-function findChallengeByRequiredSlotCount(predicate) {
+function findChallenge(predicate) {
   const campaign = getBlueprintCampaign({});
   for (const world of campaign?.worlds || []) {
     for (const stage of world?.stages || []) {
       for (const tier of stage?.tiers || []) {
         for (const challenge of tier?.challenges || []) {
-          const count = getRequiredSlotCount(challenge?.level);
-          if (predicate(count, challenge)) return challenge;
+          if (predicate(challenge)) return challenge;
         }
       }
     }
@@ -47,26 +46,21 @@ function findChallengeByRequiredSlotCount(predicate) {
   return null;
 }
 
-function createDataTransfer() {
-  return {
-    data: {},
-    setData(type, value) {
-      this.data[type] = value;
-    },
-    getData(type) {
-      return this.data[type] || "";
-    },
-    effectAllowed: "move",
-    dropEffect: "move",
-  };
+function findChallengeByRequiredSlotCount(predicate) {
+  return findChallenge((challenge) => predicate(getRequiredSlotCount(challenge?.level), challenge));
 }
 
-function dragDeckCardIntoSlot(deckCard, slot) {
-  const dataTransfer = createDataTransfer();
-  fireEvent.dragStart(deckCard, { dataTransfer });
-  fireEvent.dragOver(slot, { dataTransfer });
-  fireEvent.drop(slot, { dataTransfer });
-  fireEvent.dragEnd(deckCard, { dataTransfer });
+function findChallengeByTitle(titlePart) {
+  const safe = String(titlePart || "").toLowerCase();
+  return findChallenge((challenge) => {
+    const title = String(challenge?.level?.title || challenge?.title || "").toLowerCase();
+    return title.includes(safe);
+  });
+}
+
+function tapPlaceCard(cardId, slotId) {
+  fireEvent.click(screen.getByTestId(`blueprint-deck-card-${cardId}`));
+  fireEvent.click(screen.getByTestId(`blueprint-slot-${slotId}`));
 }
 
 describe("screens/BlueprintScreen", () => {
@@ -186,18 +180,20 @@ describe("screens/BlueprintScreen", () => {
     const activeSlot = screen.getByTestId(`blueprint-slot-${activeSlotId}`);
     const lockedSlot = screen.getByTestId(`blueprint-slot-${lockedSlotId}`);
 
-    const initialDeckCount = screen.getAllByTestId(/blueprint-deck-card-/).length;
-    const firstDeckCard = screen.getAllByTestId(/blueprint-deck-card-/)[0];
-    fireEvent.click(firstDeckCard);
-    fireEvent.click(lockedSlot);
-    expect(screen.getAllByTestId(/blueprint-deck-card-/).length).toBe(initialDeckCount);
-
     const cardsForActiveSlot = (phasedChallenge.level.cards || [])
       .filter((card) => String(card?.correctSlot || "") === activeSlotId)
       .sort((a, b) => (a?.correctOrder || 0) - (b?.correctOrder || 0));
 
+    const firstCardId = String(cardsForActiveSlot[0]?.id || "");
+    expect(firstCardId).toBeTruthy();
+
+    fireEvent.click(screen.getByTestId(`blueprint-deck-card-${firstCardId}`));
+    fireEvent.click(lockedSlot);
+    expect(within(lockedSlot).queryByTestId(new RegExp(`blueprint-placed-card-${firstCardId}`))).not.toBeInTheDocument();
+    fireEvent.click(screen.getByTestId(`blueprint-deck-card-${firstCardId}`));
+
     for (const card of cardsForActiveSlot) {
-      dragDeckCardIntoSlot(screen.getByTestId(`blueprint-deck-card-${card.id}`), activeSlot);
+      tapPlaceCard(card.id, activeSlotId);
     }
 
     const checkButton = screen.getByTestId("blueprint-check-phase-btn");
@@ -208,9 +204,10 @@ describe("screens/BlueprintScreen", () => {
     const nextActive = screen.getAllByTestId(/blueprint-phase-state-/).find((node) => /active/i.test(String(node.textContent || "")));
     expect(nextActive).toBeTruthy();
     expect(nextActive.getAttribute("data-slot-id")).not.toBe(activeSlotId);
+    expect(activeSlot).toBeInTheDocument();
   });
 
-  it("completes immediately after final phased check and saves stars", async () => {
+  it("shows completion overlay for phased mode and saves stars after continue", async () => {
     const phasedChallenge = findChallengeByRequiredSlotCount((count) => count > 10);
     expect(phasedChallenge).toBeTruthy();
 
@@ -227,310 +224,83 @@ describe("screens/BlueprintScreen", () => {
       expect(activeState).toBeTruthy();
       expect(activeState.getAttribute("data-slot-id")).toBe(String(slotId));
 
-      const targetSlot = screen.getByTestId(`blueprint-slot-${slotId}`);
       for (const card of expectedCards) {
-        dragDeckCardIntoSlot(screen.getByTestId(`blueprint-deck-card-${card.id}`), targetSlot);
+        tapPlaceCard(card.id, slotId);
       }
 
       fireEvent.click(screen.getByTestId("blueprint-check-phase-btn"));
     }
 
+    expect(screen.getByText(/Puzzle complete/i)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /continue/i }));
+
     await waitFor(() => expect(onSaveStars).toHaveBeenCalled());
     expect(onSaveStars).toHaveBeenCalledWith(String(phasedChallenge.level.id), expect.any(Number));
   });
 
-  it("supports dragging a deck card into a slot", () => {
-    renderBlueprint();
-    fireEvent.click(screen.getByRole("button", { name: /Two Sum/i }));
+  it("supports tap-select placement and keeps placed cards visible in the tray", () => {
+    const twoSumChallenge = findChallengeByTitle("Two Sum");
+    expect(twoSumChallenge).toBeTruthy();
+    renderBlueprint({ path: buildBlueprintChallengePath(twoSumChallenge.id) });
 
-    const deckCardsBefore = screen.getAllByTestId(/blueprint-deck-card-/);
-    const draggedCard = screen.getAllByTestId(/blueprint-deck-drag-surface-/)[0];
-    const targetSlot = screen.getAllByTestId(/blueprint-slot-/)[0];
+    const targetCard = (twoSumChallenge.level.cards || []).find((card) => card?.correctSlot);
+    expect(targetCard).toBeTruthy();
 
-    const dataTransfer = {
-      data: {},
-      setData(type, value) {
-        this.data[type] = value;
-      },
-      getData(type) {
-        return this.data[type] || "";
-      },
-      effectAllowed: "move",
-      dropEffect: "move",
-    };
+    tapPlaceCard(targetCard.id, targetCard.correctSlot);
 
-    fireEvent.dragStart(draggedCard, { dataTransfer });
-    fireEvent.dragOver(targetSlot, { dataTransfer });
-    fireEvent.drop(targetSlot, { dataTransfer });
-    fireEvent.dragEnd(draggedCard, { dataTransfer });
+    expect(screen.getByTestId(`blueprint-placed-card-${targetCard.id}`)).toBeInTheDocument();
 
-    expect(screen.getAllByTestId(/blueprint-deck-card-/).length).toBe(deckCardsBefore.length - 1);
-    expect(within(targetSlot).getByTestId(/blueprint-placed-card-/)).toBeInTheDocument();
+    const trayCard = screen.getByTestId(`blueprint-deck-card-${targetCard.id}`);
+    expect(trayCard).toHaveStyle("opacity: 0.45");
+    expect(within(trayCard).getByText(/check/i)).toBeInTheDocument();
   });
 
-  it("supports dragging a placed card to a different slot", () => {
-    renderBlueprint();
-    fireEvent.click(screen.getByRole("button", { name: /Two Sum/i }));
+  it("rejects wrong-section tap placement", () => {
+    const twoSumChallenge = findChallengeByTitle("Two Sum");
+    expect(twoSumChallenge).toBeTruthy();
+    renderBlueprint({ path: buildBlueprintChallengePath(twoSumChallenge.id) });
 
-    const slots = screen.getAllByTestId(/blueprint-slot-/);
-    const sourceSlot = slots[0];
-    const targetSlot = slots[1];
-    const deckCard = screen.getAllByTestId(/blueprint-deck-drag-surface-/)[0];
+    const targetCard = (twoSumChallenge.level.cards || []).find((card) => card?.correctSlot);
+    expect(targetCard).toBeTruthy();
 
-    const firstTransfer = {
-      data: {},
-      setData(type, value) {
-        this.data[type] = value;
-      },
-      getData(type) {
-        return this.data[type] || "";
-      },
-      effectAllowed: "move",
-      dropEffect: "move",
-    };
+    const wrongSlot = (twoSumChallenge.level.slots || []).find((slotId) => String(slotId) !== String(targetCard.correctSlot));
+    expect(wrongSlot).toBeTruthy();
 
-    fireEvent.dragStart(deckCard, { dataTransfer: firstTransfer });
-    fireEvent.dragOver(sourceSlot, { dataTransfer: firstTransfer });
-    fireEvent.drop(sourceSlot, { dataTransfer: firstTransfer });
-    fireEvent.dragEnd(deckCard, { dataTransfer: firstTransfer });
+    tapPlaceCard(targetCard.id, wrongSlot);
 
-    const deckCountAfterPlacement = screen.getAllByTestId(/blueprint-deck-card-/).length;
-    const placedCard = within(sourceSlot).getByTestId(/blueprint-placed-card-/);
-
-    const secondTransfer = {
-      data: {},
-      setData(type, value) {
-        this.data[type] = value;
-      },
-      getData(type) {
-        return this.data[type] || "";
-      },
-      effectAllowed: "move",
-      dropEffect: "move",
-    };
-
-    fireEvent.dragStart(placedCard, { dataTransfer: secondTransfer });
-    fireEvent.dragOver(targetSlot, { dataTransfer: secondTransfer });
-    fireEvent.drop(targetSlot, { dataTransfer: secondTransfer });
-    fireEvent.dragEnd(placedCard, { dataTransfer: secondTransfer });
-
-    expect(screen.getAllByTestId(/blueprint-deck-card-/).length).toBe(deckCountAfterPlacement);
-    expect(within(sourceSlot).queryByTestId(/blueprint-placed-card-/)).not.toBeInTheDocument();
-    expect(within(targetSlot).getByTestId(/blueprint-placed-card-/)).toBeInTheDocument();
+    expect(screen.queryByTestId(`blueprint-placed-card-${targetCard.id}`)).not.toBeInTheDocument();
+    expect(screen.getByTestId("blueprint-progress-counter")).toHaveTextContent(/^0\//);
   });
 
-  it("supports dropping multiple cards into the same step", () => {
-    renderBlueprint();
-    fireEvent.click(screen.getByRole("button", { name: /Two Sum/i }));
+  it("supports per-card undo from blueprint sections", () => {
+    const twoSumChallenge = findChallengeByTitle("Two Sum");
+    expect(twoSumChallenge).toBeTruthy();
+    renderBlueprint({ path: buildBlueprintChallengePath(twoSumChallenge.id) });
 
-    const slotCandidates = screen.getAllByTestId(/blueprint-slot-/);
-    const targetSlot =
-      slotCandidates.find((slot) => within(slot).queryByText(/\(target 1\)/i) || within(slot).queryByText(/\/1\b/)) ||
-      slotCandidates[0];
-    const [firstCard, secondCard] = screen.getAllByTestId(/blueprint-deck-card-/);
+    const targetCard = (twoSumChallenge.level.cards || []).find((card) => card?.correctSlot);
+    expect(targetCard).toBeTruthy();
 
-    const firstTransfer = {
-      data: {},
-      setData(type, value) {
-        this.data[type] = value;
-      },
-      getData(type) {
-        return this.data[type] || "";
-      },
-      effectAllowed: "move",
-      dropEffect: "move",
-    };
+    tapPlaceCard(targetCard.id, targetCard.correctSlot);
+    expect(screen.getByTestId(`blueprint-placed-card-${targetCard.id}`)).toBeInTheDocument();
 
-    fireEvent.dragStart(firstCard, { dataTransfer: firstTransfer });
-    fireEvent.dragOver(targetSlot, { dataTransfer: firstTransfer });
-    fireEvent.drop(targetSlot, { dataTransfer: firstTransfer });
-    fireEvent.dragEnd(firstCard, { dataTransfer: firstTransfer });
+    fireEvent.click(screen.getByTestId(`blueprint-undo-card-${targetCard.id}`));
 
-    const secondTransfer = {
-      data: {},
-      setData(type, value) {
-        this.data[type] = value;
-      },
-      getData(type) {
-        return this.data[type] || "";
-      },
-      effectAllowed: "move",
-      dropEffect: "move",
-    };
-
-    fireEvent.dragStart(secondCard, { dataTransfer: secondTransfer });
-    fireEvent.dragOver(targetSlot, { dataTransfer: secondTransfer });
-    fireEvent.drop(targetSlot, { dataTransfer: secondTransfer });
-    fireEvent.dragEnd(secondCard, { dataTransfer: secondTransfer });
-
-    expect(within(targetSlot).getAllByTestId(/blueprint-placed-card-/).length).toBe(2);
-  });
-
-  it("supports touch dragging a deck card into a slot", () => {
-    renderBlueprint();
-    fireEvent.click(screen.getByRole("button", { name: /Two Sum/i }));
-
-    const deckCardsBefore = screen.getAllByTestId(/blueprint-deck-card-/);
-    const draggedCard = screen.getAllByTestId(/blueprint-deck-drag-surface-/)[0];
-    const targetSlot = screen.getAllByTestId(/blueprint-slot-/)[0];
-
-    const originalElementFromPoint = document.elementFromPoint;
-    const elementFromPointMock = vi.fn(() => targetSlot);
-    Object.defineProperty(document, "elementFromPoint", {
-      configurable: true,
-      writable: true,
-      value: elementFromPointMock,
-    });
-
-    fireEvent.pointerDown(draggedCard, {
-      pointerId: 1,
-      pointerType: "touch",
-      clientX: 20,
-      clientY: 20,
-    });
-    fireEvent.pointerMove(draggedCard, {
-      pointerId: 1,
-      pointerType: "touch",
-      clientX: 20,
-      clientY: 36,
-    });
-    expect(screen.getByTestId("blueprint-touch-ghost")).toHaveStyle("visibility: visible");
-
-    fireEvent.pointerUp(draggedCard, {
-      pointerId: 1,
-      pointerType: "touch",
-      clientX: 20,
-      clientY: 36,
-    });
-    expect(screen.getByTestId("blueprint-touch-ghost")).toHaveStyle("visibility: hidden");
-
-    if (originalElementFromPoint) {
-      Object.defineProperty(document, "elementFromPoint", {
-        configurable: true,
-        writable: true,
-        value: originalElementFromPoint,
-      });
-    } else {
-      delete document.elementFromPoint;
-    }
-
-    expect(screen.getAllByTestId(/blueprint-deck-card-/).length).toBe(deckCardsBefore.length - 1);
-    expect(within(targetSlot).getByTestId(/blueprint-placed-card-/)).toBeInTheDocument();
-  });
-
-  it("supports touch dragging a placed card to a different slot", () => {
-    renderBlueprint();
-    fireEvent.click(screen.getByRole("button", { name: /Two Sum/i }));
-
-    const slots = screen.getAllByTestId(/blueprint-slot-/);
-    const sourceSlot = slots[0];
-    const targetSlot = slots[1];
-    const deckCard = screen.getAllByTestId(/blueprint-deck-drag-surface-/)[0];
-
-    const originalElementFromPoint = document.elementFromPoint;
-    const elementFromPointMock = vi.fn(() => sourceSlot);
-    Object.defineProperty(document, "elementFromPoint", {
-      configurable: true,
-      writable: true,
-      value: elementFromPointMock,
-    });
-
-    fireEvent.pointerDown(deckCard, {
-      pointerId: 1,
-      pointerType: "touch",
-      clientX: 20,
-      clientY: 20,
-    });
-    fireEvent.pointerMove(deckCard, {
-      pointerId: 1,
-      pointerType: "touch",
-      clientX: 20,
-      clientY: 36,
-    });
-    fireEvent.pointerUp(deckCard, {
-      pointerId: 1,
-      pointerType: "touch",
-      clientX: 20,
-      clientY: 36,
-    });
-
-    const deckCountAfterPlacement = screen.getAllByTestId(/blueprint-deck-card-/).length;
-    const placedCard = within(sourceSlot).getByTestId(/blueprint-placed-card-/);
-    elementFromPointMock.mockImplementation(() => targetSlot);
-
-    fireEvent.pointerDown(placedCard, {
-      pointerId: 2,
-      pointerType: "touch",
-      clientX: 20,
-      clientY: 36,
-    });
-    fireEvent.pointerMove(placedCard, {
-      pointerId: 2,
-      pointerType: "touch",
-      clientX: 20,
-      clientY: 52,
-    });
-    fireEvent.pointerUp(placedCard, {
-      pointerId: 2,
-      pointerType: "touch",
-      clientX: 20,
-      clientY: 52,
-    });
-
-    if (originalElementFromPoint) {
-      Object.defineProperty(document, "elementFromPoint", {
-        configurable: true,
-        writable: true,
-        value: originalElementFromPoint,
-      });
-    } else {
-      delete document.elementFromPoint;
-    }
-
-    expect(screen.getAllByTestId(/blueprint-deck-card-/).length).toBe(deckCountAfterPlacement);
-    expect(within(sourceSlot).queryByTestId(/blueprint-placed-card-/)).not.toBeInTheDocument();
-    expect(within(targetSlot).getByTestId(/blueprint-placed-card-/)).toBeInTheDocument();
-  });
-
-  it("warns about unresolved dependencies while dragging", () => {
-    renderBlueprint();
-    fireEvent.click(screen.getByRole("button", { name: /Two Sum/i }));
-
-    const deckCard = screen.getAllByTestId(/blueprint-deck-card-/).find((card) => String(card.textContent || "").includes("target - nums[i]"));
-    expect(deckCard).toBeTruthy();
-    const targetSlot = screen.getAllByTestId(/blueprint-slot-/)[0];
-
-    const dataTransfer = {
-      data: {},
-      setData(type, value) {
-        this.data[type] = value;
-      },
-      getData(type) {
-        return this.data[type] || "";
-      },
-      effectAllowed: "move",
-      dropEffect: "move",
-    };
-
-    fireEvent.dragStart(deckCard, { dataTransfer });
-    fireEvent.dragOver(targetSlot, { dataTransfer });
-
-    expect(screen.getByTestId("blueprint-dependency-warning")).toBeInTheDocument();
-    expect(screen.getByText(/(isn't defined until|is not declared)/i)).toBeInTheDocument();
+    expect(screen.queryByTestId(`blueprint-placed-card-${targetCard.id}`)).not.toBeInTheDocument();
+    expect(screen.getByTestId(`blueprint-deck-card-${targetCard.id}`)).toHaveStyle("opacity: 1");
   });
 
   it("keeps run disabled until all solution cards are placed", () => {
-    renderBlueprint();
-    fireEvent.click(screen.getByRole("button", { name: /Two Sum/i }));
+    const twoSumChallenge = findChallengeByTitle("Two Sum");
+    expect(twoSumChallenge).toBeTruthy();
+    renderBlueprint({ path: buildBlueprintChallengePath(twoSumChallenge.id) });
 
     const runButton = screen.getByRole("button", { name: /run blueprint/i });
     expect(runButton).toBeDisabled();
 
-    const firstDeckCard = screen.getAllByTestId(/blueprint-deck-card-/)[0];
-    const targetSlot = screen.getAllByTestId(/blueprint-slot-/)[0];
-    fireEvent.click(firstDeckCard);
-    fireEvent.click(targetSlot);
+    const firstCard = (twoSumChallenge.level.cards || []).find((card) => card?.correctSlot);
+    expect(firstCard).toBeTruthy();
 
+    tapPlaceCard(firstCard.id, firstCard.correctSlot);
     expect(runButton).toBeDisabled();
   });
 
@@ -547,58 +317,61 @@ describe("screens/BlueprintScreen", () => {
     expect(screen.queryByTestId("blueprint-problem-card")).not.toBeInTheDocument();
   });
 
-  it("opens the slot editor bottom sheet and hides the tray while it is open", () => {
-    renderBlueprint();
-    fireEvent.click(screen.getByRole("button", { name: /Two Sum/i }));
+  it("hides the tap hint bar after two placements", () => {
+    const twoSumChallenge = findChallengeByTitle("Two Sum");
+    expect(twoSumChallenge).toBeTruthy();
+    renderBlueprint({ path: buildBlueprintChallengePath(twoSumChallenge.id) });
 
-    const deckCard = screen.getAllByTestId(/blueprint-deck-card-/)[0];
-    const slot = screen.getAllByTestId(/blueprint-slot-/)[0];
-    fireEvent.click(deckCard);
-    fireEvent.click(slot);
+    const hintText = "Tap a card in the tray, then tap the matching blueprint section.";
+    expect(screen.getByText(hintText)).toBeInTheDocument();
 
-    expect(screen.getByTestId("blueprint-card-tray")).toBeInTheDocument();
+    const cards = (twoSumChallenge.level.cards || []).filter((card) => card?.correctSlot).slice(0, 2);
+    expect(cards.length).toBe(2);
 
-    fireEvent.click(slot);
-    expect(screen.getByTestId("blueprint-slot-sheet")).toBeInTheDocument();
-    expect(screen.queryByTestId("blueprint-card-tray")).not.toBeInTheDocument();
+    for (const card of cards) {
+      tapPlaceCard(card.id, card.correctSlot);
+    }
 
-    fireEvent.click(screen.getByTestId("blueprint-slot-sheet-scrim"));
-    expect(screen.queryByTestId("blueprint-slot-sheet")).not.toBeInTheDocument();
-    expect(screen.getByTestId("blueprint-card-tray")).toBeInTheDocument();
-  });
-
-  it("keeps tray cards from shrinking in the stacked mobile tray list", () => {
-    renderBlueprint();
-    fireEvent.click(screen.getByRole("button", { name: /Two Sum/i }));
-
-    const firstDeckCard = screen.getAllByTestId(/blueprint-deck-card-/)[0];
-    expect(firstDeckCard).toHaveStyle("flex-shrink: 0");
+    expect(screen.queryByText(hintText)).not.toBeInTheDocument();
   });
 
   it("shows per-card feedback badges after a failed run", () => {
-    renderBlueprint();
-    fireEvent.click(screen.getByRole("button", { name: /Two Sum/i }));
+    const challenge = findChallengeByRequiredSlotCount((count, candidate) => {
+      if (count === 0 || count > 10) return false;
+      const bySlot = {};
+      for (const card of candidate?.level?.cards || []) {
+        const slot = String(card?.correctSlot || "");
+        if (!slot) continue;
+        bySlot[slot] = (bySlot[slot] || 0) + 1;
+      }
+      return Object.values(bySlot).some((value) => value >= 2);
+    });
 
-    const targetSlot = screen.getAllByTestId(/blueprint-slot-/)[0];
-    while (screen.queryAllByTestId(/blueprint-deck-card-/).length > 0) {
-      const card = screen.getAllByTestId(/blueprint-deck-card-/)[0];
-      const dataTransfer = {
-        data: {},
-        setData(type, value) {
-          this.data[type] = value;
-        },
-        getData(type) {
-          return this.data[type] || "";
-        },
-        effectAllowed: "move",
-        dropEffect: "move",
-      };
+    expect(challenge).toBeTruthy();
+    renderBlueprint({ path: buildBlueprintChallengePath(challenge.id) });
 
-      fireEvent.dragStart(card, { dataTransfer });
-      fireEvent.dragOver(targetSlot, { dataTransfer });
-      fireEvent.drop(targetSlot, { dataTransfer });
-      fireEvent.dragEnd(card, { dataTransfer });
+    const cardsBySlot = new Map();
+    for (const card of challenge.level.cards || []) {
+      const slotId = String(card?.correctSlot || "");
+      if (!slotId) continue;
+      if (!cardsBySlot.has(slotId)) cardsBySlot.set(slotId, []);
+      cardsBySlot.get(slotId).push(card);
     }
+
+    let reversedOneSlot = false;
+    for (const [slotId, cards] of cardsBySlot.entries()) {
+      const sorted = [...cards].sort((a, b) => (a?.correctOrder || 0) - (b?.correctOrder || 0));
+      const placementOrder = !reversedOneSlot && sorted.length >= 2
+        ? [...sorted].reverse()
+        : sorted;
+      if (!reversedOneSlot && sorted.length >= 2) reversedOneSlot = true;
+
+      for (const card of placementOrder) {
+        tapPlaceCard(card.id, slotId);
+      }
+    }
+
+    expect(reversedOneSlot).toBe(true);
 
     fireEvent.click(screen.getByRole("button", { name: /run blueprint/i }));
     fireEvent.click(screen.getByRole("button", { name: /edit blueprint/i }));

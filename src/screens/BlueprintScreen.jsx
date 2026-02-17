@@ -221,7 +221,7 @@ export function BlueprintScreen({
       {
         name: "slot_row",
         title: "Place Cards",
-        body: "Drag a card here, or tap a card then tap a slot. On mobile, use the bottom sheet.",
+        body: "Tap a card in the tray, then tap the matching slot to place it.",
         targetSelector: '[data-tutorial-anchor="blueprint-slot-row"]',
         placement: "bottom",
         isReady: (ctx) => ctx.isTutorialChallengeRoute,
@@ -297,7 +297,7 @@ export function BlueprintScreen({
     onRequestTip({
       tipKey: ONBOARDING_TIP_KEYS.BLUEPRINT_DRAG_TAP,
       title: "Build Controls",
-      body: "Drag cards to slots, or tap a card then tap a slot.",
+      body: "Tap a card in the tray, then tap the matching slot.",
       targetSelector: '[data-tutorial-anchor="blueprint-card-tray"]',
     });
   }, [

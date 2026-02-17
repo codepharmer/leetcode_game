@@ -100,6 +100,10 @@ export function useBlueprintGameSession({ level, challenge }) {
     const required = (level.cards || []).filter((card) => !!card.correctSlot);
     return required.length > 0 ? required : level.cards || [];
   }, [level.cards]);
+  const hasExplicitCardSlots = useMemo(
+    () => (level.cards || []).some((card) => !!card?.correctSlot),
+    [level.cards]
+  );
   const externalIdentifiers = useMemo(
     () => collectExternalIdentifiersFromTests(level.testCases || []),
     [level.testCases]
@@ -118,6 +122,10 @@ export function useBlueprintGameSession({ level, challenge }) {
   );
   const totalSlots = useMemo(
     () => slotIds.reduce((sum, slotId) => sum + (requiredCardsBySlot?.[slotId] || []).length, 0),
+    [requiredCardsBySlot, slotIds]
+  );
+  const requiredCardCountBySlot = useMemo(
+    () => Object.fromEntries(slotIds.map((slotId) => [slotId, (requiredCardsBySlot?.[slotId] || []).length])),
     [requiredCardsBySlot, slotIds]
   );
   const solveMode = totalSlots > 10 ? "phased" : "flat";
@@ -205,7 +213,27 @@ export function useBlueprintGameSession({ level, challenge }) {
     return () => clearInterval(intervalId);
   }, [phase, startedAt]);
 
-  const selectedOrGuided = selected || (guided ? deck[0] || null : null);
+  const placedSlotIdByCardId = useMemo(() => {
+    const byId = {};
+    for (const slotId of slotIds) {
+      for (const card of slots?.[slotId] || []) {
+        const cardId = String(card?.id || "");
+        if (!cardId) continue;
+        byId[cardId] = slotId;
+      }
+    }
+    return byId;
+  }, [slotIds, slots]);
+
+  const isCardPlaced = (cardId) => {
+    const safeCardId = String(cardId || "");
+    return !!safeCardId && !!placedSlotIdByCardId[safeCardId];
+  };
+
+  const firstGuidedCard = guided
+    ? (deck.find((card) => !isCardPlaced(card?.id)) || null)
+    : null;
+  const selectedOrGuidedCard = selected || firstGuidedCard;
   const activePhaseSlotIds = useMemo(() => {
     if (solveMode !== "phased") return slotIds;
     const slotId = slotIds[activePhaseIndex];
@@ -247,7 +275,12 @@ export function useBlueprintGameSession({ level, challenge }) {
 
   const canPlaceCardInSlot = (cardId, slotId) => {
     if (!isSlotInteractive(slotId)) return false;
-    if (!getCardById(cardId)) return false;
+    const card = getCardById(cardId);
+    if (!card) return false;
+    if (hasExplicitCardSlots) {
+      const correctSlot = String(card?.correctSlot || "");
+      if (!correctSlot || correctSlot !== String(slotId || "")) return false;
+    }
     const current = slots[slotId] || [];
     if (current.some((card) => card.id === cardId)) return true;
     return true;
@@ -258,7 +291,6 @@ export function useBlueprintGameSession({ level, challenge }) {
     const card = getCardById(cardId);
     if (!card) return false;
 
-    setDeck((prev) => prev.filter((item) => item.id !== cardId));
     setSlots((prev) => {
       const next = { ...prev };
       for (const key of Object.keys(next)) {
@@ -297,14 +329,13 @@ export function useBlueprintGameSession({ level, challenge }) {
   };
 
   const handleSlotClick = (slotId) => {
-    if (!selectedOrGuided || !isSlotInteractive(slotId)) return;
-    placeCardInSlot(selectedOrGuided.id, slotId);
+    if (!selectedOrGuidedCard || !isSlotInteractive(slotId)) return false;
+    return placeCardInSlot(selectedOrGuidedCard.id, slotId);
   };
 
   const removeFromSlot = (card, slotId) => {
     if (!isSlotInteractive(slotId)) return;
     setSlots((prev) => ({ ...prev, [slotId]: prev[slotId].filter((item) => item.id !== card.id) }));
-    setDeck((prev) => [...prev, card]);
     setSelected(null);
     clearPlacementFeedback();
     setDependencyWarning("");
@@ -469,6 +500,7 @@ export function useBlueprintGameSession({ level, challenge }) {
   const stars = Number(runSummary?.stars || 0);
   const totalPlaced = Object.values(slots).reduce((sum, items) => sum + items.length, 0);
   const requiredCards = solutionCards.length;
+  const remainingRequiredCards = Math.max(0, requiredCards - totalPlaced);
   const canRun = solveMode === "flat" && requiredCards > 0 && totalPlaced === requiredCards;
   const activePhaseSlotId = activePhaseSlotIds[0] || "";
   const activePhaseRequiredCount = (requiredCardsBySlot?.[activePhaseSlotId] || []).length;
@@ -503,7 +535,10 @@ export function useBlueprintGameSession({ level, challenge }) {
     deck,
     slots,
     selected,
-    selectedOrGuided,
+    selectedOrGuided: selectedOrGuidedCard,
+    selectedOrGuidedCard,
+    requiredCardCountBySlot,
+    placedSlotIdByCardId,
     draggingCardId,
     dragOverSlotId,
     phase,
@@ -521,6 +556,7 @@ export function useBlueprintGameSession({ level, challenge }) {
     stars,
     totalPlaced,
     requiredCards,
+    remainingRequiredCards,
     canRun,
     canCheckActivePhase,
     checkButtonLabel,
@@ -534,6 +570,7 @@ export function useBlueprintGameSession({ level, challenge }) {
     previewPlacementWarning,
     clearDependencyWarning,
     isSlotInteractive,
+    isCardPlaced,
     canPlaceCardInSlot,
     placeCardInSlot,
     getPlacementDependencyWarning,

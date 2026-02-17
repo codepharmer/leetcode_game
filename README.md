@@ -42,16 +42,20 @@ Both quiz modes now feed a persistent post-round review loop:
 
 3. `blueprint builder`
 Card-based algorithm assembly mode with worlds, tiers, daily challenge, adaptive validation (test-run when executable, dependency-aware structural fallback otherwise), execution traces, hints, and star ratings.
+Blueprint solution cards are presented in Python syntax across base and auto-generated levels.
 Solve flow now auto-selects by problem size: `flat` mode for `<= 10` required blueprint slots (existing all-at-once run flow), and `phased` mode for `> 10` required slots (one phase active at a time with per-phase checks, phase locking, and immediate completion on final phase success).
-Mobile build view uses a compact fixed-row slot gutter, a bottom-sheet slot editor, and a bottom-docked stacked card tray.
-On mobile, most of each tray card is a drag target while a dedicated right-edge scroll lane preserves vertical tray scrolling.
-Tray cards are non-shrinking in the stacked list so short mobile viewports keep normal card height and scroll naturally.
+Build mode now uses a side-by-side puzzle layout with independently scrollable panes (`card tray` left, `blueprint` right).
+Card placement uses a tap flow: tap a tray card to select, then tap a blueprint section to place. Correct taps flash the section and pop the card in; wrong taps shake the selected card.
+Each section renders dashed placeholder slots for expected card count, plus a contextual `tap to place` cue while a card is selected. Placed cards include per-card `undo`, and completed sections keep a persistent colored border.
+Placed tray cards stay visible with reduced opacity and a `check` badge instead of disappearing.
+Header status now includes a gradient placement progress bar and a short contextual hint bar that auto-hides after two placements.
+Puzzle completion shows an overlay with elapsed time, stars, retry, and continue actions.
 Build-mode menu campaign preview rows now show unlocked worlds only.
 
 Global + per-mode onboarding overlays are now built in:
 - First app visit: guided `MenuScreen` onboarding (`global` flow).
 - First mode play: guided flow for Match, Template, and Build.
-- One-time contextual tips (quiz shortcuts, blueprint drag/tap, blueprint hint penalty) with non-blocking auto-dismiss behavior.
+- One-time contextual tips (quiz shortcuts, blueprint tap-select flow, blueprint hint penalty) with non-blocking auto-dismiss behavior.
 - Replay/reset controls are available from the menu tutorial section and mode settings.
 
 ## Live URLs
@@ -144,6 +148,7 @@ If unset, analytics events are emitted only to `console.debug` in local dev (non
 - All `World 0` problems are open by default (no tier/stage gating inside that world).
 - `World 0` is excluded from daily challenge selection and from core-world unlock counting so existing unlock pacing remains stable.
 - Blueprint cards now avoid placeholder pseudocode/comment markers across all levels and ship concrete runnable code steps from strategy solve implementations.
+- Blueprint cards now store display text (`text`, Python) and execution text (`execText`, JS) so adaptive composed execution, traces, and dependency checks remain stable while the UI language is Python-first.
 
 ## Content Ownership
 
@@ -392,7 +397,10 @@ Coverage and quality metrics (`strategy coverage`, `semantic pass`, `problemSpec
 Deterministic/random verification gate for strategy solve plans.
 
 - `src/lib/blueprint/ir.js`
-Converts verified IR nodes into card payloads and slot limits, and filters standalone comment-only cards.
+Converts verified IR nodes into card payloads and slot limits, filters standalone comment-only cards, and emits Python display text while preserving JS execution text in `execText`.
+
+- `src/lib/blueprint/pythonSyntax.js`
+JS-to-Python display converter used for blueprint card text normalization.
 
 - `src/lib/blueprint/solutionPipeline.js`
 Strategy selection + verification + IR conversion + strict no-fallback default behavior.
@@ -404,10 +412,10 @@ Base handcrafted levels + auto-generated levels for all questions.
 World/tier progression model, unlock rules, deterministic daily challenge selection, and primitive onboarding world handling (`World 0` fully open by default and excluded from daily/core-unlock counts).
 
 - `src/lib/blueprint/engine.js`
-Blueprint executor, adaptive validator (composed test execution + structural fallback), known-valid ordering cache, trace generation, and divergence detection.
+Blueprint executor, adaptive validator (composed test execution + structural fallback), known-valid ordering cache, trace generation, and divergence detection. Composed execution uses `execText` when present.
 
 - `src/lib/blueprint/dependencyHints.js`
-Card dependency analysis and drag-preview warnings, including runtime helper allowances used by composed execution (for example `isAlphaNum`).
+Card dependency analysis and placement warnings, including runtime helper allowances used by composed execution (for example `isAlphaNum`). Dependency parsing prefers `execText` when available.
 
 ### `src/screens`
 
@@ -452,8 +460,7 @@ World stage/tier detail and challenge launch UI. Uses a single world-detail top 
 Daily challenge detail/start screen with a single `Worlds` back button (gameplay-style nav; no duplicate global `back` button on this view).
 
 - `src/screens/blueprint/BlueprintGame.jsx`
-Blueprint build/execution UI: compact slot rows, drag/drop/touch support (including moving already placed cards between slots and placing multiple cards in the same step), dependency warnings during placement, per-card failure badges/tooltips (`correct`, `misplaced`, `wrong phase`, phased-check `incorrect`), bottom-sheet slot editing, fixed mobile tray, live countdown timer, and adaptive controls (`Run Blueprint` in flat mode, per-phase `Check [PHASE]` in phased mode). Large problems use phased slot states (`completed`, `active`, `locked`) with interaction restricted to the active phase. Emits tutorial run/pass/hint signals for onboarding and one-time tip logic.
-On mobile, tray cards reserve a slim right-edge scroll lane, allow drag-start from the rest of the card surface, and do not vertically shrink on short screens.
+Blueprint build/execution UI: side-by-side scrollable tray/blueprint panes, tap-select card placement, wrong-tap shake feedback, section flash + card pop on correct placement, dashed section placeholders, per-card inline undo, tray `check` state for placed cards, gradient header progress, contextual hint bar, completion overlay, live countdown timer, and adaptive controls (`Run Blueprint` in flat mode, per-phase `Check [PHASE]` in phased mode). Large problems use phased slot states (`completed`, `active`, `locked`) with interaction restricted to the active phase. Emits tutorial run/pass/hint signals for onboarding and one-time tip logic.
 
 - `src/screens/blueprint/BlueprintExecution.jsx`
 Execution trace stepping and feedback display with denser mobile-friendly test/result formatting and tutorial anchors for step navigator/star explanation overlays.
@@ -539,7 +546,7 @@ Strategy pipeline pass/fallback behavior.
 Blueprint template definitions.
 
 - `src/screens/BlueprintScreen.test.jsx`
-Blueprint navigation and drag/touch interactions, including moving placed cards between slots, flat/phased solve-mode behavior, problem-details toggle behavior, and slot-editor/tray overlay flow.
+Blueprint navigation and tap-placement interactions, including wrong-section rejection, per-card undo, tray placed-state rendering, flat/phased solve-mode behavior, completion overlay flow, and problem-details toggle behavior.
 
 - `src/screens/BrowseScreen.test.jsx`
 Browse UI grouping/expansion.
