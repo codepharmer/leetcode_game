@@ -175,6 +175,51 @@ describe("lib/blueprint/levels", () => {
     expect(byKey.get("save-index")).toBe("store");
   });
 
+  it("renders q1-q50 generated display cards in python-style syntax", () => {
+    const targetLevelIds = new Set(Array.from({ length: 50 }, (_unused, idx) => `q-${idx + 1}`));
+    const jsPatterns = [
+      /\bconst\b/,
+      /\blet\b/,
+      /\bvar\b/,
+      /\bfunction\b/,
+      /=>/,
+      /===/,
+      /!==/,
+      /&&/,
+      /\|\|/,
+      /\?\./,
+      /\bnew\s+(?:Map|Set|Array)\b/,
+      /\bMath\./,
+      /\bNumber\./,
+      /\bArray\./,
+      /\.push\(/,
+      /\.shift\(/,
+      /\.unshift\(/,
+      /\.splice\(/,
+      /\.flatMap\(/,
+      /\.localeCompare\(/,
+      /\.length\b/,
+      /;\s*$/,
+      /^\s*for\s*\(/,
+      /^\s*while\s*\(.+\)\s*\{?\s*$/,
+      /^\s*if\s*\(.+\)\s*\{?\s*$/,
+      /\bnull\b/,
+      /\btrue\b/,
+      /\bfalse\b/,
+    ];
+
+    const levels = BLUEPRINT_LEVELS.filter((level) => targetLevelIds.has(String(level.id)));
+    expect(levels).toHaveLength(targetLevelIds.size);
+
+    for (const level of levels) {
+      for (const card of level.cards || []) {
+        if (!card.correctSlot) continue;
+        const text = String(card.text || "");
+        expect(jsPatterns.some((pattern) => pattern.test(text))).toBe(false);
+      }
+    }
+  });
+
   it("enables adaptive validation with contract output modes for generated levels", () => {
     const groupAnagrams = BLUEPRINT_LEVELS.find((level) => String(level.id) === "q-4");
     expect(groupAnagrams?.validationMode).toBe("adaptive");

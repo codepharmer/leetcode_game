@@ -368,10 +368,11 @@ function composeStandardProgram(level, slots) {
     };
   }
 
-  const setupStatements = canonical.setup.map((card) => normalizeStatement(card.text)).filter(Boolean);
-  const loopStatements = canonical.loop.map((card) => String(card?.text || "").trim()).filter(Boolean);
-  const bodyStatements = [...canonical.check, ...canonical.update].map((card) => normalizeStatement(card.text)).filter(Boolean);
-  const returnStatements = canonical.return.map((card) => normalizeStatement(card.text)).filter(Boolean);
+  const resolveExecutionText = (card) => String(card?.execText || card?.text || "");
+  const setupStatements = canonical.setup.map((card) => normalizeStatement(resolveExecutionText(card))).filter(Boolean);
+  const loopStatements = canonical.loop.map((card) => String(resolveExecutionText(card) || "").trim()).filter(Boolean);
+  const bodyStatements = [...canonical.check, ...canonical.update].map((card) => normalizeStatement(resolveExecutionText(card))).filter(Boolean);
+  const returnStatements = canonical.return.map((card) => normalizeStatement(resolveExecutionText(card))).filter(Boolean);
 
   const sourceLines = [...setupStatements];
   if (loopStatements.length > 0) {

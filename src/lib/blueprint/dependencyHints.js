@@ -196,8 +196,9 @@ export function analyzeCardDependencies({
   for (const entry of ordered) {
     const cardId = String(entry.card?.id || "");
     if (!cardId) continue;
-    const declared = extractDeclaredIdentifiers(entry.card?.text || "");
-    const referenced = extractReferencedIdentifiers(entry.card?.text || "");
+    const sourceText = String(entry.card?.execText || entry.card?.text || "");
+    const declared = extractDeclaredIdentifiers(sourceText);
+    const referenced = extractReferencedIdentifiers(sourceText);
     const missing = referenced.filter((name) => !available.has(name));
 
     byCardId[cardId] = {

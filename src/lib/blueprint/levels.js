@@ -1,6 +1,7 @@
 import { getBlueprintSeedByQuestionId, getQuestionToPatternItems } from "../content/registry";
 import { getQuestionContract } from "./contracts";
 import { buildCardsFromIr, buildSlotLimits } from "./ir";
+import { pythonizeCardText } from "./pythonSyntax";
 import { buildGeneratedSolutionForQuestion } from "./solutionPipeline";
 import { buildTemplateIrForQuestion } from "./templatePlan";
 import { DEFAULT_BLUEPRINT_TEMPLATE_ID, TWO_POINTERS_TEMPLATE_ID, getTemplateSlotIds } from "./templates";
@@ -178,6 +179,30 @@ function buildExamplePreview(question) {
   return `Objective: assemble the ${pattern} blueprint for "${title}".`;
 }
 
+function toPythonCard(card) {
+  if (card?.execText !== undefined) return card;
+
+  const sourceText = String(card?.text || "");
+  const execText = sourceText.trim();
+  if (!execText) return card;
+
+  const text = pythonizeCardText(sourceText);
+  if (text === sourceText) return card;
+
+  return {
+    ...card,
+    text,
+    execText,
+  };
+}
+
+function toPythonLevel(level) {
+  return {
+    ...level,
+    cards: (level.cards || []).map((card) => toPythonCard(card)),
+  };
+}
+
 const AUTO_BLUEPRINT_LEVELS = getQuestionToPatternItems().map((questionItem) => {
   const blueprintSeed = getBlueprintSeedByQuestionId(questionItem.id);
   const question = blueprintSeed?.question || questionItem;
@@ -218,7 +243,7 @@ const AUTO_BLUEPRINT_LEVELS = getQuestionToPatternItems().map((questionItem) => 
   };
 });
 
-const ALL_BLUEPRINT_LEVELS = [...BASE_BLUEPRINT_LEVELS, ...AUTO_BLUEPRINT_LEVELS];
+const ALL_BLUEPRINT_LEVELS = [...BASE_BLUEPRINT_LEVELS, ...AUTO_BLUEPRINT_LEVELS].map((level) => toPythonLevel(level));
 
 export const BLUEPRINT_LEVELS = ALL_BLUEPRINT_LEVELS.map((level) => ({
   ...level,
