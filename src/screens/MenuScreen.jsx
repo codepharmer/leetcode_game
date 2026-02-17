@@ -13,10 +13,10 @@ function clamp(n, a, b) {
 
 function getProgressColorHex(percentage) {
   const p = clamp(percentage, 0, 100);
-  if (p === 0) return "#4a4a5a";
-  if (p < 50) return "#f59e0b";
-  if (p < 80) return "#3b82f6";
-  return "#10b981";
+  if (p === 0) return "var(--quiet)";
+  if (p < 50) return "var(--warn)";
+  if (p < 80) return "var(--info)";
+  return "var(--accent)";
 }
 
 const MODE_VISUALS = {
@@ -25,27 +25,27 @@ const MODE_VISUALS = {
     progressBadge: "Question",
     description: "Match questions to their solution pattern",
     accent: "var(--accent)",
-    accentSoft: "rgba(16, 185, 129, 0.13)",
-    accentRing: "rgba(16, 185, 129, 0.48)",
-    accentGlow: "rgba(16, 185, 129, 0.22)",
+    accentSoft: "var(--accent-fill-soft)",
+    accentRing: "var(--accent-ring-mid)",
+    accentGlow: "var(--accent-fill-strong)",
   },
   [GAME_TYPES.TEMPLATE_TO_PATTERN]: {
     title: "Template",
     progressBadge: "Template",
     description: "Identify patterns from code templates",
     accent: "var(--info)",
-    accentSoft: "rgba(59, 130, 246, 0.14)",
-    accentRing: "rgba(59, 130, 246, 0.5)",
-    accentGlow: "rgba(59, 130, 246, 0.2)",
+    accentSoft: "var(--info-fill-soft)",
+    accentRing: "var(--info-ring-soft)",
+    accentGlow: "var(--info-fill-mid)",
   },
   [GAME_TYPES.BLUEPRINT_BUILDER]: {
     title: "Build",
     progressBadge: "Blueprint",
     description: "Build solution blueprints from scratch",
     accent: "var(--warn)",
-    accentSoft: "rgba(245, 158, 11, 0.16)",
-    accentRing: "rgba(245, 158, 11, 0.52)",
-    accentGlow: "rgba(245, 158, 11, 0.22)",
+    accentSoft: "var(--warn-fill-mid)",
+    accentRing: "var(--warn-ring-soft)",
+    accentGlow: "var(--warn-fill-mid)",
   },
 };
 
@@ -56,9 +56,9 @@ function getModeVisual(gameType, fallbackLabel = "Mode") {
       progressBadge: fallbackLabel,
       description: "Select a mode.",
       accent: "var(--accent)",
-      accentSoft: "rgba(16, 185, 129, 0.13)",
-      accentRing: "rgba(16, 185, 129, 0.48)",
-      accentGlow: "rgba(16, 185, 129, 0.22)",
+      accentSoft: "var(--accent-fill-soft)",
+      accentRing: "var(--accent-ring-mid)",
+      accentGlow: "var(--accent-fill-strong)",
     }
   );
 }
@@ -145,8 +145,8 @@ function ProgressBar({ percentage, label, delay = 0 }) {
   return (
     <div style={{ animation: `fadeSlideIn 0.5s ease ${delay}s both` }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-        <span style={{ fontSize: 13.5, color: "var(--text)", fontFamily: "'DM Sans', sans-serif", fontWeight: 500 }}>{label}</span>
-        <span style={{ fontSize: 12, color: p === 0 ? "var(--faint)" : color, fontFamily: "'DM Mono', monospace", fontWeight: 500 }}>
+        <span style={{ fontSize: 13.5, color: "var(--text)", fontFamily: "var(--font-ui)", fontWeight: 500 }}>{label}</span>
+        <span style={{ fontSize: 13, color: p === 0 ? "var(--faint)" : color, fontFamily: "var(--font-code)", fontWeight: 500 }}>
           {p === 0 ? "not started" : `${p}%`}
         </span>
       </div>
@@ -177,16 +177,16 @@ function StatRing({ label, value, percentage, delay = 0, accentColor }) {
         <span
           style={{
             position: "absolute",
-            fontFamily: "'Outfit', sans-serif",
+            fontFamily: "var(--font-ui)",
             fontWeight: 700,
-            fontSize: compactValue ? 10.5 : 13,
+            fontSize: 13,
             color: "var(--text-strong)",
           }}
         >
           {valueText}
         </span>
       </div>
-      <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 12, color: "var(--faint)", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+      <div style={{ fontFamily: "var(--font-ui)", fontSize: 13, color: "var(--faint)", textTransform: "uppercase", letterSpacing: "0.5px" }}>
         {label}
       </div>
     </div>
@@ -214,7 +214,7 @@ function MenuTopBar({ user, displayName, avatarLetter, onSignOut }) {
           sign out
         </button>
       ) : (
-        <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 11, color: "var(--faint)" }}>local only</span>
+        <span style={{ fontFamily: "var(--font-code)", fontSize: 13, color: "var(--faint)" }}>local only</span>
       )}
     </div>
   );
@@ -226,7 +226,7 @@ function MenuBrand({ menuSubtitle }) {
       <div style={S.logo}>
         <span style={S.logoAccent}>$</span>
         <span style={{ color: "var(--text-strong)" }}>pattern</span>
-        <span style={{ color: "var(--accent)", fontFamily: "'DM Mono', monospace", fontWeight: 500 }}>.</span>
+        <span style={{ color: "var(--accent)", fontFamily: "var(--font-code)", fontWeight: 500 }}>.</span>
         <span style={S.logoDim}>match</span>
       </div>
       <div style={S.subtitle}>{menuSubtitle}</div>
@@ -246,7 +246,7 @@ function SyncAndAuthSection({ user, authError, onGoogleSuccess, onGoogleError, o
       )}
 
       {authError && (
-        <div style={{ ...S.syncBanner, borderColor: "rgba(239,68,68,0.35)", background: "rgba(239,68,68,0.06)", animation: "fadeSlideIn 0.5s ease 0.08s both" }}>
+        <div style={{ ...S.syncBanner, borderColor: "var(--error-ring-soft)", background: "var(--error-fill-soft)", animation: "fadeSlideIn 0.5s ease 0.08s both" }}>
           <div style={{ ...S.syncBannerTitle, color: "var(--danger)" }}>Cloud sync</div>
           <div style={{ ...S.syncBannerText, color: "var(--muted)" }}>{authError}</div>
         </div>
@@ -377,7 +377,7 @@ function RoundSettingsSection({
         }}
       >
         <span style={{ ...S.sectionLabel, marginBottom: 0 }}>round settings</span>
-        <span style={{ fontSize: 12, color: "var(--dim)", fontFamily: "'DM Mono', monospace" }}>
+        <span style={{ fontSize: 13, color: "var(--dim)", fontFamily: "var(--font-code)" }}>
           {selectedModeLabel} | {showRoundSettings ? "hide" : "show"}
         </span>
       </button>
@@ -414,7 +414,7 @@ function RoundSettingsSection({
 
           <div
             style={{
-              fontFamily: "'DM Sans', sans-serif",
+              fontFamily: "var(--font-ui)",
               fontSize: 13,
               color: "var(--faint)",
               marginTop: 16,
@@ -537,7 +537,7 @@ function StartSection({ startGame, startLabel }) {
           style={{
             position: "absolute",
             inset: 0,
-            background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent)",
+            background: "linear-gradient(90deg, transparent, var(--shimmer-highlight), transparent)",
             backgroundSize: "200% 100%",
             animation: "shimmer 3s ease-in-out infinite",
             pointerEvents: "none",
@@ -602,8 +602,8 @@ function AccuracyTrendSection({ trendPoints = [] }) {
       <div style={{ ...S.sectionLabel, marginBottom: 10 }}>accuracy trend</div>
       <div
         style={{
-          fontFamily: "'DM Mono', monospace",
-          fontSize: 11.5,
+          fontFamily: "var(--font-code)",
+          fontSize: 13,
           color: "var(--faint)",
           marginBottom: 8,
         }}
@@ -668,7 +668,7 @@ function DangerZone({ stats, showResetConfirm, setShowResetConfirm, resetAllData
         </button>
       ) : (
         <div style={{ ...S.resetConfirm, justifyContent: "center" }}>
-          <span style={{ fontSize: 12, color: "var(--danger)" }}>erase all progress?</span>
+          <span style={{ fontSize: 13, color: "var(--danger)" }}>erase all progress?</span>
           <button onClick={resetAllData} style={{ ...S.resetBtn, color: "var(--danger)" }}>
             yes, reset
           </button>

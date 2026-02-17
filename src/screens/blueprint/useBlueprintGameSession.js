@@ -180,7 +180,7 @@ export function useBlueprintGameSession({ level, challenge }) {
       setDeck(firstPhaseSlotId ? buildPhaseTray(firstPhaseSlotId, requiredCardsBySlot, decoyPool) : []);
     } else {
       setActivePhaseIndex(0);
-      setDeck(guided ? orderedSolutionCards : shuffle(solutionCards));
+      setDeck(shuffle(guided ? orderedSolutionCards : solutionCards));
     }
     setSelected(null);
     setDraggingCardId(null);
@@ -231,7 +231,7 @@ export function useBlueprintGameSession({ level, challenge }) {
   };
 
   const firstGuidedCard = guided
-    ? (deck.find((card) => !isCardPlaced(card?.id)) || null)
+    ? (orderedSolutionCards.find((card) => !isCardPlaced(card?.id)) || null)
     : null;
   const selectedOrGuidedCard = selected || firstGuidedCard;
   const activePhaseSlotIds = useMemo(() => {

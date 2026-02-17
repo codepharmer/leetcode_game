@@ -175,8 +175,8 @@ describe("lib/blueprint/levels", () => {
     expect(byKey.get("save-index")).toBe("store");
   });
 
-  it("renders q1-q50 generated display cards in python-style syntax", () => {
-    const targetLevelIds = new Set(Array.from({ length: 50 }, (_unused, idx) => `q-${idx + 1}`));
+  it("renders q1-q87 generated display cards in python-style syntax", () => {
+    const targetLevelIds = new Set(Array.from({ length: 87 }, (_unused, idx) => `q-${idx + 1}`));
     const jsPatterns = [
       /\bconst\b/,
       /\blet\b/,

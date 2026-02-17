@@ -32,10 +32,10 @@ export function ResultsScreen({
           <div style={S.logo}>
             <span style={S.logoAccent}>$</span>
             <span style={{ color: "var(--text-strong)" }}>pattern</span>
-            <span style={{ color: "var(--accent)", fontFamily: "'DM Mono', monospace", fontWeight: 500 }}>.</span>
+            <span style={{ color: "var(--accent)", fontFamily: "var(--font-code)", fontWeight: 500 }}>.</span>
             <span style={S.logoDim}>match</span>
           </div>
-          <div style={{ marginTop: 6, fontFamily: "'DM Mono', monospace", fontSize: 10, letterSpacing: "1.5px", textTransform: "uppercase", color: "var(--faint)" }}>
+          <div style={{ marginTop: 6, fontFamily: "var(--font-code)", fontSize: 13, letterSpacing: "1.5px", textTransform: "uppercase", color: "var(--faint)" }}>
             results
           </div>
         </div>
@@ -57,16 +57,16 @@ export function ResultsScreen({
         <div style={{ ...S.card, width: "100%", maxWidth: 680, display: "flex", flexDirection: "column", gap: 10 }}>
           <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center" }}>
             <span style={{ fontSize: 14, color: "var(--text-strong)", fontWeight: 700 }}>Explore more</span>
-            <button onClick={onDismissExploreActions} style={S.resetBtn}>
+            <button className="tap-target" onClick={onDismissExploreActions} style={S.resetBtn}>
               dismiss
             </button>
           </div>
           <div style={{ fontSize: 13, color: "var(--muted)" }}>Study grouped patterns or browse full templates before your next round.</div>
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-            <button onClick={onExploreBrowse} style={S.browseBtn}>
+            <button className="tap-target" onClick={onExploreBrowse} style={S.browseBtn}>
               Browse Patterns
             </button>
-            <button onClick={onExploreTemplates} style={S.browseBtn}>
+            <button className="tap-target" onClick={onExploreTemplates} style={S.browseBtn}>
               View Templates
             </button>
           </div>
@@ -74,7 +74,7 @@ export function ResultsScreen({
       ) : null}
 
       {!user && (
-        <div style={{ ...S.syncBanner, maxWidth: 640 }}>
+        <div role="status" style={{ ...S.syncBanner, maxWidth: 640 }}>
           <div style={S.syncBannerTitle}>Want to keep these results?</div>
           <div style={S.syncBannerText}>Sign in to sync your progress across devices.</div>
           <div style={S.syncBannerNote}>Signed-out progress is saved only in this browser.</div>
@@ -88,14 +88,26 @@ export function ResultsScreen({
 
           return (
             <div key={i} style={{ ...S.resultRowOuter, animation: `slideIn 0.2s ease-out ${i * 0.03}s both` }}>
-              <div className="hover-row" onClick={() => setExpandedResult((p) => ({ ...p, [i]: !p[i] }))} style={S.resultRow}>
+              <button
+                type="button"
+                className="hover-row tap-target"
+                aria-expanded={!!expandedResult[i]}
+                onClick={() => setExpandedResult((p) => ({ ...p, [i]: !p[i] }))}
+                style={{
+                  ...S.resultRow,
+                  width: "100%",
+                  border: "none",
+                  textAlign: "left",
+                  background: "transparent",
+                }}
+              >
                 <span style={{ ...S.resultIcon, color: r.correct ? "var(--accent)" : "var(--danger)" }}>{r.correct ? "" : ""}</span>
                 <span style={S.resultName}>{item.title || item.name || item.id}</span>
                 <AccuracyDot qId={item.id} history={history} />
                 <span style={{ ...S.resultPattern, color: PATTERN_COLORS[item.pattern] || "var(--text)" }}>{item.pattern}</span>
                 {!r.correct && <span style={S.resultWrong}>(you: {r.chosen})</span>}
                 <span style={S.chevron}>{expandedResult[i] ? "" : ""}</span>
-              </div>
+              </button>
               {expandedResult[i] && (
                 <div style={{ padding: "0 12px 12px 40px", animation: "descReveal 0.2s ease-out" }}>
                   {item.promptKind === "code" ? (
@@ -114,10 +126,10 @@ export function ResultsScreen({
       </div>
 
       <div style={S.resultsActions}>
-        <button onClick={startGame} style={S.startBtn}>
+        <button className="tap-target" onClick={startGame} style={S.startBtn}>
           play again{" "}
         </button>
-        <button onClick={goMenu} style={S.browseBtn}>
+        <button className="tap-target" onClick={goMenu} style={S.browseBtn}>
           menu
         </button>
       </div>

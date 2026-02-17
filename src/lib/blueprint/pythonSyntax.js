@@ -9,6 +9,7 @@ const JS_MARKERS = [
   /\bArray\b/,
   /\bArray\.isArray\s*\(/,
   /\bNumber\s*\(/,
+  /\bNumber\./,
   /\bString\s*\(/,
   /===/,
   /!==/,
@@ -25,6 +26,7 @@ const JS_MARKERS = [
   /\.push\s*\(/,
   /\.shift\s*\(/,
   /\.sort\s*\(/,
+  /\.map\s*\(/,
   /\.flatMap\s*\(/,
   /\bMath\./,
   /\.toLowerCase\s*\(/,
@@ -170,12 +172,30 @@ function replaceCommonSyntax(text) {
     "$2 if isinstance($1, list) else $3"
   );
   out = out.replace(/\bArray\.isArray\s*\(([^)]+)\)/g, "isinstance($1, list)");
+  out = out.replace(
+    /\bNumber\.isFinite\s*\(([^)]+)\)\s*\?\s*([^:;]+?)\s*:\s*([^;]+)/g,
+    "$2 if (($1) == ($1) and ($1) != float(\"inf\") and ($1) != float(\"-inf\")) else $3"
+  );
+  out = out.replace(
+    /\bNumber\.isFinite\s*\(([^)]+)\)/g,
+    "(($1) == ($1) and ($1) != float(\"inf\") and ($1) != float(\"-inf\"))"
+  );
   out = out.replace(/\bnew\s+Map\s*\(\s*\)/g, "{}");
   out = out.replace(/\bnew\s+Set\s*\(\s*\)/g, "set()");
   out = out.replace(/\bnew\s+Set\s*\(([^)]*)\)/g, "set($1)");
+  out = out.replace(/\bnew\s+Array\s*\(([^)]+)\)\.fill\(\s*\[\s*\]\s*\)/g, "[[] for _ in range($1)]");
+  out = out.replace(/\bnew\s+Array\s*\(([^)]+)\)\.fill\(\s*([^)]+)\s*\)/g, "[$2] * ($1)");
   out = out.replace(/\bArray\s*\(([^)]+)\)\.fill\(\s*\[\s*\]\s*\)/g, "[[] for _ in range($1)]");
   out = out.replace(/\bArray\s*\(([^)]+)\)\.fill\(\s*([^)]+)\s*\)/g, "[$2] * ($1)");
   out = out.replace(/\bArray\.from\((.+)\)/g, "list($1)");
+  out = out.replace(
+    /\b([A-Za-z_][A-Za-z0-9_]*)\.sort\s*\(\s*\(\s*([A-Za-z_][A-Za-z0-9_]*)\s*,\s*([A-Za-z_][A-Za-z0-9_]*)\s*\)\s*=>\s*\2\[(\d+)\]\s*-\s*\3\[\4\]\s*\)/g,
+    "$1.sort(key=lambda x: x[$4])"
+  );
+  out = out.replace(
+    /\b([A-Za-z_][A-Za-z0-9_]*)\.sort\s*\(\s*\(\s*([A-Za-z_][A-Za-z0-9_]*)\s*,\s*([A-Za-z_][A-Za-z0-9_]*)\s*\)\s*=>\s*\3\[(\d+)\]\s*-\s*\2\[\4\]\s*\)/g,
+    "$1.sort(key=lambda x: x[$4], reverse=True)"
+  );
   out = out.replace(
     /\b([A-Za-z_][A-Za-z0-9_]*)\.sort\s*\(\s*\(\s*([A-Za-z_][A-Za-z0-9_]*)\s*,\s*([A-Za-z_][A-Za-z0-9_]*)\s*\)\s*=>\s*\2\s*\.\s*length\s*-\s*\3\s*\.\s*length\s*or\s*JSON\.stringify\(\2\)\.localeCompare\(JSON\.stringify\(\3\)\)\s*\)/g,
     "sorted($1, key=lambda x: (len(x), str(x)))"
@@ -183,6 +203,10 @@ function replaceCommonSyntax(text) {
   out = out.replace(
     /\b([A-Za-z_][A-Za-z0-9_]*)\.sort\s*\(\s*\(\s*([A-Za-z_][A-Za-z0-9_]*)\s*,\s*([A-Za-z_][A-Za-z0-9_]*)\s*\)\s*=>\s*\2\s*-\s*\3\s*\)/g,
     "$1.sort()"
+  );
+  out = out.replace(
+    /list\(([^)]+)\)\.sort\s*\(\s*\(\s*([A-Za-z_][A-Za-z0-9_]*)\s*,\s*([A-Za-z_][A-Za-z0-9_]*)\s*\)\s*=>\s*\2\s*-\s*\3\s*\)/g,
+    "sorted(list($1))"
   );
   out = out.replace(
     /\b([A-Za-z_][A-Za-z0-9_]*)\.sort\s*\(\s*\(\s*([A-Za-z_][A-Za-z0-9_]*)\s*,\s*([A-Za-z_][A-Za-z0-9_]*)\s*\)\s*=>\s*\3\s*-\s*\2\s*\)/g,
@@ -200,6 +224,19 @@ function replaceCommonSyntax(text) {
   out = out.replace(/\.push\s*\(/g, ".append(");
   out = out.replace(/\.shift\s*\(\s*\)/g, ".pop(0)");
   out = out.replace(/\b([A-Za-z_][A-Za-z0-9_]*)\.size\b/g, "len($1)");
+  out = out.replace(
+    /\b([A-Za-z_][A-Za-z0-9_.\[\]]*)\.map\s*\(\s*\(\s*([A-Za-z_][A-Za-z0-9_]*)\s*\)\s*=>\s*\[\s*\.\.\.\s*\2\s*\]\s*\)/g,
+    "[list($2) for $2 in $1]"
+  );
+  out = out.replace(/\[\s*\.\.\.\s*([A-Za-z_][A-Za-z0-9_]*)\s*\]/g, "list($1)");
+  out = out.replace(
+    /\b([A-Za-z_][A-Za-z0-9_.\[\]]*)\.map\s*\(\s*\(\s*([A-Za-z_][A-Za-z0-9_]*)\s*\)\s*=>\s*\(\s*([^\n]+?)\s*\)\s*\)/g,
+    "[$3 for $2 in $1]"
+  );
+  out = out.replace(
+    /list\(([^)]+)\)\.sort\s*\(\s*\(\s*([A-Za-z_][A-Za-z0-9_]*)\s*,\s*([A-Za-z_][A-Za-z0-9_]*)\s*\)\s*=>\s*\2\s*-\s*\3\s*\)/g,
+    "sorted(list($1))"
+  );
   out = out.replace(
     /\b([A-Za-z_][A-Za-z0-9_]*)\.flatMap\s*\(\s*\(\s*([A-Za-z_][A-Za-z0-9_]*)\s*\)\s*=>\s*\(\s*\2 if isinstance\(\2,\s*list\)\s*else\s*\[\]\s*\)\s*\)/g,
     "[__flat for $2 in $1 for __flat in ($2 if isinstance($2, list) else [])]"
@@ -372,8 +409,12 @@ export function pythonizeCardText(text) {
   if (!looksJavaScriptLikeCardText(source)) return source;
 
   const { masked, templates } = maskTemplateLiterals(source);
+  const preNormalized = masked.replace(
+    /\bArray\.from\s*\(\s*\{\s*length\s*:\s*([^}]+?)\s*\}\s*,\s*\(\s*\)\s*=>\s*\[\s*\]\s*\)/g,
+    "[[] for _ in range($1)]"
+  );
 
-  const expanded = masked
+  const expanded = preNormalized
     .replace(/}\s*else\s+if/g, "}\nelse if")
     .replace(/}\s*else/g, "}\nelse")
     .replace(/\{/g, "{\n")

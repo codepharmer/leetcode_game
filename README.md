@@ -48,6 +48,7 @@ Build mode now uses a side-by-side puzzle layout with independently scrollable p
 Card placement uses a tap flow: tap a tray card to select, then tap a blueprint section to place. Correct taps flash the section and pop the card in; wrong taps shake the selected card.
 Each section renders dashed placeholder slots for expected card count, plus a contextual `tap to place` cue while a card is selected. Placed cards include per-card `undo`, and completed sections keep a persistent colored border.
 Placed tray cards stay visible with reduced opacity and a `check` badge instead of disappearing.
+Tray cards are shuffled at the start of each level/reset, including guided levels.
 Header status now includes a gradient placement progress bar and a short contextual hint bar that auto-hides after two placements.
 Puzzle completion shows an overlay with elapsed time, stars, retry, and continue actions.
 Build-mode menu campaign preview rows now show unlocked worlds only.

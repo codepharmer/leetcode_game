@@ -18,12 +18,13 @@ export function BrowseScreen({
   return (
     <div style={S.browseContainer}>
       <div style={S.topBar}>
-        <button onClick={goMenu} style={S.backBtn}>
+        <button className="tap-target" onClick={goMenu} style={S.backBtn}>
           {" "}back
         </button>
         <div style={S.pillGroup}>
           {["All", "Easy", "Medium", "Hard"].map((d) => (
             <button
+              className="tap-target"
               key={d}
               onClick={() => setBrowseFilter(d)}
               style={{ ...S.pillSmall, ...(browseFilter === d ? S.pillActive : {}) }}
@@ -53,12 +54,24 @@ export function BrowseScreen({
 
                 {items.map((item) => (
                   <div key={item.id}>
-                    <div className="hover-row" onClick={() => setExpandedBrowse((p) => ({ ...p, [item.id]: !p[item.id] }))} style={S.patternQ}>
+                    <button
+                      type="button"
+                      className="hover-row tap-target"
+                      aria-expanded={!!expandedBrowse[item.id]}
+                      onClick={() => setExpandedBrowse((p) => ({ ...p, [item.id]: !p[item.id] }))}
+                      style={{
+                        ...S.patternQ,
+                        width: "100%",
+                        border: "none",
+                        textAlign: "left",
+                        background: "transparent",
+                      }}
+                    >
                       <span style={{ ...S.patternQDiff, color: DIFF_COLORS[item.difficulty] }}></span>
                       <span style={{ flex: 1 }}>{item.title || item.name || item.id}</span>
                       <AccuracyDot qId={item.id} history={history} />
                       <span style={S.chevron}>{expandedBrowse[item.id] ? "" : ""}</span>
-                    </div>
+                    </button>
                     {expandedBrowse[item.id] && (
                       <div style={{ ...S.browseDescBox, animation: "descReveal 0.2s ease-out" }}>
                         {item.promptKind === "code" ? <CodeBlock code={item.code} /> : item.desc}
