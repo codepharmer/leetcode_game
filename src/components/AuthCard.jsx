@@ -16,7 +16,7 @@ export function AuthCard({ user, authError, onGoogleSuccess, onGoogleError, onSi
             <div style={S.authName}>{user.name || user.email || "signed in"}</div>
             {user.name && user.email && <div style={S.authEmail}>{user.email}</div>}
           </div>
-          <button onClick={onSignOut} style={S.authBtn}>
+          <button className="tap-target" onClick={onSignOut} style={S.authBtn}>
             sign out
           </button>
         </div>

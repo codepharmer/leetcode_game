@@ -304,7 +304,7 @@ export function BlueprintGame({
           </div>
           <span data-testid="blueprint-progress-counter" style={S.blueprintHeaderProgressLabel}>{totalPlaced}/{requiredCards} cards</span>
         </div>
-        <span style={S.blueprintStatsItem}>hints {hintsRemaining}</span>
+        <span style={S.blueprintStatsItem}>hints {hintsRemaining} | used {hintUses}</span>
         <span role="timer" style={{ ...S.blueprintStatsItem, color: timerColor }}>{timerLabel}</span>
         {solveMode === "phased" ? (
           <span style={S.blueprintStatsItem}>mistakes {mistakes}</span>
@@ -358,6 +358,7 @@ export function BlueprintGame({
                   return (
                     <button
                       key={card.id}
+                      className="tap-target"
                       data-testid={`blueprint-deck-card-${card.id}`}
                       onClick={() => {
                         if (isPlaced) return;

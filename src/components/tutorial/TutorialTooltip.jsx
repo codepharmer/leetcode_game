@@ -51,6 +51,7 @@ export function TutorialTooltip({
   if (kind === "tip") {
     return (
       <div
+        className="tap-target"
         role="dialog"
         aria-modal="false"
         style={S.tutorialTip}
@@ -78,13 +79,13 @@ export function TutorialTooltip({
         Step {Math.max(1, stepIndex + 1)} of {Math.max(1, totalSteps)}
       </div>
       <div style={S.tutorialTooltipActions}>
-        <button type="button" onClick={onSkip} style={S.tutorialTooltipGhostBtn}>
+        <button className="tap-target" type="button" onClick={onSkip} style={S.tutorialTooltipGhostBtn}>
           Skip
         </button>
-        <button type="button" onClick={onDontShowAgain} style={S.tutorialTooltipGhostBtn}>
+        <button className="tap-target" type="button" onClick={onDontShowAgain} style={S.tutorialTooltipGhostBtn}>
           Don't show again
         </button>
-        <button ref={nextBtnRef} type="button" onClick={onNext} style={S.tutorialTooltipNextBtn}>
+        <button className="tap-target" ref={nextBtnRef} type="button" onClick={onNext} style={S.tutorialTooltipNextBtn}>
           Next
         </button>
       </div>

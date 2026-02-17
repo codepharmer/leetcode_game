@@ -49,10 +49,9 @@ function sortNested(values) {
 function solveQ33(input) {
   function invert(node) {
     if (!node) return null;
-    const left = invert(node.left);
-    const right = invert(node.right);
-    node.left = right;
-    node.right = left;
+    [node.left, node.right] = [node.right, node.left];
+    invert(node.left);
+    invert(node.right);
     return node;
   }
   return treeToArray(invert(arrayToTree(input?.root || [])));
@@ -529,20 +528,34 @@ function treeConstraints() {
 const WORLD0_WAVE3_IR_OVERRIDES = Object.freeze({
   33: [
     irStep("base-case", "invert-base-case", "function invert(node) { if (!node) return null", "branch"),
-    irStep("branch", "invert-recurse-children", "const left = invert(node.left); const right = invert(node.right)", "loop"),
-    irStep("prune", "invert-leaf-noop", "if (left === null && right === null) { node.left = null; node.right = null }", "branch"),
-    irStep("traverse", "invert-swap-and-return", "node.left = right; node.right = left; return node }", "update"),
-    irStep("aggregate", "invert-run", "return treeToArray(invert(arrayToTree(input?.root || [])))", "return"),
+    irStep("branch", "invert-swap-children", "[node.left, node.right] = [node.right, node.left]", "update"),
+    irStep("prune", "invert-left-branch", "invert(node.left)", "loop"),
+    irStep("traverse", "invert-right-and-return", "invert(node.right); return node }", "update"),
+    irStep("aggregate", "invert-run", "return invert(root)", "return"),
   ],
   34: [
     irStep("base-case", "depth-base-case", "function depth(node) { if (!node) return 0", "branch"),
     irStep("branch", "depth-children", "const leftDepth = depth(node.left); const rightDepth = depth(node.right)", "loop"),
     irStep("prune", "depth-left-dominant", "if (leftDepth > rightDepth) return leftDepth + 1", "branch"),
     irStep("traverse", "depth-return-right", "return rightDepth + 1 }", "update"),
-    irStep("aggregate", "depth-run", "return depth(arrayToTree(input?.root || []))", "return"),
+    irStep("aggregate", "depth-run", "return depth(root)", "return"),
+  ],
+  35: [
+    irStep("base-case", "same-base-both-null", "function sameTree(a, b) { if (!a && !b) return true", "branch"),
+    irStep("branch", "same-shape-or-value-mismatch", "if (!a || !b || a.val !== b.val) return false", "branch"),
+    irStep("prune", "same-left-subtree", "const sameLeft = sameTree(a.left, b.left)", "loop"),
+    irStep("traverse", "same-right-subtree-and-return", "return sameLeft && sameTree(a.right, b.right) }", "update"),
+    irStep("aggregate", "same-run", "return sameTree(p, q)", "return"),
+  ],
+  36: [
+    irStep("base-case", "subtree-same-base", "function sameTree(a, b) { if (!a && !b) return true", "branch"),
+    irStep("branch", "subtree-same-mismatch", "if (!a || !b || a.val !== b.val) return false; return sameTree(a.left, b.left) && sameTree(a.right, b.right) }", "loop"),
+    irStep("prune", "subtree-contains-base", "function contains(node) { if (!node) return false; if (sameTree(node, subRoot)) return true", "branch"),
+    irStep("traverse", "subtree-contains-children", "return contains(node.left) || contains(node.right) }", "update"),
+    irStep("aggregate", "subtree-run", "return contains(root)", "return"),
   ],
   38: [
-    irStep("base-case", "levelorder-init-root", "const root = arrayToTree(input?.root || []); if (!root) return []", "branch"),
+    irStep("base-case", "levelorder-init-root", "if (!root) return []", "branch"),
     irStep("branch", "levelorder-start-bfs", "const out = []; const queue = [root]; while (queue.length) { const size = queue.length; const level = []", "loop"),
     irStep(
       "prune",
@@ -552,6 +565,39 @@ const WORLD0_WAVE3_IR_OVERRIDES = Object.freeze({
     ),
     irStep("traverse", "levelorder-close-level", "out.push(level) }", "update"),
     irStep("aggregate", "levelorder-return", "return out", "return"),
+  ],
+  39: [
+    irStep("base-case", "validbst-base", "function valid(node, low, high) { if (!node) return true", "branch"),
+    irStep("branch", "validbst-range-check", "if (!(low < node.val && node.val < high)) return false", "loop"),
+    irStep("prune", "validbst-left", "const leftOk = valid(node.left, low, node.val)", "branch"),
+    irStep("traverse", "validbst-right-and-return", "return leftOk && valid(node.right, node.val, high) }", "update"),
+    irStep("aggregate", "validbst-run", "return valid(root, -Infinity, Infinity)", "return"),
+  ],
+  40: [
+    irStep("base-case", "kth-init", "const stack = []; let node = root; let seen = 0", "branch"),
+    irStep("branch", "kth-inorder-loop", "while (node || stack.length) { while (node) { stack.push(node); node = node.left }", "loop"),
+    irStep("prune", "kth-visit-node", "node = stack.pop(); seen += 1; if (seen === k) return node.val", "branch"),
+    irStep("traverse", "kth-move-right", "node = node.right }", "update"),
+    irStep("aggregate", "kth-fallback", "return null", "return"),
+  ],
+  42: [
+    irStep("base-case", "maxpath-init-and-base", "let best = -Infinity; function dfs(node) { if (!node) return 0", "branch"),
+    irStep("branch", "maxpath-children", "const left = Math.max(0, dfs(node.left)); const right = Math.max(0, dfs(node.right))", "loop"),
+    irStep("prune", "maxpath-update-best", "best = Math.max(best, node.val + left + right)", "branch"),
+    irStep("traverse", "maxpath-return-branch", "return node.val + Math.max(left, right) }", "update"),
+    irStep("aggregate", "maxpath-run", "dfs(root); return best === -Infinity ? 0 : best", "return"),
+  ],
+  43: [
+    irStep("base-case", "codec-serialize-base", "function serializeTree(root) { if (!root) return '#'; const out = []; const queue = [root]", "branch"),
+    irStep("branch", "codec-serialize-loop", "while (queue.length) { const node = queue.shift(); if (!node) { out.push('#'); continue } out.push(String(node.val)); queue.push(node.left || null); queue.push(node.right || null) }", "loop"),
+    irStep("prune", "codec-serialize-return", "while (out.length > 1 && out[out.length - 1] === '#') out.pop(); return out.join(',') }", "branch"),
+    irStep(
+      "traverse",
+      "codec-deserialize",
+      "function deserializeTree(serialized) { const items = String(serialized || '').split(','); if (!items.length || items[0] === '#') return null; const rootNode = { val: Number(items[0]), left: null, right: null }; const queue = [rootNode]; let index = 1; while (queue.length && index < items.length) { const node = queue.shift(); const left = items[index++]; if (left !== undefined && left !== '#') { node.left = { val: Number(left), left: null, right: null }; queue.push(node.left) } const right = items[index++]; if (right !== undefined && right !== '#') { node.right = { val: Number(right), left: null, right: null }; queue.push(node.right) } } return rootNode }",
+      "update"
+    ),
+    irStep("aggregate", "codec-run", "return deserializeTree(serializeTree(root))", "return"),
   ],
 });
 

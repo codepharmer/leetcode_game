@@ -16,8 +16,8 @@ export function TemplateViewer({ pattern, compact, open: openProp, onOpenChange 
   if (compact) {
     return (
       <div style={{ marginTop: 6 }}>
-        <button className="hover-row" onClick={() => setOpen(!open)} style={S.templateToggle}>
-          {open ? "" : ""} {info.category} templates
+        <button className="hover-row tap-target" onClick={() => setOpen(!open)} style={S.templateToggle}>
+          {open ? "[-]" : "[+]"} {info.category} templates
           <span style={S.templateCount}>{info.templates.length}</span>
         </button>
         {open && (
@@ -36,18 +36,18 @@ export function TemplateViewer({ pattern, compact, open: openProp, onOpenChange 
 
   return (
     <div style={S.templateSection}>
-      <button className="hover-row" onClick={() => setOpen(!open)} style={S.templateToggleLg}>
-        {open ? "" : ""} view template: {info.category}
+      <button className="hover-row tap-target" onClick={() => setOpen(!open)} style={S.templateToggleLg}>
+        {open ? "[-]" : "[+]"} view template: {info.category}
         <span style={S.descHotkey}>T</span>
       </button>
       {open && (
         <div style={{ ...S.templatePanelLg, animation: "descReveal 0.25s ease-out" }}>
           <button
-            className="hover-row"
+            className="hover-row tap-target"
             onClick={() => setShowUniversal(!showUniversal)}
             style={{ ...S.templateToggle, marginBottom: 8, color: "var(--dim)" }}
           >
-            {showUniversal ? "" : ""} universal skeleton
+            {showUniversal ? "[-]" : "[+]"} universal skeleton
           </button>
           {showUniversal && <CodeBlock code={UNIVERSAL_TEMPLATE.code} />}
           {info.templates.map((t, i) => (

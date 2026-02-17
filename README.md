@@ -168,6 +168,8 @@ If unset, analytics events are emitted only to `console.debug` in local dev (non
 - `World 0` is excluded from daily challenge selection and from core-world unlock counting so existing unlock pacing remains stable.
 - Blueprint cards now avoid placeholder pseudocode/comment markers across all levels and ship concrete runnable code steps from strategy solve implementations.
 - Blueprint cards now store display text (`text`, Python) and execution text (`execText`, JS) so adaptive composed execution, traces, and dependency checks remain stable while the UI language is Python-first.
+- Tree World 0 solution cards (`q-33`, `q-34`, `q-35`, `q-36`, `q-38`, `q-39`, `q-40`, `q-42`, `q-43`) are self-contained and no longer reference hidden tree conversion helpers (`arrayToTree` / `treeToArray`) in the displayed flow.
+- Invert Binary Tree (`q-33`) now demonstrates the swap-first DFS order (`swap children -> recurse left -> recurse right`) in both execution and displayed blueprint steps.
 
 ## Content Ownership
 
@@ -440,6 +442,7 @@ Card dependency analysis and placement warnings, including runtime helper allowa
 
 - `src/screens/MenuScreen.jsx`
 Main menu with a top-level segmented mode selector (`Match`, `Template`, `Build`) and dynamic helper copy, plus contextual progress stats, quiz round settings, blueprint campaign preview, auth entry, and launch actions.
+Progress-ring values in the `your progress` card render inside a compact center badge so labels stay readable at any fill level.
 For quiz modes, menu also includes a secondary `review mistakes` entry and a lower-page accuracy trend card sourced from mode metadata.
 In blueprint mode, the primary CTA label is provided by app state (`Jump In`, `Continue Challenge`, or `Open Campaign Map`) so players can resume directly.
 For `blueprint builder`, the menu progress card derives `levels`, `stars`, `worlds`, and `mastered` values from `byGameType.blueprint_builder.meta.levelStars` plus campaign world completion, instead of quiz history counters.

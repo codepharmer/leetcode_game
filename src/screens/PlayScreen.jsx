@@ -89,15 +89,18 @@ export function PlayScreen({
 
       <div data-tutorial-anchor="play-choices" style={S.choicesGrid}>
         {choices.map((c, i) => {
+          const isRevealed = selected !== null;
+          const isCorrectChoice = isRevealed && c === currentItem.pattern;
+          const isIncorrectChoice = isRevealed && c === selected && c !== currentItem.pattern;
           let bg = "var(--surface-1)",
             border = "var(--border)",
             fg = "var(--text)";
-          if (selected !== null) {
-            if (c === currentItem.pattern) {
+          if (isRevealed) {
+            if (isCorrectChoice) {
               bg = "var(--accent-fill-soft)";
               border = "var(--accent)";
               fg = "var(--accent)";
-            } else if (c === selected) {
+            } else if (isIncorrectChoice) {
               bg = "var(--error-fill-soft)";
               border = "var(--danger)";
               fg = "var(--danger)";
@@ -106,6 +109,7 @@ export function PlayScreen({
 
           return (
             <button
+              className="tap-target"
               key={c}
               onClick={() => onSelect(c)}
               style={{
@@ -119,6 +123,16 @@ export function PlayScreen({
             >
               <span style={S.choiceNum}>{i + 1}</span>
               {c}
+              {isCorrectChoice ? (
+                <span style={{ ...S.choiceState, color: "var(--accent)", borderColor: "var(--accent-ring-soft)", background: "var(--accent-fill-soft)" }}>
+                  correct
+                </span>
+              ) : null}
+              {isIncorrectChoice ? (
+                <span style={{ ...S.choiceState, color: "var(--danger)", borderColor: "var(--error-ring-soft)", background: "var(--error-fill-soft)" }}>
+                  incorrect
+                </span>
+              ) : null}
             </button>
           );
         })}
@@ -138,10 +152,10 @@ export function PlayScreen({
               <span style={{ color: "var(--accent)", fontSize: 14, fontWeight: 600 }}> correct</span>
             ) : (
               <span style={{ color: "var(--danger)", fontSize: 14, fontWeight: 600 }}>
-                {" "}answer: <span style={{ color: "var(--text)" }}>{currentItem.pattern}</span>
+                incorrect | answer: <span style={{ color: "var(--text)" }}>{currentItem.pattern}</span>
               </span>
             )}
-            <button onClick={onNext} style={S.nextBtn}>
+            <button className="tap-target" onClick={onNext} style={S.nextBtn}>
               {currentIdx + 1 >= total ? "see results" : "next"}{" "}
             </button>
           </div>

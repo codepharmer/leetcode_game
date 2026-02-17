@@ -165,6 +165,35 @@ describe("lib/blueprint/levels", () => {
     expect(autoLevels.get("q-62")?.slots).toEqual(["base-state", "subproblem", "state-guard", "transition", "memoize"]);
   });
 
+  it("keeps invert binary tree solution cards self-contained", () => {
+    const level = BLUEPRINT_LEVELS.find((item) => String(item.id) === "q-33");
+    expect(level).toBeTruthy();
+
+    const source = (level?.cards || [])
+      .filter((card) => !!card.correctSlot)
+      .map((card) => String(card.execText || card.text || ""))
+      .join("\n");
+
+    expect(source).not.toMatch(/\barrayToTree\s*\(/);
+    expect(source).not.toMatch(/\btreeToArray\s*\(/);
+    expect(source).toMatch(/\breturn\s+invert\s*\(\s*root\s*\)/);
+  });
+
+  it("keeps tree world-0 solution cards free of hidden tree conversion helpers", () => {
+    const targetIds = new Set(["q-33", "q-34", "q-35", "q-36", "q-38", "q-39", "q-40", "q-42", "q-43"]);
+    const levels = BLUEPRINT_LEVELS.filter((level) => targetIds.has(String(level.id)));
+    expect(levels).toHaveLength(targetIds.size);
+
+    for (const level of levels) {
+      const source = (level.cards || [])
+        .filter((card) => !!card.correctSlot)
+        .map((card) => String(card.execText || card.text || ""))
+        .join("\n");
+      expect(source).not.toMatch(/\barrayToTree\s*\(/);
+      expect(source).not.toMatch(/\btreeToArray\s*\(/);
+    }
+  });
+
   it("keeps array/hash generated solutions aligned to probe then store stages", () => {
     const twoSum = BLUEPRINT_LEVELS.find((level) => String(level.id) === "q-1");
     expect(twoSum?.slots).toEqual(["seed", "loop", "probe", "store", "emit"]);

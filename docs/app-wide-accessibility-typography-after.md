@@ -1,6 +1,6 @@
 # App-Wide Accessibility/Typography After Pass
 
-Captured: 2026-02-17 11:02:54 -05:00
+Captured: 2026-02-17 11:21:56 -05:00
 
 ## 1) Clickable div audit
 Command:
@@ -60,8 +60,8 @@ src/global.css:29:  --text: #edf0f7;
 src/global.css:30:  --text-strong: #edf0f7;
 src/global.css:31:  --muted: #c7d0df;
 src/global.css:32:  --dim: #a8b2c1;
-src/global.css:33:  --faint: #8d96a7;
-src/global.css:34:  --quiet: #7a8394;
+src/global.css:33:  --faint: #99a2b4;
+src/global.css:34:  --quiet: #919bad;
 src/global.css:35:  --text-accent-soft: #d4c8ff;
 src/global.css:36:  --text-accent-cool: #bcc8ff;
 src/global.css:38:  --accent: #5ee8b7;
@@ -94,4 +94,47 @@ src/global.css:76:  --pulse-shadow-start: 0 0 20px rgba(184, 161, 255, 0.15), 0 
 src/global.css:77:  --pulse-shadow-mid: 0 0 25px rgba(184, 161, 255, 0.25), 0 0 80px rgba(184, 161, 255, 0.1);
 src/global.css:78:  --blueprint-pulse-start: 0 0 0 0 rgba(184, 161, 255, 0.42);
 src/global.css:79:  --blueprint-pulse-mid: 0 0 0 3px rgba(184, 161, 255, 0.18);
+```
+
+## 5) Tap-target coverage audit
+Command:
+$ [script] scan all `src/**/*.jsx` buttons and report those without `tap-target`
+
+Output:
+```text
+(no missing buttons)
+```
+
+## 6) Contrast validation summary
+Command:
+$ [script] compute WCAG contrast for semantic text tokens against `--bg-page`, `--surface-1`, `--surface-2`, `--surface-soft`, plus active/inactive chip/button and gradient CTA combinations.
+
+Output:
+```text
+ALL_CONTRAST_CHECKS_PASS
+```
+
+Highlights:
+- `quiet on surface-soft`: `4.55` (PASS)
+- `faint on surface-soft`: `4.97` (PASS)
+- `bg-page on accent`: `12.31` (PASS)
+- `bg-page on accent2`: `9.14` (PASS)
+- `bg-page on danger`: `8.95` (PASS)
+
+## 7) Verification runs
+Command:
+$ npm run test
+
+Output:
+```text
+39 test files passed, 195 tests passed
+```
+
+Command:
+$ npm run build
+
+Output:
+```text
+vite build succeeded
+note: existing chunk-size warning (>500kB) remains
 ```

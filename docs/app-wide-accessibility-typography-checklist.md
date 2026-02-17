@@ -1,8 +1,8 @@
 # App-Wide Accessibility & Typography Pass Checklist
 
 ## Scope and Done Criteria
-- [ ] Scope locked: app-wide pass across `src/global.css`, `src/styles.js`, all `src/screens/**/*.jsx`, and all `src/components/**/*.jsx`.
-- [ ] Done criteria agreed: no hardcoded UI color values outside centralized tokens, no text below 13px, code text at 13.5px with 1.6 line-height, keyboard and ARIA coverage for all interactive controls, and WCAG AA contrast for text.
+- [x] Scope locked: app-wide pass across `src/global.css`, `src/styles.js`, all `src/screens/**/*.jsx`, and all `src/components/**/*.jsx`.
+- [x] Done criteria agreed: no hardcoded UI color values outside centralized tokens, no text below 13px, code text at 13.5px with 1.6 line-height, keyboard and ARIA coverage for all interactive controls, and WCAG AA contrast for text.
 
 ## 1) Baseline Audit
 - [x] Save baseline search outputs for tracking before/after:
@@ -36,8 +36,8 @@
 ## 4) Required Color Migrations
 - [x] Text: replace `#e2e8f0` with `#edf0f7`.
 - [x] Text: replace `#94a3b8` with `#a8b2c1`.
-- [x] Text: replace `#64748b` with `#8d96a7`.
-- [x] Text: replace `#475569` with `#7a8394`.
+- [x] Text: replace `#64748b` with `#99a2b4`.
+- [x] Text: replace `#475569` with `#919bad`.
 - [x] Text: replace `#c4b5fd` with `#d4c8ff`.
 - [x] Text: replace `#a5b4fc` with `#bcc8ff`.
 - [x] Accent: replace `#a78bfa` with `#b8a1ff`.
@@ -78,16 +78,16 @@
 - [x] Add/update global focus rule in `src/global.css`: `*:focus-visible { outline: 2px solid #b8a1ff; outline-offset: 2px; }`.
 
 ## 8) Tap Target and Non-Color State Rules
-- [ ] Introduce a shared tap-target utility (`min-width: 44px; min-height: 44px`) and use it for all interactive controls.
-- [ ] Apply tap target sizing to compact controls in menu, blueprint controls, icon buttons, close buttons, and tiny chips.
-- [ ] Ensure state is never color-only: pair color with icon, text, border pattern, or text decoration.
-- [ ] Specifically add redundant cues for used/completed/incorrect states (for example icon + label, or strikethrough + marker).
+- [x] Introduce a shared tap-target utility (`min-width: 44px; min-height: 44px`) and use it for all interactive controls.
+- [x] Apply tap target sizing to compact controls in menu, blueprint controls, icon buttons, close buttons, and tiny chips.
+- [x] Ensure state is never color-only: pair color with icon, text, border pattern, or text decoration.
+- [x] Specifically add redundant cues for used/completed/incorrect states (for example icon + label, or strikethrough + marker).
 
 ## 9) WCAG AA Contrast Validation
-- [ ] Validate all text tokens against `#0f1117` and surface tokens with contrast >= 4.5:1.
-- [ ] Validate all tokenized badge/chip/button text on active/inactive backgrounds with contrast >= 4.5:1.
-- [ ] Validate dynamic gradient/overlay text contrast in blueprint and menu banners.
-- [ ] Resolve any failures by adjusting semantic token values, not ad hoc component literals.
+- [x] Validate all text tokens against `#0f1117` and surface tokens with contrast >= 4.5:1.
+- [x] Validate all tokenized badge/chip/button text on active/inactive backgrounds with contrast >= 4.5:1.
+- [x] Validate dynamic gradient/overlay text contrast in blueprint and menu banners.
+- [x] Resolve any failures by adjusting semantic token values, not ad hoc component literals.
 
 ## 10) Test Coverage and QA
 - [x] Add or update tests for keyboard activation on converted interactive rows.

@@ -53,33 +53,37 @@ export function BrowseScreen({
                   <span style={S.patternCount}>{items.length}</span>
                 </div>
 
-                {items.map((item) => (
-                  <div key={item.id}>
-                    <button
-                      type="button"
-                      className="hover-row tap-target"
-                      aria-expanded={!!expandedBrowse[item.id]}
-                      onClick={() => setExpandedBrowse((p) => ({ ...p, [item.id]: !p[item.id] }))}
-                      style={{
-                        ...S.patternQ,
-                        width: "100%",
-                        border: "none",
-                        textAlign: "left",
-                        background: "transparent",
-                      }}
-                    >
-                      <span style={{ ...S.patternQDiff, color: DIFF_COLORS[item.difficulty] }}></span>
-                      <span style={{ flex: 1 }}>{item.title || item.name || item.id}</span>
-                      <AccuracyDot qId={item.id} history={history} />
-                      <span style={S.chevron}>{expandedBrowse[item.id] ? "" : ""}</span>
-                    </button>
-                    {expandedBrowse[item.id] && (
-                      <div style={{ ...S.browseDescBox, animation: "descReveal 0.2s ease-out" }}>
-                        {item.promptKind === "code" ? <CodeBlock code={item.code} /> : item.desc}
-                      </div>
-                    )}
-                  </div>
-                ))}
+                {items.map((item) => {
+                  const diffTag = String(item.difficulty || "?").slice(0, 1).toUpperCase();
+
+                  return (
+                    <div key={item.id}>
+                      <button
+                        type="button"
+                        className="hover-row tap-target"
+                        aria-expanded={!!expandedBrowse[item.id]}
+                        onClick={() => setExpandedBrowse((p) => ({ ...p, [item.id]: !p[item.id] }))}
+                        style={{
+                          ...S.patternQ,
+                          width: "100%",
+                          border: "none",
+                          textAlign: "left",
+                          background: "transparent",
+                        }}
+                      >
+                        <span style={{ ...S.patternQDiff, color: DIFF_COLORS[item.difficulty] }}>[{diffTag}]</span>
+                        <span style={{ flex: 1 }}>{item.title || item.name || item.id}</span>
+                        <AccuracyDot qId={item.id} history={history} />
+                        <span style={S.chevron}>{expandedBrowse[item.id] ? "[-]" : "[+]"}</span>
+                      </button>
+                      {expandedBrowse[item.id] && (
+                        <div style={{ ...S.browseDescBox, animation: "descReveal 0.2s ease-out" }}>
+                          {item.promptKind === "code" ? <CodeBlock code={item.code} /> : item.desc}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
 
                 {templatePattern && <TemplateViewer pattern={templatePattern} compact />}
               </div>

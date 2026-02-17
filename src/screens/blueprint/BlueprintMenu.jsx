@@ -25,7 +25,7 @@ export function BlueprintMenu({
     <div style={S.blueprintMenuContainer}>
       {isMapView ? (
         <div style={S.topBar}>
-          <button onClick={goMenu} style={{ ...S.backBtn, minHeight: 44, minWidth: 44 }}>
+          <button className="tap-target" onClick={goMenu} style={{ ...S.backBtn, minHeight: 44, minWidth: 44 }}>
             back
           </button>
           <span style={S.blueprintTitle}>Blueprint Builder</span>
@@ -65,14 +65,16 @@ export function BlueprintMenu({
       <div aria-hidden="true" style={S.blueprintTabFade} />
       <div style={{ ...S.blueprintTabBar, gridTemplateColumns: "1fr 1fr" }}>
         <button
-          className="pressable-200"
+          className="pressable-200 tap-target"
+          aria-pressed={activeTab === TAB_MAP}
           onClick={onOpenMap}
           style={{ ...S.blueprintTabBtn, ...(activeTab === TAB_MAP ? S.blueprintTabBtnActive : null) }}
         >
           Map
         </button>
         <button
-          className="pressable-200"
+          className="pressable-200 tap-target"
+          aria-pressed={activeTab === TAB_DAILY}
           onClick={onOpenDaily}
           style={{ ...S.blueprintTabBtn, ...(activeTab === TAB_DAILY ? S.blueprintTabBtnActive : null) }}
         >

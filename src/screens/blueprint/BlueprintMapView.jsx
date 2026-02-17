@@ -136,7 +136,7 @@ export function BlueprintMapView({ campaign, completed, onOpenDaily, onOpenWorld
           style={{ ...S.blueprintContinueBtn, background: nextAccent.gradient, borderColor: nextAccent.ring }}
         >
           <span style={{ ...S.blueprintNodeTitle, color: "var(--bg-page)" }}>Continue</span>
-          <span style={{ ...S.blueprintNodeMeta, color: "var(--quiet)", fontSize: 13 }}>
+          <span style={{ ...S.blueprintNodeMeta, color: "var(--bg-page)", fontSize: 13 }}>
             {nextChallenge.world?.name || "World"} | {nextChallenge.challenge.level.title}
           </span>
         </button>

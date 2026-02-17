@@ -189,8 +189,15 @@ function StatRing({ label, value, percentage, delay = 0, accentColor }) {
             position: "absolute",
             fontFamily: "var(--font-ui)",
             fontWeight: 700,
-            fontSize: 13,
+            fontSize: 11,
+            lineHeight: 1,
+            padding: "2px 6px",
+            borderRadius: 999,
             color: "var(--text-strong)",
+            background: "var(--surface-1)",
+            border: "1px solid var(--border)",
+            boxShadow: "0 1px 2px rgba(0, 0, 0, 0.18)",
+            pointerEvents: "none",
           }}
         >
           {valueText}

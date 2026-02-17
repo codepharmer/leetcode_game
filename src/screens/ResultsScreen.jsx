@@ -84,6 +84,7 @@ export function ResultsScreen({
       <div style={S.resultsList}>
         {results.map((r, i) => {
           const item = r.item || r.question;
+          const isCorrect = !!r.correct;
           if (!item) return null;
 
           return (
@@ -101,12 +102,21 @@ export function ResultsScreen({
                   background: "transparent",
                 }}
               >
-                <span style={{ ...S.resultIcon, color: r.correct ? "var(--accent)" : "var(--danger)" }}>{r.correct ? "" : ""}</span>
+                <span
+                  style={{
+                    ...S.resultOutcome,
+                    color: isCorrect ? "var(--accent)" : "var(--danger)",
+                    borderColor: isCorrect ? "var(--accent-ring-soft)" : "var(--error-ring-soft)",
+                    background: isCorrect ? "var(--accent-fill-soft)" : "var(--error-fill-soft)",
+                  }}
+                >
+                  {isCorrect ? "correct" : "incorrect"}
+                </span>
                 <span style={S.resultName}>{item.title || item.name || item.id}</span>
                 <AccuracyDot qId={item.id} history={history} />
                 <span style={{ ...S.resultPattern, color: PATTERN_COLORS[item.pattern] || "var(--text)" }}>{item.pattern}</span>
                 {!r.correct && <span style={S.resultWrong}>(you: {r.chosen})</span>}
-                <span style={S.chevron}>{expandedResult[i] ? "" : ""}</span>
+                <span style={S.chevron}>{expandedResult[i] ? "[-]" : "[+]"}</span>
               </button>
               {expandedResult[i] && (
                 <div style={{ padding: "0 12px 12px 40px", animation: "descReveal 0.2s ease-out" }}>
