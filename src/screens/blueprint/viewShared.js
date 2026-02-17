@@ -3,27 +3,27 @@ import { getLevelStars } from "./shared";
 const WORLD_ACCENTS = [
   {
     base: "var(--accent)",
-    ring: "rgba(16, 185, 129, 0.5)",
-    soft: "rgba(16, 185, 129, 0.12)",
-    gradient: "linear-gradient(135deg, rgba(16, 185, 129, 0.95), rgba(14, 165, 233, 0.88))",
+    ring: "var(--accent-ring-mid)",
+    soft: "var(--accent-fill-soft)",
+    gradient: "linear-gradient(135deg, var(--accent), var(--accent2))",
   },
   {
     base: "var(--info)",
-    ring: "rgba(59, 130, 246, 0.5)",
-    soft: "rgba(59, 130, 246, 0.12)",
-    gradient: "linear-gradient(135deg, rgba(59, 130, 246, 0.95), rgba(16, 185, 129, 0.88))",
+    ring: "var(--info-ring-soft)",
+    soft: "var(--info-fill-soft)",
+    gradient: "linear-gradient(135deg, var(--accent2), var(--accent))",
   },
   {
     base: "var(--warn)",
-    ring: "rgba(245, 158, 11, 0.52)",
-    soft: "rgba(245, 158, 11, 0.14)",
-    gradient: "linear-gradient(135deg, rgba(245, 158, 11, 0.95), rgba(239, 68, 68, 0.88))",
+    ring: "var(--warn-ring-soft)",
+    soft: "var(--warn-fill-mid)",
+    gradient: "linear-gradient(135deg, var(--warn), var(--text-accent-cool))",
   },
   {
     base: "var(--danger)",
-    ring: "rgba(239, 68, 68, 0.52)",
-    soft: "rgba(239, 68, 68, 0.13)",
-    gradient: "linear-gradient(135deg, rgba(239, 68, 68, 0.94), rgba(245, 158, 11, 0.85))",
+    ring: "var(--error-ring-soft)",
+    soft: "var(--error-fill-soft)",
+    gradient: "linear-gradient(135deg, var(--danger), var(--warn))",
   },
 ];
 

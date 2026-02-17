@@ -27,6 +27,7 @@ export function BrowseScreen({
               className="tap-target"
               key={d}
               onClick={() => setBrowseFilter(d)}
+              aria-pressed={browseFilter === d}
               style={{ ...S.pillSmall, ...(browseFilter === d ? S.pillActive : {}) }}
             >
               {d.toLowerCase()}

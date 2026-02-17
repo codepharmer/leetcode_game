@@ -82,7 +82,10 @@ describe("screens/BlueprintScreen", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /Two Sum/i }));
     expect(screen.getByTestId("blueprint-solve-mode")).toHaveTextContent(/mode flat/i);
-    expect(screen.getByText("Run Blueprint")).toBeInTheDocument();
+    expect(screen.getByRole("progressbar", { name: /blueprint card placement progress/i })).toBeInTheDocument();
+    const runButton = screen.getByRole("button", { name: /run blueprint/i });
+    expect(runButton).toBeInTheDocument();
+    expect(runButton).toHaveClass("tap-target");
 
     fireEvent.click(screen.getByRole("button", { name: /worlds/i }));
     expect(screen.getByText(/Hash Maps & Sets/i)).toBeInTheDocument();
@@ -144,13 +147,13 @@ describe("screens/BlueprintScreen", () => {
       renderBlueprint();
 
       fireEvent.click(screen.getByRole("button", { name: /Two Sum/i }));
-      expect(screen.getByText(/left 5:00/i)).toBeInTheDocument();
+      expect(screen.getByRole("timer")).toHaveTextContent(/left 5:00/i);
 
       act(() => {
         vi.advanceTimersByTime(2000);
       });
 
-      expect(screen.getByText(/left 4:58/i)).toBeInTheDocument();
+      expect(screen.getByRole("timer")).toHaveTextContent(/left 4:58/i);
     } finally {
       vi.useRealTimers();
     }
@@ -232,6 +235,7 @@ describe("screens/BlueprintScreen", () => {
     }
 
     expect(screen.getByText(/Puzzle complete/i)).toBeInTheDocument();
+    expect(screen.getByRole("dialog", { name: /puzzle complete/i })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /continue/i }));
 
     await waitFor(() => expect(onSaveStars).toHaveBeenCalled());
@@ -310,10 +314,14 @@ describe("screens/BlueprintScreen", () => {
 
     expect(screen.queryByTestId("blueprint-problem-card")).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: /show problem/i }));
+    const problemToggle = screen.getByRole("button", { name: /show problem/i });
+    expect(problemToggle).toHaveAttribute("aria-pressed", "false");
+    fireEvent.click(problemToggle);
     expect(screen.getByTestId("blueprint-problem-card")).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: /hide problem/i }));
+    const hideProblemToggle = screen.getByRole("button", { name: /hide problem/i });
+    expect(hideProblemToggle).toHaveAttribute("aria-pressed", "true");
+    fireEvent.click(hideProblemToggle);
     expect(screen.queryByTestId("blueprint-problem-card")).not.toBeInTheDocument();
   });
 

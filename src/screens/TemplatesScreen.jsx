@@ -8,7 +8,7 @@ export function TemplatesScreen({ goMenu }) {
   return (
       <div style={S.browseContainer}>
         <div style={S.topBar}>
-          <button onClick={goMenu} style={S.backBtn}>
+          <button className="tap-target" onClick={goMenu} style={S.backBtn}>
             {" "}back
           </button>
           <span style={{ fontSize: 14, color: "var(--text-strong)", fontWeight: 700 }}>All Templates</span>
@@ -29,7 +29,7 @@ export function TemplatesScreen({ goMenu }) {
             <span style={{ ...S.patternName, color: PATTERN_COLORS[g.patterns[0]] || "var(--text)" }}>{g.category}</span>
             <span style={S.patternCount}>{g.templates.length} templates</span>
           </div>
-          <div style={{ fontSize: 12, color: "var(--dim)", marginBottom: 10 }}>patterns: {g.patterns.join(", ")}</div>
+          <div style={{ fontSize: 13, color: "var(--dim)", marginBottom: 10 }}>patterns: {g.patterns.join(", ")}</div>
           {g.templates.map((t, ti) => (
             <div key={ti} style={S.templateItem}>
               <div style={S.templateName}>{t.name}</div>

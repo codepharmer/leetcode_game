@@ -23,12 +23,42 @@ function getFeedbackTone(status) {
   return "var(--dim)";
 }
 
+function getFeedbackBorder(status) {
+  if (status === "correct") return "var(--accent-ring-soft)";
+  if (status === "misplaced") return "var(--warn-ring-soft)";
+  if (status === "phase-error") return "var(--error-ring-soft)";
+  if (status === "wrong-phase") return "var(--error-ring-soft)";
+  return "var(--border)";
+}
+
+function getFeedbackFill(status) {
+  if (status === "correct") return "var(--accent-fill-soft)";
+  if (status === "misplaced") return "var(--warn-fill-soft)";
+  if (status === "phase-error") return "var(--error-fill-soft)";
+  if (status === "wrong-phase") return "var(--error-fill-soft)";
+  return "var(--surface-1)";
+}
+
 function getFeedbackLabel(status) {
   if (status === "correct") return "correct";
   if (status === "misplaced") return "misplaced";
   if (status === "phase-error") return "incorrect";
   if (status === "wrong-phase") return "wrong phase";
   return "";
+}
+
+function getChallengeBadgeRingColor(challenge) {
+  if (challenge?.isBossRush) return "var(--error-ring-soft)";
+  if (challenge?.tier === 1) return "var(--accent-ring-soft)";
+  if (challenge?.tier === 2) return "var(--warn-ring-soft)";
+  return "var(--error-ring-soft)";
+}
+
+function getDifficultyRingColor(difficulty) {
+  if (difficulty === "Easy") return "var(--accent-ring-soft)";
+  if (difficulty === "Medium") return "var(--warn-ring-soft)";
+  if (difficulty === "Hard") return "var(--error-ring-soft)";
+  return "var(--border)";
 }
 
 export function BlueprintGame({
@@ -237,36 +267,45 @@ export function BlueprintGame({
   return (
     <div style={{ ...S.blueprintContainer, paddingBottom: phase === "build" ? 24 : 24 }}>
       <div style={S.topBar}>
-        <button onClick={onBack} style={S.backBtn}>
+        <button className="tap-target" onClick={onBack} style={S.backBtn}>
           {" "}worlds
         </button>
         <span style={{ ...S.blueprintTitle, flex: 1, textAlign: "center", margin: "0 10px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
           {level.title}
         </span>
         <button
+          className="tap-target"
           onClick={() => setShowProblem((value) => !value)}
           style={{ ...S.blueprintSheetClose, width: 34, height: 34 }}
           title={showProblem ? "Hide problem" : "Show problem"}
           aria-label={showProblem ? "Hide problem" : "Show problem"}
+          aria-pressed={showProblem}
         >
           ?
         </button>
       </div>
 
       {showTapHintBar ? (
-        <div style={S.blueprintTapHintBar}>{hintBarText}</div>
+        <div role="status" style={S.blueprintTapHintBar}>{hintBarText}</div>
       ) : null}
 
       <div style={S.blueprintStatsStrip}>
         <span data-testid="blueprint-solve-mode" style={S.blueprintStatsItem}>mode {solveMode}</span>
         <div style={S.blueprintHeaderProgressWrap}>
-          <div style={S.blueprintHeaderProgressTrack}>
+          <div
+            role="progressbar"
+            aria-label="Blueprint card placement progress"
+            aria-valuemin={0}
+            aria-valuemax={requiredCards}
+            aria-valuenow={totalPlaced}
+            style={S.blueprintHeaderProgressTrack}
+          >
             <div style={{ ...S.blueprintHeaderProgressFill, width: `${progressPercent}%` }} />
           </div>
           <span data-testid="blueprint-progress-counter" style={S.blueprintHeaderProgressLabel}>{totalPlaced}/{requiredCards} cards</span>
         </div>
         <span style={S.blueprintStatsItem}>hints {hintsRemaining}</span>
-        <span style={{ ...S.blueprintStatsItem, color: timerColor }}>{timerLabel}</span>
+        <span role="timer" style={{ ...S.blueprintStatsItem, color: timerColor }}>{timerLabel}</span>
         {solveMode === "phased" ? (
           <span style={S.blueprintStatsItem}>mistakes {mistakes}</span>
         ) : (
@@ -275,7 +314,7 @@ export function BlueprintGame({
       </div>
 
       {phase === "build" && dependencyWarning ? (
-        <div data-testid="blueprint-dependency-warning" style={S.blueprintDependencyWarning}>
+        <div role="status" data-testid="blueprint-dependency-warning" style={S.blueprintDependencyWarning}>
           {dependencyWarning}
         </div>
       ) : null}
@@ -283,16 +322,16 @@ export function BlueprintGame({
       {showProblem ? (
         <div data-testid="blueprint-problem-card" style={S.blueprintProblemCard}>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            <span style={{ ...S.diffBadge, color: getChallengeBadgeColor(challenge), borderColor: `${getChallengeBadgeColor(challenge)}55` }}>
+            <span style={{ ...S.diffBadge, color: getChallengeBadgeColor(challenge), borderColor: getChallengeBadgeRingColor(challenge) }}>
               {challenge?.tierIcon || "LVL"} {challenge?.tierRole || level.difficulty}
             </span>
-            <span style={{ ...S.diffBadge, color: DIFF_COLOR[level.difficulty] || "var(--text)", borderColor: `${DIFF_COLOR[level.difficulty] || "var(--border)"}45` }}>
+            <span style={{ ...S.diffBadge, color: DIFF_COLOR[level.difficulty] || "var(--text)", borderColor: getDifficultyRingColor(level.difficulty) }}>
               {level.difficulty}
             </span>
             <span style={S.blueprintPatternBadge}>{showPatternLabel ? level.pattern : "pattern hidden"}</span>
           </div>
           {challenge?.isBossRush ? (
-            <div style={{ fontSize: 12, color: "var(--warn)" }}>Boss rush mode: identify the pattern yourself.</div>
+            <div style={{ fontSize: 13, color: "var(--warn)" }}>Boss rush mode: identify the pattern yourself.</div>
           ) : null}
           <p style={S.blueprintProblemText}>{level.description}</p>
           <pre style={S.blueprintExample}>{level.example}</pre>
@@ -327,7 +366,7 @@ export function BlueprintGame({
                       style={{
                         ...S.blueprintTrayCard,
                         borderColor: isSelected ? "var(--accent)" : "var(--border)",
-                        background: isSelected ? "rgba(16, 185, 129, 0.11)" : "var(--surface-1)",
+                        background: isSelected ? "var(--accent-fill-soft)" : "var(--surface-1)",
                         opacity: isPlaced ? 0.45 : 1,
                         cursor: isPlaced ? "default" : "pointer",
                         animation: isShaking
@@ -351,6 +390,7 @@ export function BlueprintGame({
                           <span
                             role="button"
                             tabIndex={0}
+                            className="tap-target"
                             data-blueprint-hint-btn="true"
                             style={{ ...S.blueprintHintBtn, opacity: canOpenHint ? 1 : 0.4, cursor: canOpenHint ? "pointer" : "not-allowed" }}
                             onClick={(event) => {
@@ -364,6 +404,8 @@ export function BlueprintGame({
                               handleToggleHint(card.id, canOpenHint);
                             }}
                             title={canOpenHint ? "hint" : "hint limit reached"}
+                            aria-label={canOpenHint ? "Show card hint" : "Hint limit reached"}
+                            aria-disabled={!canOpenHint}
                           >
                             ?
                           </span>
@@ -397,6 +439,8 @@ export function BlueprintGame({
                   const shouldFlash = flashedSlotId === slotId;
                   const hasTapAffordance = !!selected?.id && canPlaceSelected && slotInteractive;
 
+                  const isKeyboardInteractive = slotInteractive && !!selected?.id;
+
                   return (
                     <div
                       key={slotId}
@@ -405,6 +449,15 @@ export function BlueprintGame({
                       data-blueprint-phase-state={slotSolveState}
                       data-blueprint-slot-id={slotId}
                       onClick={() => handleSlotTap(slotId)}
+                      role={isKeyboardInteractive ? "button" : undefined}
+                      tabIndex={isKeyboardInteractive ? 0 : -1}
+                      onKeyDown={(event) => {
+                        if (!isKeyboardInteractive) return;
+                        if (event.key !== "Enter" && event.key !== " ") return;
+                        event.preventDefault();
+                        handleSlotTap(slotId);
+                      }}
+                      aria-label={isKeyboardInteractive ? `Place selected card in ${displayMeta.name}` : undefined}
                       style={{
                         ...S.blueprintSectionCard,
                         borderColor: isSectionComplete ? displayMeta.color : shouldFlash ? `${displayMeta.color}` : "var(--border)",
@@ -416,7 +469,7 @@ export function BlueprintGame({
                         background: shouldFlash
                           ? `${displayMeta.color}24`
                           : isPhaseLocked
-                            ? "rgba(100, 116, 139, 0.1)"
+                            ? "var(--surface-soft)"
                             : "var(--surface-1)",
                         opacity: isPhaseLocked ? 0.56 : 1,
                         cursor: slotInteractive && selected?.id ? (canPlaceSelected ? "pointer" : "not-allowed") : "default",
@@ -476,14 +529,15 @@ export function BlueprintGame({
                                     style={{
                                       ...S.blueprintFeedbackBadge,
                                       color: feedbackTone,
-                                      borderColor: `${feedbackTone}66`,
-                                      background: `${feedbackTone}1A`,
+                                      borderColor: getFeedbackBorder(feedback.status),
+                                      background: getFeedbackFill(feedback.status),
                                     }}
                                   >
                                     {getFeedbackLabel(feedback.status)}
                                   </span>
                                 ) : <span />}
                                 <button
+                                  className="tap-target"
                                   data-testid={`blueprint-undo-card-${card.id}`}
                                   onClick={(event) => {
                                     event.stopPropagation();
@@ -513,11 +567,12 @@ export function BlueprintGame({
           </div>
 
           <div style={S.actionBar}>
-            <button onClick={handleResetWithOverlay} style={S.resetBtn}>
+            <button className="tap-target" onClick={handleResetWithOverlay} style={S.resetBtn}>
               retry
             </button>
             {solveMode === "flat" ? (
               <button
+                className="tap-target"
                 data-tutorial-anchor="blueprint-run-button"
                 onClick={handleRunWithSignals}
                 disabled={!canRun}
@@ -532,6 +587,7 @@ export function BlueprintGame({
               </button>
             ) : canCheckActivePhase ? (
               <button
+                className="tap-target"
                 data-testid="blueprint-check-phase-btn"
                 onClick={handlePhaseCheck}
                 style={{
@@ -568,13 +624,13 @@ export function BlueprintGame({
 
       {completionOverlay ? (
         <div style={S.blueprintCompletionScrim}>
-          <div style={S.blueprintCompletionCard}>
+          <div role="dialog" aria-modal="true" aria-label="Puzzle complete" style={S.blueprintCompletionCard}>
             <div style={S.blueprintTitle}>Puzzle complete</div>
             <div style={S.blueprintTopMeta}>time {formatElapsed(completionOverlay.elapsedMs)}</div>
             <div style={{ ...S.blueprintTopMeta, color: "var(--warn)", marginTop: -4 }}>stars {completionOverlay.stars}</div>
             <div style={S.blueprintCompletionActions}>
-              <button onClick={handleResetWithOverlay} style={S.resetBtn}>retry</button>
-              <button onClick={handleContinue} style={{ ...S.startBtn, padding: "10px 18px" }}>continue</button>
+              <button className="tap-target" onClick={handleResetWithOverlay} style={S.resetBtn}>retry</button>
+              <button className="tap-target" onClick={handleContinue} style={{ ...S.startBtn, padding: "10px 18px" }}>continue</button>
             </div>
           </div>
         </div>

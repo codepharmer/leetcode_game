@@ -44,8 +44,8 @@ function ProgressRing({ progressPct, accent, icon, worldId, locked }) {
           lineHeight: 1,
         }}
       >
-        <span style={{ fontSize: 10, color: "var(--dim)", fontFamily: "'DM Mono', monospace", textTransform: "uppercase" }}>{icon}</span>
-        <span style={{ fontSize: 15, color: "var(--text-strong)", fontFamily: "'Outfit', sans-serif", fontWeight: 700 }}>{worldId}</span>
+        <span style={{ fontSize: 13, color: "var(--dim)", fontFamily: "var(--font-code)", textTransform: "uppercase" }}>{icon}</span>
+        <span style={{ fontSize: 15, color: "var(--text-strong)", fontFamily: "var(--font-ui)", fontWeight: 700 }}>{worldId}</span>
       </div>
     </div>
   );
@@ -55,7 +55,7 @@ function WorldNodeButton({ world, index, accent, isLocked, unlockCountLabel, onO
   return (
     <button
       data-tutorial-anchor={tutorialAnchor || undefined}
-      className="hover-row hover-accent pressable-200"
+      className="hover-row hover-accent pressable-200 tap-target"
       disabled={!world.isUnlocked}
       onClick={() => world.isUnlocked && onOpenWorld(world.id)}
       style={{
@@ -113,13 +113,13 @@ export function BlueprintMapView({ campaign, completed, onOpenDaily, onOpenWorld
       {campaign?.dailyChallenge?.challenge?.level ? (
         <button
           data-tutorial-anchor="blueprint-daily-banner"
-          className="pressable-200 hover-row"
+          className="pressable-200 hover-row tap-target"
           onClick={onOpenDaily}
           style={S.blueprintDailyBannerRow}
         >
           <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0, flex: 1 }}>
-            <span style={{ ...S.blueprintNodeBadge, color: "var(--warn)", borderColor: "rgba(245, 158, 11, 0.45)" }}>D</span>
-            <span style={{ ...S.diffBadge, color: "var(--warn)", borderColor: "rgba(245, 158, 11, 0.45)" }}>Daily Challenge</span>
+            <span style={{ ...S.blueprintNodeBadge, color: "var(--warn)", borderColor: "var(--warn-ring-soft)" }}>D</span>
+            <span style={{ ...S.diffBadge, color: "var(--warn)", borderColor: "var(--warn-ring-soft)" }}>Daily Challenge</span>
             <span style={{ ...S.blueprintNodeMeta, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
               {campaign.dailyChallenge.challenge.level.title}
             </span>
@@ -131,12 +131,12 @@ export function BlueprintMapView({ campaign, completed, onOpenDaily, onOpenWorld
       {nextChallenge ? (
         <button
           data-tutorial-anchor="blueprint-continue-cta"
-          className="pressable-200"
+          className="pressable-200 tap-target"
           onClick={() => onContinue(nextChallenge.challenge)}
           style={{ ...S.blueprintContinueBtn, background: nextAccent.gradient, borderColor: nextAccent.ring }}
         >
-          <span style={{ ...S.blueprintNodeTitle, color: "#0f1117" }}>Continue</span>
-          <span style={{ ...S.blueprintNodeMeta, color: "rgba(15, 17, 23, 0.82)", fontSize: 12.5 }}>
+          <span style={{ ...S.blueprintNodeTitle, color: "var(--bg-page)" }}>Continue</span>
+          <span style={{ ...S.blueprintNodeMeta, color: "var(--quiet)", fontSize: 13 }}>
             {nextChallenge.world?.name || "World"} | {nextChallenge.challenge.level.title}
           </span>
         </button>

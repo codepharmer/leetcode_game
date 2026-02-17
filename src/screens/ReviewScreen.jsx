@@ -16,14 +16,14 @@ export function ReviewScreen({ attempts = [], goMenu }) {
           <div style={S.logo}>
             <span style={S.logoAccent}>$</span>
             <span style={{ color: "var(--text-strong)" }}>pattern</span>
-            <span style={{ color: "var(--accent)", fontFamily: "'DM Mono', monospace", fontWeight: 500 }}>.</span>
+            <span style={{ color: "var(--accent)", fontFamily: "var(--font-code)", fontWeight: 500 }}>.</span>
             <span style={S.logoDim}>match</span>
           </div>
           <div
             style={{
               marginTop: 6,
-              fontFamily: "'DM Mono', monospace",
-              fontSize: 10,
+              fontFamily: "var(--font-code)",
+              fontSize: 13,
               letterSpacing: "1.5px",
               textTransform: "uppercase",
               color: "var(--faint)",
@@ -49,7 +49,7 @@ export function ReviewScreen({ attempts = [], goMenu }) {
                   <span style={S.resultName}>{entry.title || entry.itemId}</span>
                   <span style={{ ...S.chevron, marginLeft: "auto" }}>{formatAttemptTime(entry.ts)}</span>
                 </div>
-                <div style={{ fontSize: 12.5, color: "var(--dim)", lineHeight: 1.45, marginLeft: 26 }}>
+                <div style={{ fontSize: 13, color: "var(--dim)", lineHeight: 1.45, marginLeft: 26 }}>
                   <div>your answer: {entry.chosen || "n/a"}</div>
                   <div>correct pattern: {entry.pattern || "n/a"}</div>
                 </div>
@@ -60,7 +60,7 @@ export function ReviewScreen({ attempts = [], goMenu }) {
       </div>
 
       <div style={S.resultsActions}>
-        <button onClick={goMenu} style={S.browseBtn}>
+        <button className="tap-target" onClick={goMenu} style={S.browseBtn}>
           menu
         </button>
       </div>

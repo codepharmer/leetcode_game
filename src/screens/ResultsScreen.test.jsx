@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
 import { GAME_TYPES } from "../lib/constants";
@@ -42,7 +43,34 @@ describe("screens/ResultsScreen", () => {
     );
 
     expect(screen.getByText("Want to keep these results?")).toBeInTheDocument();
-    fireEvent.click(screen.getByText("Two Sum"));
+    expect(screen.getByRole("status")).toHaveTextContent(/Want to keep these results\?/i);
+    const resultRow = screen.getByRole("button", { name: /Two Sum/i });
+    expect(resultRow).toHaveAttribute("aria-expanded", "false");
+    expect(resultRow).toHaveClass("tap-target");
+    fireEvent.click(resultRow);
+    expect(commonProps.setExpandedResult).toHaveBeenCalled();
+  });
+
+  it("supports keyboard activation after semantic button migration", async () => {
+    const user = userEvent.setup();
+    render(
+      <ResultsScreen
+        {...commonProps}
+        gameType={GAME_TYPES.QUESTION_TO_PATTERN}
+        results={[
+          {
+            correct: false,
+            chosen: "DFS",
+            item: { id: "q1", title: "Two Sum", pattern: "Hash Map", promptKind: "question", desc: "question description" },
+          },
+        ]}
+      />
+    );
+
+    const resultRow = screen.getByRole("button", { name: /Two Sum/i });
+    resultRow.focus();
+    expect(resultRow).toHaveFocus();
+    await user.keyboard("{Enter}");
     expect(commonProps.setExpandedResult).toHaveBeenCalled();
   });
 

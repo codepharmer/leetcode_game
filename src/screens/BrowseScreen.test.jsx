@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
 import { BrowseScreen } from "./BrowseScreen";
@@ -27,7 +28,35 @@ describe("screens/BrowseScreen", () => {
     expect(screen.getByText("All Patterns")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "easy" }));
     expect(setBrowseFilter).toHaveBeenCalledWith("Easy");
-    fireEvent.click(screen.getByText("Two Sum"));
+    const toggleRow = screen.getByRole("button", { name: /Two Sum/i });
+    expect(toggleRow).toHaveAttribute("aria-expanded", "false");
+    expect(toggleRow).toHaveClass("tap-target");
+    fireEvent.click(toggleRow);
+    expect(setExpandedBrowse).toHaveBeenCalled();
+  });
+
+  it("supports keyboard activation after semantic button migration", async () => {
+    const setExpandedBrowse = vi.fn();
+    const user = userEvent.setup();
+    render(
+      <BrowseScreen
+        browseFilter="All"
+        setBrowseFilter={vi.fn()}
+        groupedByPattern={{
+          "Hash Map": [{ id: "q1", title: "Two Sum", pattern: "Hash Map", difficulty: "Easy", promptKind: "question", desc: "desc" }],
+        }}
+        expandedBrowse={{}}
+        setExpandedBrowse={setExpandedBrowse}
+        goMenu={vi.fn()}
+        history={{}}
+        browseTitle="All Patterns"
+      />
+    );
+
+    const toggleRow = screen.getByRole("button", { name: /Two Sum/i });
+    toggleRow.focus();
+    expect(toggleRow).toHaveFocus();
+    await user.keyboard("{Enter}");
     expect(setExpandedBrowse).toHaveBeenCalled();
   });
 

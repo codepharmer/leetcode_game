@@ -14,13 +14,13 @@ export function BlueprintExecution({
   onReset,
 }) {
   const current = trace[step];
-  const phaseColor = {
-    setup: "#818CF8",
-    update: "#60A5FA",
-    check: "#FBBF24",
-    return: "#F472B6",
-    loop: "#34D399",
-    error: "#EF4444",
+  const phaseTone = {
+    setup: { color: "var(--text-accent-cool)", background: "var(--info-fill-soft)" },
+    update: { color: "var(--accent2)", background: "var(--info-fill-soft)" },
+    check: { color: "var(--warn)", background: "var(--warn-fill-soft)" },
+    return: { color: "var(--accent-pink)", background: "var(--error-fill-soft)" },
+    loop: { color: "var(--accent)", background: "var(--accent-fill-soft)" },
+    error: { color: "var(--danger)", background: "var(--error-fill-soft)" },
   };
 
   return (
@@ -36,7 +36,13 @@ export function BlueprintExecution({
         {current ? (
           <>
             <div style={S.blueprintPhaseRow}>
-              <span style={{ ...S.phasePill, background: `${phaseColor[current.phase] || "#64748B"}22`, color: phaseColor[current.phase] || "var(--dim)" }}>
+              <span
+                style={{
+                  ...S.phasePill,
+                  background: phaseTone[current.phase]?.background || "var(--surface-1)",
+                  color: phaseTone[current.phase]?.color || "var(--dim)",
+                }}
+              >
                 {current.phase}
               </span>
               {current.iteration !== undefined ? <span style={S.blueprintTopMeta}>iteration {current.iteration}</span> : null}
@@ -62,8 +68,14 @@ export function BlueprintExecution({
                       <div
                         style={{
                           ...S.blueprintArrayCell,
-                          background: hasWindow ? "rgba(16, 185, 129, 0.14)" : "var(--surface-1)",
-                          borderColor: isLeft ? "#818CF8" : isRight ? "#F472B6" : hasWindow ? "rgba(16, 185, 129, 0.45)" : "var(--border)",
+                          background: hasWindow ? "var(--accent-fill-soft)" : "var(--surface-1)",
+                          borderColor: isLeft
+                            ? "var(--text-accent-cool)"
+                            : isRight
+                              ? "var(--accent-pink)"
+                              : hasWindow
+                                ? "var(--accent-ring-soft)"
+                                : "var(--border)",
                         }}
                       >
                         {String(value)}
@@ -98,13 +110,14 @@ export function BlueprintExecution({
         ) : null}
 
         <div data-tutorial-anchor="blueprint-step-navigator" style={S.stepControls}>
-          <button onClick={() => setStep(0)} disabled={step === 0} style={{ ...S.stepBtn, opacity: step === 0 ? 0.4 : 1 }}>
+          <button className="tap-target" onClick={() => setStep(0)} disabled={step === 0} style={{ ...S.stepBtn, opacity: step === 0 ? 0.4 : 1 }}>
             first
           </button>
-          <button onClick={() => setStep(Math.max(0, step - 1))} disabled={step === 0} style={{ ...S.stepBtn, opacity: step === 0 ? 0.4 : 1 }}>
+          <button className="tap-target" onClick={() => setStep(Math.max(0, step - 1))} disabled={step === 0} style={{ ...S.stepBtn, opacity: step === 0 ? 0.4 : 1 }}>
             prev
           </button>
           <button
+            className="tap-target"
             onClick={() => setStep(Math.min(trace.length - 1, step + 1))}
             disabled={step >= trace.length - 1}
             style={{ ...S.stepBtn, opacity: step >= trace.length - 1 ? 0.4 : 1 }}
@@ -112,6 +125,7 @@ export function BlueprintExecution({
             next
           </button>
           <button
+            className="tap-target"
             onClick={() => setStep(Math.max(trace.length - 1, 0))}
             disabled={step >= trace.length - 1}
             style={{ ...S.stepBtn, opacity: step >= trace.length - 1 ? 0.4 : 1 }}
@@ -126,8 +140,8 @@ export function BlueprintExecution({
         {testResults?.map((result, index) => (
           <div key={index} style={{ ...S.testRow, borderLeftColor: result.passed ? "var(--accent)" : "var(--danger)" }}>
             <div style={{ display: "flex", justifyContent: "space-between", gap: 8, marginBottom: 5 }}>
-              <span style={{ ...S.blueprintNodeMeta, fontSize: 10.5 }}>case {index + 1}</span>
-              <span style={{ ...S.blueprintNodeMeta, fontSize: 10.5, color: result.passed ? "var(--accent)" : "var(--danger)" }}>
+              <span style={{ ...S.blueprintNodeMeta, fontSize: 13 }}>case {index + 1}</span>
+              <span style={{ ...S.blueprintNodeMeta, fontSize: 13, color: result.passed ? "var(--accent)" : "var(--danger)" }}>
                 {result.passed ? "pass" : "fail"}
               </span>
             </div>
@@ -141,7 +155,7 @@ export function BlueprintExecution({
       </div>
 
       {!allPassed && divergence ? (
-        <div style={{ ...S.feedbackBox, borderColor: "rgba(245, 158, 11, 0.4)", background: "rgba(245, 158, 11, 0.08)" }}>
+        <div style={{ ...S.feedbackBox, borderColor: "var(--warn-ring-soft)", background: "var(--warn-fill-soft)" }}>
           <div style={{ fontSize: 14, fontWeight: 700, color: "var(--warn)", marginBottom: 8 }}>Where it diverged</div>
           <p style={S.blueprintFeedbackText}>
             Divergence at step {divergence.step + 1} in {divergence.player?.phase || "unknown"} phase.
@@ -155,7 +169,7 @@ export function BlueprintExecution({
       {allPassed ? (
         <div
           data-tutorial-anchor="blueprint-stars-info"
-          style={{ ...S.feedbackBox, borderColor: "rgba(16, 185, 129, 0.45)", background: "rgba(16, 185, 129, 0.08)" }}
+          style={{ ...S.feedbackBox, borderColor: "var(--accent-ring-soft)", background: "var(--accent-fill-soft)" }}
         >
           <div style={{ fontSize: 16, fontWeight: 800, color: "var(--accent)", textAlign: "center" }}>Blueprint Correct</div>
           <div style={S.blueprintStarRow}>
@@ -165,7 +179,7 @@ export function BlueprintExecution({
               </span>
             ))}
           </div>
-          <div style={{ fontSize: 12, color: "var(--muted)", display: "flex", flexDirection: "column", gap: 4, marginTop: 8 }}>
+          <div style={{ fontSize: 13, color: "var(--muted)", display: "flex", flexDirection: "column", gap: 4, marginTop: 8 }}>
             <div>1 star: complete the level</div>
             <div style={{ color: runSummary?.underTime ? "var(--accent)" : "var(--dim)" }}>
               +1 star: finish under {formatElapsed((runSummary?.timeLimitSec || 0) * 1000)} ({formatElapsed(runSummary?.elapsedMs)})
@@ -180,15 +194,15 @@ export function BlueprintExecution({
       <div style={S.actionBar}>
         {!allPassed ? (
           <>
-            <button onClick={onBackToBuild} style={S.resetBtn}>
+            <button className="tap-target" onClick={onBackToBuild} style={S.resetBtn}>
               edit blueprint
             </button>
-            <button onClick={onReset} style={S.resetBtn}>
+            <button className="tap-target" onClick={onReset} style={S.resetBtn}>
               reset all
             </button>
           </>
         ) : (
-          <button onClick={onComplete} style={{ ...S.startBtn, padding: "10px 20px" }}>
+          <button className="tap-target" onClick={onComplete} style={{ ...S.startBtn, padding: "10px 20px" }}>
             continue
           </button>
         )}

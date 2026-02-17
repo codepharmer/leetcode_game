@@ -7,10 +7,17 @@ import { getWorldAccent } from "./viewShared";
 function ProblemRow({ challenge, stars, accent, canPlay, onStart }) {
   const item = challenge.level;
   const solved = stars >= 1;
+  const challengeBorderColor = challenge?.isBossRush
+    ? "var(--error-ring-soft)"
+    : challenge?.tier === 1
+      ? "var(--accent-ring-soft)"
+      : challenge?.tier === 2
+        ? "var(--warn-ring-soft)"
+        : "var(--error-ring-soft)";
 
   return (
     <button
-      className="hover-row hover-accent pressable-200"
+      className="hover-row hover-accent pressable-200 tap-target"
       disabled={!canPlay}
       onClick={() => canPlay && onStart(challenge)}
       style={{
@@ -22,7 +29,7 @@ function ProblemRow({ challenge, stars, accent, canPlay, onStart }) {
         "--hover-accent-border": accent.ring,
       }}
     >
-      <div style={{ ...S.blueprintNodeBadge, color: solved ? accent.base : getChallengeBadgeColor(challenge), borderColor: solved ? accent.ring : `${getChallengeBadgeColor(challenge)}55` }}>
+      <div style={{ ...S.blueprintNodeBadge, color: solved ? accent.base : getChallengeBadgeColor(challenge), borderColor: solved ? accent.ring : challengeBorderColor }}>
         {solved ? "\u2713" : challenge.tierIcon}
       </div>
 
@@ -41,7 +48,7 @@ function ProblemRow({ challenge, stars, accent, canPlay, onStart }) {
             key={value}
             style={{
               ...S.blueprintStar,
-              fontSize: 12,
+              fontSize: 13,
               color: value <= stars ? "var(--warn)" : "var(--faint)",
             }}
           >
@@ -91,7 +98,7 @@ export function BlueprintWorldDetailView({ world, completed, totalStars, onBack,
   return (
     <div style={{ ...S.blueprintViewPane, animation: "blueprintViewIn 0.24s ease" }}>
       <div style={S.blueprintWorldNavBar}>
-        <button className="pressable-200" onClick={onBack} style={{ ...S.backBtn, minHeight: 44, width: "fit-content" }}>
+        <button className="pressable-200 tap-target" onClick={onBack} style={{ ...S.backBtn, minHeight: 44, width: "fit-content" }}>
           Worlds
         </button>
 
@@ -123,7 +130,7 @@ export function BlueprintWorldDetailView({ world, completed, totalStars, onBack,
             return (
               <div key={tier.index} style={S.blueprintTierCard}>
                 <button
-                  className="pressable-200"
+                  className="pressable-200 tap-target"
                   disabled={isLocked}
                   onClick={() =>
                     !isLocked &&
@@ -144,7 +151,7 @@ export function BlueprintWorldDetailView({ world, completed, totalStars, onBack,
                       {solvedCount}/{tier.levelIds.length} solved
                     </span>
                   </div>
-                  <span style={{ ...S.blueprintNodeMeta, color: isLocked ? "var(--warn)" : "var(--dim)", fontSize: 12 }}>
+                  <span style={{ ...S.blueprintNodeMeta, color: isLocked ? "var(--warn)" : "var(--dim)", fontSize: 13 }}>
                     {isLocked ? "[LOCK]" : isExpanded ? "v" : ">"}
                   </span>
                 </button>

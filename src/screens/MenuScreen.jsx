@@ -105,13 +105,18 @@ function ModeSegmentIcon({ gameType }) {
   );
 }
 
-function CircularProgress({ percentage, size = 48, strokeWidth = 3.5, accentColor = "var(--accent)" }) {
+function CircularProgress({ percentage, size = 48, strokeWidth = 3.5, accentColor = "var(--accent)", ariaLabel = "progress" }) {
   const p = clamp(percentage, 0, 100);
   const stop = `${(p / 100) * 360}deg`;
   const innerSize = Math.max(0, size - strokeWidth * 2);
 
   return (
     <div
+      role="progressbar"
+      aria-label={ariaLabel}
+      aria-valuemin={0}
+      aria-valuemax={100}
+      aria-valuenow={Math.round(p)}
       style={{
         width: size,
         height: size,
@@ -140,7 +145,13 @@ function CircularProgress({ percentage, size = 48, strokeWidth = 3.5, accentColo
 function ProgressBar({ percentage, label, delay = 0 }) {
   const p = clamp(percentage, 0, 100);
   const color = getProgressColorHex(p);
-  const bgColor = p === 0 ? "var(--surface-2)" : `${color}15`;
+  const bgColor = p === 0
+    ? "var(--surface-2)"
+    : p < 50
+      ? "var(--warn-fill-soft)"
+      : p < 80
+        ? "var(--info-fill-soft)"
+        : "var(--accent-fill-soft)";
 
   return (
     <div style={{ animation: `fadeSlideIn 0.5s ease ${delay}s both` }}>
@@ -168,12 +179,11 @@ function ProgressBar({ percentage, label, delay = 0 }) {
 
 function StatRing({ label, value, percentage, delay = 0, accentColor }) {
   const valueText = String(value ?? "");
-  const compactValue = valueText.length > 4;
 
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 14, animation: `fadeSlideIn 0.5s ease ${delay}s both` }}>
       <div style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <CircularProgress percentage={percentage} size={48} accentColor={accentColor} />
+        <CircularProgress percentage={percentage} size={48} accentColor={accentColor} ariaLabel={`${label} progress`} />
         <span
           style={{
             position: "absolute",
@@ -210,7 +220,7 @@ function MenuTopBar({ user, displayName, avatarLetter, onSignOut }) {
         <span style={S.menuUsername}>{displayName}</span>
       </div>
       {user ? (
-        <button onClick={onSignOut} style={S.menuSignout}>
+        <button className="tap-target" onClick={onSignOut} style={S.menuSignout}>
           sign out
         </button>
       ) : (
@@ -238,7 +248,7 @@ function SyncAndAuthSection({ user, authError, onGoogleSuccess, onGoogleError, o
   return (
     <>
       {!user && (
-        <div style={{ ...S.syncBanner, animation: "fadeSlideIn 0.5s ease 0.05s both" }}>
+        <div role="status" style={{ ...S.syncBanner, animation: "fadeSlideIn 0.5s ease 0.05s both" }}>
           <div style={S.syncBannerTitle}>Save your results</div>
           <div style={S.syncBannerText}>Sign in to sync your progress across devices.</div>
           <div style={S.syncBannerNote}>If you stay signed out, results are saved only in this browser.</div>
@@ -246,7 +256,7 @@ function SyncAndAuthSection({ user, authError, onGoogleSuccess, onGoogleError, o
       )}
 
       {authError && (
-        <div style={{ ...S.syncBanner, borderColor: "var(--error-ring-soft)", background: "var(--error-fill-soft)", animation: "fadeSlideIn 0.5s ease 0.08s both" }}>
+        <div role="status" style={{ ...S.syncBanner, borderColor: "var(--error-ring-soft)", background: "var(--error-fill-soft)", animation: "fadeSlideIn 0.5s ease 0.08s both" }}>
           <div style={{ ...S.syncBannerTitle, color: "var(--danger)" }}>Cloud sync</div>
           <div style={{ ...S.syncBannerText, color: "var(--muted)" }}>{authError}</div>
         </div>
@@ -273,7 +283,7 @@ function ModeSelectionSection({ gameTypeOptions, gameType, setGameType }) {
           return (
             <button
               key={option.value}
-              className={`menu-mode-segment pressable-200 ${isActive ? "is-active" : ""}`}
+              className={`menu-mode-segment pressable-200 tap-target ${isActive ? "is-active" : ""}`}
               aria-pressed={isActive}
               onClick={() => setGameType(option.value)}
             >
@@ -363,7 +373,10 @@ function RoundSettingsSection({
   return (
     <div style={{ ...S.card, padding: 0, overflow: "hidden", animation: "fadeSlideIn 0.5s ease 0.2s both" }}>
       <button
+        className="tap-target"
         onClick={() => setShowRoundSettings((p) => !p)}
+        aria-expanded={showRoundSettings}
+        aria-pressed={showRoundSettings}
         style={{
           width: "100%",
           background: "none",
@@ -390,7 +403,13 @@ function RoundSettingsSection({
                 <span style={S.configLabel}>Difficulty</span>
                 <div style={S.pillGroup}>
                   {["All", "Easy", "Medium", "Hard"].map((d) => (
-                    <button key={d} onClick={() => setFilterDifficulty(d)} style={{ ...S.pill, ...(filterDifficulty === d ? S.pillActive : {}) }}>
+                    <button
+                      className="tap-target"
+                      key={d}
+                      onClick={() => setFilterDifficulty(d)}
+                      aria-pressed={filterDifficulty === d}
+                      style={{ ...S.pill, ...(filterDifficulty === d ? S.pillActive : {}) }}
+                    >
                       {d.toLowerCase()}
                     </button>
                   ))}
@@ -403,7 +422,13 @@ function RoundSettingsSection({
                 <span style={S.configLabel}>{noun}</span>
                 <div style={S.pillGroup}>
                   {questionCountOptions.map((n) => (
-                    <button key={n} onClick={() => setTotalQuestions(n)} style={{ ...S.pill, ...(totalQuestions === n ? S.pillActive : {}) }}>
+                    <button
+                      className="tap-target"
+                      key={n}
+                      onClick={() => setTotalQuestions(n)}
+                      aria-pressed={totalQuestions === n}
+                      style={{ ...S.pill, ...(totalQuestions === n ? S.pillActive : {}) }}
+                    >
                       {n === allCount ? "all" : n}
                     </button>
                   ))}
@@ -426,7 +451,7 @@ function RoundSettingsSection({
             {settingsSummary}
           </div>
           <div style={{ marginTop: 12 }}>
-            <button onClick={onReplayTutorial} style={S.browseBtn}>
+            <button className="tap-target" onClick={onReplayTutorial} style={S.browseBtn}>
               replay tutorial
             </button>
           </div>
@@ -453,7 +478,7 @@ function CampaignPreviewSection({ campaignPreview, onOpenDaily, onOpenWorld }) {
       </div>
 
       <div className="menu-campaign-panel">
-        <button className="menu-campaign-daily hover-row pressable-200" onClick={onOpenDaily}>
+        <button className="menu-campaign-daily hover-row pressable-200 tap-target" onClick={onOpenDaily}>
           <span className="menu-campaign-daily__icon" aria-hidden="true">
             D
           </span>
@@ -473,7 +498,7 @@ function CampaignPreviewSection({ campaignPreview, onOpenDaily, onOpenWorld }) {
             return (
               <button
                 key={`${worldId || index}-${worldLabel}`}
-                className="menu-campaign-world-row hover-row pressable-200"
+                className="menu-campaign-world-row hover-row pressable-200 tap-target"
                 onClick={() => onOpenWorld(worldId)}
               >
                 <span className="menu-campaign-world-row__badge" aria-hidden="true">
@@ -503,9 +528,11 @@ function TutorialSection({
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
         <div style={{ ...S.sectionLabel, marginBottom: 0 }}>tutorials</div>
         <button
+          className="tap-target"
           onClick={onToggleExpanded}
           style={S.browseBtn}
           aria-expanded={expanded}
+          aria-pressed={expanded}
           aria-label="Toggle tutorials controls"
           data-testid="tutorial-toggle"
         >
@@ -514,13 +541,13 @@ function TutorialSection({
       </div>
       {expanded ? (
         <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginTop: 10 }}>
-          <button onClick={onReplaySelectedTutorial} style={S.browseBtn}>
+          <button className="tap-target" onClick={onReplaySelectedTutorial} style={S.browseBtn}>
             replay tutorial
           </button>
-          <button onClick={onReplayGlobalTutorial} style={S.browseBtn}>
+          <button className="tap-target" onClick={onReplayGlobalTutorial} style={S.browseBtn}>
             replay global onboarding
           </button>
-          <button onClick={onResetOnboarding} style={S.browseBtn}>
+          <button className="tap-target" onClick={onResetOnboarding} style={S.browseBtn}>
             reset onboarding
           </button>
         </div>
@@ -532,7 +559,7 @@ function TutorialSection({
 function StartSection({ startGame, startLabel }) {
   return (
     <div style={{ animation: "fadeSlideIn 0.5s ease 0.25s both" }}>
-      <button onClick={startGame} style={{ ...S.startBtn, width: "100%", animation: "pulseGlow 3s ease-in-out infinite" }}>
+      <button className="tap-target" onClick={startGame} style={{ ...S.startBtn, width: "100%", animation: "pulseGlow 3s ease-in-out infinite" }}>
         <span
           style={{
             position: "absolute",
@@ -639,17 +666,17 @@ function SecondaryActions({ supportsBrowse, supportsTemplates, goBrowse, goTempl
   return (
     <div style={{ display: "flex", gap: 10, justifyContent: "center", animation: "fadeSlideIn 0.5s ease 0.5s both" }}>
       {typeof goReview === "function" && (
-        <button onClick={goReview} style={S.browseBtn}>
+        <button className="tap-target" onClick={goReview} style={S.browseBtn}>
           review mistakes
         </button>
       )}
       {supportsBrowse && (
-        <button onClick={goBrowse} style={S.browseBtn}>
+        <button className="tap-target" onClick={goBrowse} style={S.browseBtn}>
           browse patterns
         </button>
       )}
       {supportsTemplates && (
-        <button onClick={goTemplates} style={S.browseBtn}>
+        <button className="tap-target" onClick={goTemplates} style={S.browseBtn}>
           view templates
         </button>
       )}
@@ -663,16 +690,16 @@ function DangerZone({ stats, showResetConfirm, setShowResetConfirm, resetAllData
   return (
     <div style={{ textAlign: "center", marginTop: 8, animation: "fadeSlideIn 0.5s ease 0.55s both" }}>
       {!showResetConfirm ? (
-        <button onClick={() => setShowResetConfirm(true)} style={S.resetBtn}>
+        <button className="tap-target" onClick={() => setShowResetConfirm(true)} style={S.resetBtn}>
           reset all data
         </button>
       ) : (
         <div style={{ ...S.resetConfirm, justifyContent: "center" }}>
           <span style={{ fontSize: 13, color: "var(--danger)" }}>erase all progress?</span>
-          <button onClick={resetAllData} style={{ ...S.resetBtn, color: "var(--danger)" }}>
+          <button className="tap-target" onClick={resetAllData} style={{ ...S.resetBtn, color: "var(--danger)" }}>
             yes, reset
           </button>
-          <button onClick={() => setShowResetConfirm(false)} style={S.resetBtn}>
+          <button className="tap-target" onClick={() => setShowResetConfirm(false)} style={S.resetBtn}>
             cancel
           </button>
         </div>
@@ -773,7 +800,7 @@ export function MenuScreen({
       <MenuTopBar user={user} displayName={displayName} avatarLetter={avatarLetter} onSignOut={onSignOut} />
       <MenuBrand menuSubtitle={menuSubtitle} />
       {routeNotice ? (
-        <div style={{ ...S.syncBanner, animation: "fadeSlideIn 0.4s ease 0.02s both", maxWidth: 700 }}>
+        <div role="status" style={{ ...S.syncBanner, animation: "fadeSlideIn 0.4s ease 0.02s both", maxWidth: 700 }}>
           <div style={S.syncBannerText}>{routeNotice}</div>
         </div>
       ) : null}

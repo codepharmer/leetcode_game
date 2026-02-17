@@ -34,6 +34,7 @@ describe("screens/PlayScreen", () => {
 
     expect(screen.getByText("Two Sum")).toBeInTheDocument();
     expect(screen.getByText("What pattern solves this?")).toBeInTheDocument();
+    expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "1");
     fireEvent.click(screen.getByRole("button", { name: /show description/i }));
     expect(baseProps.setShowDesc).toHaveBeenCalled();
     fireEvent.click(screen.getByRole("button", { name: /1/i }));

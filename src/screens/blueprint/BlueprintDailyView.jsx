@@ -6,7 +6,7 @@ export function BlueprintDailyView({ dailyChallenge, completed, onBack, onStartC
   if (!dailyChallenge?.challenge?.level) {
     return (
       <div style={{ ...S.blueprintProblemCard, animation: "blueprintViewIn 0.24s ease" }}>
-        <button className="pressable-200" onClick={onBack} style={{ ...S.backBtn, minHeight: 44, width: "fit-content" }}>
+        <button className="pressable-200 tap-target" onClick={onBack} style={{ ...S.backBtn, minHeight: 44, width: "fit-content" }}>
           Worlds
         </button>
         <div style={S.blueprintNodeTitle}>Daily challenge is not available yet.</div>
@@ -22,12 +22,12 @@ export function BlueprintDailyView({ dailyChallenge, completed, onBack, onStartC
   return (
     <div style={{ ...S.blueprintViewPane, animation: "blueprintViewIn 0.24s ease" }}>
       <div style={S.blueprintDetailHeader}>
-        <button className="pressable-200" onClick={onBack} style={{ ...S.backBtn, minHeight: 44, minWidth: 44 }}>
+        <button className="pressable-200 tap-target" onClick={onBack} style={{ ...S.backBtn, minHeight: 44, minWidth: 44 }}>
           Worlds
         </button>
 
         <div style={{ display: "flex", flexDirection: "column", gap: 4, minWidth: 0, flex: 1 }}>
-          <div style={{ ...S.blueprintNodeMeta, color: "var(--warn)", fontFamily: "'DM Mono', monospace" }}>
+          <div style={{ ...S.blueprintNodeMeta, color: "var(--warn)", fontFamily: "var(--font-code)" }}>
             Daily Challenge [{dailyChallenge.dateKey}]
           </div>
           <div style={{ ...S.blueprintLevelTitle, fontSize: 22, lineHeight: 1.2 }}>{item.title}</div>
@@ -61,11 +61,11 @@ export function BlueprintDailyView({ dailyChallenge, completed, onBack, onStartC
         </div>
 
         <button
-          className="pressable-200"
+          className="pressable-200 tap-target"
           onClick={() => onStartChallenge(challenge)}
           style={{
             ...S.blueprintDailyStartBtn,
-            background: "linear-gradient(135deg, rgba(245, 158, 11, 0.95), rgba(234, 179, 8, 0.92))",
+            background: "linear-gradient(135deg, var(--warn), var(--accent-warn))",
           }}
         >
           Start Challenge

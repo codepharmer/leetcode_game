@@ -59,6 +59,24 @@ Global + per-mode onboarding overlays are now built in:
 - One-time contextual tips (quiz shortcuts, blueprint tap-select flow, blueprint hint penalty) with non-blocking auto-dismiss behavior.
 - Replay/reset controls are available from the menu tutorial section and mode settings.
 
+## UI Accessibility & Typography Policy
+
+- Typography stack:
+  - UI: `Source Sans 3` via `--font-ui`
+  - Code: `IBM Plex Mono` via `--font-code`
+- Text size floor:
+  - No UI text below `13px`
+  - Code-like content (`code`, `pre`, snippets) uses `13.5px` and `line-height: 1.6`
+- Color/token policy:
+  - UI colors must be consumed through centralized CSS variables in `src/global.css`
+  - Do not introduce hardcoded `#hex` or `rgba(...)` values in `src/styles.js`, `src/screens`, or `src/components`
+- Interaction/accessibility policy:
+  - Prefer semantic controls (`button`) over clickable non-semantic elements
+  - Any remaining non-button interaction must include keyboard support and ARIA role semantics
+  - Progress/timer/dialog/status surfaces must expose appropriate ARIA roles
+  - Use `.tap-target` for compact controls (`min-width`/`min-height` of `44px`)
+  - Global keyboard focus uses `*:focus-visible` with the tokenized focus ring (`--focus-ring`)
+
 ## Live URLs
 
 - `https://patternmatch.nosson.ai` (primary)

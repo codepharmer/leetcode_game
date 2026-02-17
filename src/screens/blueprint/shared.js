@@ -1,10 +1,10 @@
 export const DIFF_COLOR = {
-  Tutorial: "#10B981",
-  Practice: "#F59E0B",
-  Boss: "#EF4444",
-  Easy: "#10B981",
-  Medium: "#F59E0B",
-  Hard: "#EF4444",
+  Tutorial: "var(--accent)",
+  Practice: "var(--warn)",
+  Boss: "var(--danger)",
+  Easy: "var(--accent)",
+  Medium: "var(--warn)",
+  Hard: "var(--danger)",
 };
 
 export function normalizeStars(stars) {
@@ -22,10 +22,10 @@ export function getLevelStars(starsByLevel, levelId) {
 }
 
 export function getChallengeBadgeColor(challenge) {
-  if (challenge?.isBossRush) return "#EF4444";
-  if (challenge?.tier === 1) return "#10B981";
-  if (challenge?.tier === 2) return "#F59E0B";
-  return "#EF4444";
+  if (challenge?.isBossRush) return "var(--danger)";
+  if (challenge?.tier === 1) return "var(--accent)";
+  if (challenge?.tier === 2) return "var(--warn)";
+  return "var(--danger)";
 }
 
 export function formatElapsed(ms) {

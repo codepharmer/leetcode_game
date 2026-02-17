@@ -34,7 +34,7 @@ export function PlayScreen({
   return (
     <div style={S.playContainer}>
       <div style={S.topBar}>
-        <button onClick={onBack} style={S.backBtn}>
+        <button className="tap-target" onClick={onBack} style={S.backBtn}>
           {" "}back
         </button>
         <div style={S.stats2}>
@@ -46,11 +46,11 @@ export function PlayScreen({
             {score}
             <span style={S.statDim}> correct</span>
           </span>
-          {streak > 1 && <span style={{ ...S.statItem, color: "#e5c07b", animation: "pulse 1s ease-in-out infinite" }}>🔥 {streak}</span>}
+          {streak > 1 && <span style={{ ...S.statItem, color: "var(--warn)", animation: "pulse 1s ease-in-out infinite" }}>🔥 {streak}</span>}
         </div>
       </div>
 
-      <div style={S.progressTrack}>
+      <div role="progressbar" aria-valuemin={0} aria-valuemax={total} aria-valuenow={currentIdx + 1} style={S.progressTrack}>
         <div style={{ ...S.progressBar, width: `${((currentIdx + 1) / total) * 100}%` }} />
       </div>
 
@@ -65,7 +65,7 @@ export function PlayScreen({
 
         {!isCodePrompt && (
           <>
-            <button className="hover-row" onClick={() => setShowDesc((p) => !p)} style={S.descToggle}>
+            <button className="hover-row tap-target" aria-pressed={showDesc} onClick={() => setShowDesc((p) => !p)} style={S.descToggle}>
               {showDesc ? " hide description" : " show description"}
               <span style={S.descHotkey}>D</span>
             </button>
@@ -94,11 +94,11 @@ export function PlayScreen({
             fg = "var(--text)";
           if (selected !== null) {
             if (c === currentItem.pattern) {
-              bg = "rgba(16, 185, 129, 0.15)";
+              bg = "var(--accent-fill-soft)";
               border = "var(--accent)";
               fg = "var(--accent)";
             } else if (c === selected) {
-              bg = "rgba(239, 68, 68, 0.12)";
+              bg = "var(--error-fill-soft)";
               border = "var(--danger)";
               fg = "var(--danger)";
             }

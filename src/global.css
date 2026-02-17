@@ -57,11 +57,15 @@
   --accent-fill-soft: rgba(184, 161, 255, 0.12);
   --accent-fill-mid: rgba(184, 161, 255, 0.18);
   --accent-fill-strong: rgba(184, 161, 255, 0.22);
+  --info-ring-soft: rgba(125, 184, 255, 0.5);
+  --info-fill-soft: rgba(125, 184, 255, 0.12);
+  --info-fill-mid: rgba(125, 184, 255, 0.2);
   --warn-ring-soft: rgba(255, 208, 87, 0.45);
   --warn-fill-soft: rgba(255, 208, 87, 0.08);
   --warn-fill-mid: rgba(255, 208, 87, 0.14);
   --error-ring-soft: rgba(255, 142, 200, 0.45);
   --error-fill-soft: rgba(255, 142, 200, 0.12);
+  --shimmer-highlight: rgba(255, 255, 255, 0.15);
   --selection-bg: rgba(184, 161, 255, 0.22);
   --scrollbar-thumb: rgba(255, 255, 255, 0.14);
   --panel-stroke-inner: rgba(255, 255, 255, 0.06);
@@ -435,7 +439,7 @@ pre::-webkit-scrollbar-thumb {
 }
 
 .menu-campaign-daily__subtitle {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--dim);
   overflow: hidden;
   text-overflow: ellipsis;
